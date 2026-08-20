@@ -1,0 +1,16 @@
+.DS_Store
+for rohit only/
+
+# Original logo drops at repo root — copied into assets/, kept out of git here
+/nkr-logo-light.png
+/nkr-logo-dark.png
+
+# Internal planning docs — not part of the published tool
+Claude-Code-Handoff-Brief.md
+Claude-Code-Kickoff-Prompt.md
+UAE-DMTT-Tool-Scope-Map.md
+UAE-DMTT-Module1-Applicability-Spec.md
+NKR-design-tokens.md
+
+# Reference implementation from another NKR tool — not part of this repo's product
+qfzptool.html
