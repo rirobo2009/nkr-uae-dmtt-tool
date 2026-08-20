@@ -12,6 +12,7 @@
     --accent-primary:#1D9E75;--accent-warning:#D97706;--warning-bg:#FBF1E4;--border:#E2E8F0;
     --red:#B3261E;--red-bg:#FBEAEA;--green-bg:#E4F5EE;
     --text-primary-ondark:#F5F7FA;--text-secondary-ondark:#7FA8AD;
+    --header-bg-green:#BBE2D6;--nkr-navy-soft:#4A5F7A;
     --shadow:0 2px 10px rgba(20,40,63,.06);--shadow-lg:0 8px 30px rgba(20,40,63,.16);
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   }
@@ -22,17 +23,17 @@
 
   .brand-bar{position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--nkr-navy),var(--nkr-teal),var(--nkr-green));z-index:101}
 
-  header.masthead{border-bottom:2px solid var(--nkr-teal);margin-bottom:8px;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);padding-left:calc(50vw - 50%);padding-right:calc(50vw - 50%);position:sticky;top:4px;background:var(--nkr-navy);z-index:100;padding-top:12px;padding-bottom:12px}
+  header.masthead{border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);margin-bottom:20px;position:sticky;top:4px;background:var(--header-bg-green);z-index:100;padding:16px 22px}
   .head-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
   .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
   .logo-mark img{height:22px;width:auto;display:block}
-  .logo-mark .logo-light{display:none}
-  .logo-mark .logo-dark{display:block}
-  .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--nkr-green);font-weight:700;margin-bottom:6px}
-  h1{font-size:24px;line-height:1.2;color:var(--text-primary-ondark);font-weight:700;letter-spacing:-.01em}
-  .sub{margin-top:6px;color:var(--text-secondary-ondark);font-size:13.5px;max-width:680px}
-  .explore{flex-shrink:0;font-weight:700;font-size:12.5px;letter-spacing:.02em;color:#fff;background:transparent;border:1.5px solid rgba(255,255,255,.5);border-radius:8px;padding:7px 14px;text-decoration:none;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
-  .explore:hover{background:#fff;color:var(--nkr-navy)}
+  .logo-mark .logo-light{display:block}
+  .logo-mark .logo-dark{display:none}
+  .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#fff;font-weight:700;margin-bottom:6px}
+  h1{font-size:24px;line-height:1.2;color:var(--nkr-navy);font-weight:700;letter-spacing:-.01em}
+  .sub{margin-top:6px;color:var(--nkr-navy-soft);font-weight:400;font-size:13.5px;max-width:680px}
+  .explore{flex-shrink:0;font-weight:700;font-size:12.5px;letter-spacing:.02em;color:var(--nkr-navy);background:transparent;border:1.5px solid var(--nkr-navy);border-radius:8px;padding:7px 14px;text-decoration:none;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .explore:hover{background:var(--nkr-navy);color:#fff}
   .explore svg{width:12px;height:12px}
 
   .legal-strip{font-size:11.5px;color:var(--text-secondary);background:#fff;border:1px solid var(--border);border-left:4px solid var(--nkr-teal);border-radius:6px;padding:10px 14px;margin:16px 0 26px;letter-spacing:.01em;line-height:1.5;box-shadow:var(--shadow)}
@@ -166,7 +167,7 @@
        otherwise drop the navy masthead fill and leave white-on-white text.
        Force a light masthead with dark text so the PDF is legible regardless
        of that setting. */
-    header.masthead{position:static!important;margin-left:0;margin-right:0;padding-left:0;padding-right:0;background:#fff!important;border-bottom:2px solid #ccc!important}
+    header.masthead{position:static!important;background:#fff!important;border:1px solid #ccc!important;box-shadow:none!important}
     header.masthead .eyebrow{color:var(--nkr-teal)!important}
     header.masthead h1{color:var(--nkr-navy)!important}
     header.masthead .sub{color:var(--text-secondary)!important}
