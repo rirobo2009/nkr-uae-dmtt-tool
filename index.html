@@ -230,7 +230,8 @@ const CITE={
   revThreshold:"Art. 1.1.1, CD 142/2024 Annexure",
   revProration:"Art. 1.1.2, CD 142/2024 Annexure",
   group:"Art. 1.2.1–1.2.3, CD 142/2024 Annexure",
-  upe:"Art. 1.4.1, CD 142/2024 Annexure; Art. 18 (Controlling Interest)"
+  upe:"Art. 1.4.1, CD 142/2024 Annexure; Art. 18 (Controlling Interest)",
+  constituent:"Art. 1.3, CD 142/2024 Annexure"
 };
 
 /* ==================================================================
@@ -467,6 +468,25 @@ function stepC_swf(){
     [
       {key:'A',label:'Confirmed — I have identified the substituted Ultimate Parent Entity under Art 1.6',action:()=>{record("Art 1.6 substituted UPE identified?","Yes","yes");push(stepD);}}
     ],'UPE Identification — sovereign wealth fund substitution');
+  mount(node,'step');fixTooltips();
+}
+
+/* ==================================================================
+   STEP D — Is the UAE Entity a Constituent Entity? (Art 1.3)
+   ================================================================== */
+function stepD(){
+  coreIndex=4;
+  const node=optionCard(
+    `Is the UAE Entity included in the Group's Consolidated Financial Statements (or excluded only for size/materiality/held-for-sale reasons), or is it a Permanent Establishment of such an Entity? ${tip("This establishes whether the UAE Entity is potentially a Constituent Entity before testing Excluded Entity status. A Constituent Entity is an Entity included in the Group's Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds), or a Permanent Establishment of a Main Entity that is part of the Group.",CITE.constituent)}`,
+    null,
+    [
+      {key:'A',label:'Yes, included in consolidation',action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, included in consolidation","yes");push(stepE);}},
+      {key:'B',label:"Yes, it's a UAE Permanent Establishment of a Main Entity",action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, UAE Permanent Establishment of a Main Entity","yes");push(stepE);}},
+      {key:'C',label:'No / Not sure',sub:'The Entity is not included in the Group\'s Consolidated Financial Statements and is not a Permanent Establishment of a consolidated Main Entity',action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","No / Not sure","no");
+        outOfScope("Out of scope — not a Constituent Entity.",
+          "The UAE Entity is not included in the Group's Consolidated Financial Statements (other than on size/materiality/held-for-sale grounds) and is not a Permanent Establishment of a Main Entity that is part of the Group. It does not meet the gateway definition of a Constituent Entity, so UAE DMTT does not apply to it.",
+          [{t:"Only a Constituent Entity can be charged to UAE DMTT.",b:"A Constituent Entity is an Entity included in the Group's Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds), or a Permanent Establishment of such an Entity. An Entity that meets neither limb is not a Constituent Entity and falls outside the charge in Art 2.1.",c:CITE.constituent}]);}}
+    ],'Constituent Entity Check');
   mount(node,'step');fixTooltips();
 }
 
