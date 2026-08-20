@@ -243,7 +243,10 @@ const CITE={
   exclHeldByExternal:"Art. 1.8, CD 142/2024 Annexure",
   exclNpoOwned:"Art. 1.9, CD 142/2024 Annexure",
   fiveYearElection:"Art. 1.5.3, CD 142/2024 Annexure",
-  peExcluded:"Art. 1.7, CD 142/2024 Annexure"
+  peExcluded:"Art. 1.7, CD 142/2024 Annexure",
+  investmentEntity:"Art. 18 (Investment Entity), CD 142/2024 Annexure",
+  investmentEntityCharge:"Art. 2.3, CD 142/2024 Annexure",
+  charging:"Art. 2.1, CD 142/2024 Annexure"
 };
 
 /* ==================================================================
@@ -617,6 +620,33 @@ function concludeE(selectedAll,operative,electionMade,electedKeys){
   outOfScope("Out of scope — Excluded Entity.",
     "The UAE Entity matches one or more of the Excluded Entity tests and is therefore not a Constituent Entity for UAE DMTT purposes. This result is entity-specific — other UAE entities in the same Group may still be in scope and should be assessed separately.",
     facts);
+}
+
+/* ==================================================================
+   STEP F — Charging confirmation (Art 2.1–2.3)
+   ================================================================== */
+function stepF(){
+  coreIndex=6;
+  const invFundTip=E_TILES.find(t=>t.key==='t5').tip;
+  const reivTip=E_TILES.find(t=>t.key==='t6').tip;
+  const ieTip=tip(
+    `Investment Entity means: (a) an Investment Fund, a Real Estate Investment Vehicle, or an Insurance Investment Entity; (b) an Entity that is at least 95% owned directly by an Entity described in (a), or through a chain of such Entities, and that operates exclusively or almost exclusively to hold assets or invest funds for the benefit of such Investment Entities; or (c) an Entity where at least 85% of the value of the Entity is owned by an Entity referred to in (a), provided substantially all of the Entity's income is Excluded Dividends or Excluded Equity Gain or Loss excluded from Pillar Two Income or Loss under Art 3.2.1(b) or (c). Investment Fund and Real Estate Investment Vehicle carry the same statutory tests as in the Excluded Entity screening above (see tiles for the Investment Fund and REIV tests). An Insurance Investment Entity is an Entity that would meet the Investment Fund/REIV definition but for being established in relation to insurance or annuity contract liabilities, and is wholly owned by one or more Entities regulated as an insurance company in the Group, in the jurisdiction the insurance company is located (including a Flow-through Entity subject to equivalent regulation).`,
+    CITE.investmentEntity
+  );
+  const node=optionCard(
+    `Is this UAE Entity an Investment Entity? ${ieTip}`,
+    `This is a distinct test from the Investment Fund/REIV-as-Ultimate-Parent-Entity tiles in Step E above — it catches an Investment Entity generally, at any level of the structure, not only where it is the Ultimate Parent Entity.`,
+    [
+      {key:'A',label:'No',action:()=>{record("UAE Entity is an Investment Entity (Art 18)?","No","yes");
+        inScope("IN SCOPE.",
+          "The UAE Entity is a Constituent Entity, is not an Excluded Entity, and is not an Investment Entity. It is in scope of UAE DMTT and should be routed to the detailed computation tool (Stage 2 — Pillar Two Income, Adjusted Covered Taxes, ETR and Top-up Tax calculation) for the substantive liability assessment. Stage 2 is a separate module, not covered by this applicability check.",
+          [{t:"Charging provision.",b:"UAE DMTT is imposed on Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE. On the facts entered, the UAE Entity is a Constituent Entity that is not Excluded and not an Investment Entity, so the charge applies to it.",c:CITE.charging}]);}},
+      {key:'B',label:'Yes',action:()=>{record("UAE Entity is an Investment Entity (Art 18)?","Yes","no");
+        notDirectlyLiable("NOT DIRECTLY LIABLE — Investment Entity.",
+          "The UAE Entity is an Investment Entity. Per Art 2.3, an Investment Entity located in the UAE is not directly liable to pay Top-up Tax — but it is still included in the Constituent Entity population for the wider ETR and Top-up Tax computation, since its data feeds that calculation for other Group entities.",
+          [{t:"Investment Entities are excluded from the direct charge.",b:"An Investment Entity located in the UAE is not subject to Top-up Tax directly, although its data may still feed the wider ETR computation for the jurisdiction.",c:CITE.investmentEntityCharge}]);}}
+    ],'Investment Entity Charging Confirmation');
+  mount(node,'step');fixTooltips();
 }
 
 function start(){trail=[];stepStack=[];answers={};trailMarks=[];answersMarks=[];coreIndexMarks=[];coreIndex=1;STAGE.innerHTML='';push(stepA);}
