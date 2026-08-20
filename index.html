@@ -314,7 +314,7 @@ const CITE={
   exclReiv:"Art. 1.5; Art. 18 (Real Estate Investment Vehicle), CD 142/2024 Annexure",
   excl95:"Art. 1.5.2(a), CD 142/2024 Annexure",
   excl85:"Art. 1.5.2(b), CD 142/2024 Annexure",
-  exclHeldByExternal:"Art. 1.8, CD 142/2024 Annexure",
+  exclHeldByExternal:"Art. 1.8 (ownership limb deemed satisfied); Art. 1.5.2(a) (combined test), CD 142/2024 Annexure",
   exclNpoOwned:"Art. 1.9, CD 142/2024 Annexure",
   fiveYearElection:"Art. 1.5.3, CD 142/2024 Annexure",
   peExcluded:"Art. 1.7, CD 142/2024 Annexure",
@@ -364,7 +364,7 @@ const STAGE=document.getElementById('stage'),PROG=document.getElementById('progr
    (which are themselves correctly restored on Back). */
 const BASE_STEP_COUNT=7;
 function totalStepsEstimate(){
-  return BASE_STEP_COUNT + (answers.tookSWF?1:0) + (answers.tookElection?1:0);
+  return BASE_STEP_COUNT + (answers.tookSWF?1:0) + (answers.tookElection?1:0) + (answers.tookT9Purpose?1:0);
 }
 function stepLabel(name){
   const depth=stepStack.length;
@@ -631,8 +631,8 @@ const E_TILES=[
    tip:"None of the above apply, but the Entity is at least 95% owned (directly, or indirectly through a chain of such Entities) by one or more Entities described in tiles 1–6 above (excluding a Pension Services Entity), and the Entity exists solely or almost solely to hold assets or invest funds for their benefit, or carries out only activities that are ancillary to those carried out by them."},
   {key:'t8',label:'≥85% owned, substantially all Excluded Dividend/Equity Gain income',cite:CITE.excl85,
    tip:"None of the above apply, but at least 85% of the value of the Entity is owned by one or more Entities described in tiles 1–6 above, provided substantially all of the Entity's income is Excluded Dividends or Excluded Equity Gain or Loss."},
-  {key:'t9',label:'Held by an external Investment Fund or REIV (outside the Group)',cite:CITE.exclHeldByExternal,
-   tip:"The Entity is held by an Investment Fund or Real Estate Investment Vehicle that is not itself a Group Entity — this deems the ≥95% ownership condition in the tile above satisfied."},
+  {key:'t9',label:'Held by an external Investment Fund or REIV — ownership limb only',cite:CITE.exclHeldByExternal,
+   tip:"Where the Entity is held by an Investment Fund or Real Estate Investment Vehicle that is not itself a Group Entity, Art 1.8 deems only the ≥95% ownership limb of the test above satisfied — it does not by itself make the Entity Excluded. The purpose limb (exists to hold/invest assets for the benefit of tiles 1–6, or carries out only ancillary activities to them) must still be met. Selecting this tile will ask you to confirm that limb separately, unless you have also selected the tile above."},
   {key:'t10',label:'≥100% owned by Non-profit Organisation(s)',cite:CITE.exclNpoOwned,
    tip:"The Entity is 100% owned by one or more Non-profit Organisations, AND the Group's revenue (excluding revenue of Non-profit Organisations and other Excluded Entities) is under EUR 750 million, AND the revenue of non-Excluded-Entities is under 25% of the MNE Group's total revenue."}
 ];
@@ -655,6 +655,28 @@ function stepE(){
 }
 
 function handleE(selected){
+  if(selected.includes('t9')&&!selected.includes('t7')){
+    answers.tookT9Purpose=true;
+    push(()=>stepE_t9_purpose(selected));
+    return;
+  }
+  handleE_continue(selected);
+}
+
+function stepE_t9_purpose(selected){
+  const node=optionCard(
+    `You selected "Held by an external Investment Fund or REIV." Art 1.8 deems only the ≥95% ownership limb of the Art 1.5.2(a) test satisfied — it does not by itself exclude the Entity. ${tip("Art 1.5.2(a) requires BOTH limbs: (i) at least 95% ownership by one or more of the Entities in tiles 1–6, which Art 1.8 deems satisfied here, AND (ii) the Entity exists to hold or invest assets for their benefit, or carries out only activities ancillary to them. This question checks limb (ii), which Art 1.8 does not itself address.",CITE.excl95)} Does the Entity also exist solely or almost solely to hold assets or invest funds for the benefit of the Entities in tiles 1–6, or carry out only activities ancillary to them?`,
+    null,
+    [
+      {key:'A',label:'No / not sure — the purpose limb is not established',action:()=>{record("Art 1.5.2(a) purpose limb also met (Art 1.8 ownership deeming)?","No / not sure","");
+        handleE_continue(selected.filter(k=>k!=='t9'));}},
+      {key:'B',label:'Yes — the purpose limb is also met',action:()=>{record("Art 1.5.2(a) purpose limb also met (Art 1.8 ownership deeming)?","Yes","");
+        handleE_continue(selected);}}
+    ],'Excluded Entity Screening — Art 1.8 ownership deeming');
+  mount(node,'step');fixTooltips();
+}
+
+function handleE_continue(selected){
   if(selected.length===0){
     record("Excluded Entity tests matched","None","yes");
     push(stepF);
