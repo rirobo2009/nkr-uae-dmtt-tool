@@ -38,13 +38,10 @@
   .legal-strip{font-size:11.5px;color:var(--text-secondary);background:#fff;border:1px solid var(--border);border-left:4px solid var(--nkr-teal);border-radius:6px;padding:10px 14px;margin:16px 0 26px;letter-spacing:.01em;line-height:1.5;box-shadow:var(--shadow)}
   .legal-strip strong{color:var(--nkr-navy)}
 
-  .progress{display:flex;align-items:center;gap:6px;margin-bottom:22px;flex-wrap:wrap}
-  .pip{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-secondary);letter-spacing:.02em}
-  .pip .dot{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);background:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text-secondary);flex-shrink:0}
-  .pip.active .dot{background:var(--nkr-navy);color:#fff;border-color:var(--nkr-navy)}
-  .pip.done .dot{background:var(--accent-primary);color:#fff;border-color:var(--accent-primary)}
-  .pip.fail .dot{background:var(--red);color:#fff;border-color:var(--red)}
-  .pip .sep{width:14px;height:1px;background:var(--border)}
+  .progress{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .progress-track{flex:1;height:8px;border-radius:99px;background:var(--border);overflow:hidden}
+  .progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--nkr-navy),var(--nkr-teal),var(--nkr-green));transition:width .25s}
+  .progress-label{font-size:12px;font-weight:700;color:var(--nkr-navy);white-space:nowrap;letter-spacing:.02em}
 
   .card{background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:26px 26px 24px;margin-bottom:20px}
   .step-num{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-primary);font-weight:700;margin-bottom:8px}
@@ -155,7 +152,7 @@
     .head-top{flex-direction:row;align-items:flex-end;gap:8px}
     .explore{padding:5px 8px;font-size:10px;white-space:normal;text-align:center;flex-shrink:0}
     .explore svg{display:none}
-    .card{padding:20px 18px}.verdict{padding:20px}.pip .lbl-txt{display:none}
+    .card{padding:20px 18px}.verdict{padding:20px}
     .info .tip{width:min(260px,72vw);left:0;right:auto;transform:none}
     .info .tip::after{left:16px;transform:none}
     .info.tip-left .tip{left:auto;right:0}
@@ -341,33 +338,35 @@ document.addEventListener('click',function(e){
 /* ==================================================================
    Step engine — step stack, progress, back navigation, recorded trail
    ================================================================== */
-let trail=[],stepStack=[],answers={},trailMarks=[],answersMarks=[],coreIndexMarks=[],coreIndex=1;
+let trail=[],stepStack=[],answers={},trailMarks=[],answersMarks=[];
 const STAGE=document.getElementById('stage'),PROG=document.getElementById('progress');
-const CORE_LABELS=["Revenue Threshold","MNE Group","UPE Identification","Constituent Entity","Excluded Entity","Investment Entity"];
 
+/* Base sequential steps on every path that reaches Step F: Revenue Threshold,
+   the short-Fiscal-Year sub-step (always shown once Step A = Yes), MNE Group,
+   UPE Identification, Constituent Entity, Excluded Entity, Investment Entity.
+   Two further steps are conditional and only counted once the user's answers
+   make them definitely apply: the Art 1.6 sovereign wealth fund sub-flow, and
+   the Art 1.5.3 Five-Year Election sub-step. This keeps "Step X of Y" accurate
+   for whichever path is actually being walked, recomputed from current answers
+   (which are themselves correctly restored on Back). */
+const BASE_STEP_COUNT=7;
+function totalStepsEstimate(){
+  return BASE_STEP_COUNT + (answers.tookSWF?1:0) + (answers.tookElection?1:0);
+}
 function stepLabel(name){
-  return `Step ${coreIndex} of ${CORE_LABELS.length}${name?` · ${name}`:''}`;
+  const depth=stepStack.length;
+  const total=totalStepsEstimate();
+  return `Step ${depth} of ${total}${name?` · ${name}`:''}`;
 }
 
 function renderProgress(state){
-  PROG.innerHTML='';
-  const total=CORE_LABELS.length;
-  for(let i=0;i<total;i++){
-    const pip=document.createElement('div');let cls='pip';
-    const stepNo=i+1;
-    if(stepNo<coreIndex || (state==='final' && stepNo<=coreIndex)) cls+=' done';
-    else if(stepNo===coreIndex && state!=='final') cls+=' active';
-    pip.className=cls;
-    const mark=cls.includes('done')?'✓':stepNo;
-    pip.innerHTML=`<span class="dot">${mark}</span><span class="lbl-txt">${CORE_LABELS[i]}</span>`;
-    PROG.appendChild(pip);
-    const s=document.createElement('span');s.className='sep';PROG.appendChild(s);
+  if(state==='final'){
+    PROG.innerHTML=`<div class="progress-track"><div class="progress-fill" style="width:100%"></div></div><div class="progress-label">Result</div>`;
+    return;
   }
-  const resPip=document.createElement('div');let rcls='pip';
-  if(state==='final') rcls+=' done';
-  resPip.className=rcls;
-  resPip.innerHTML=`<span class="dot">${state==='final'?'✓':total+1}</span><span class="lbl-txt">Result</span>`;
-  PROG.appendChild(resPip);
+  const depth=stepStack.length,total=totalStepsEstimate();
+  const pct=Math.max(4,Math.min(96,Math.round((depth-1)/total*100)));
+  PROG.innerHTML=`<div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div class="progress-label">Step ${depth} of ${total}</div>`;
 }
 
 function push(fn){stepStack.push(fn);fn();}
@@ -377,14 +376,12 @@ function goBack(){
   const idx=stepStack.length-1;
   trail=trail.slice(0,trailMarks[idx]??0);
   answers=JSON.parse(JSON.stringify(answersMarks[idx]??{}));
-  coreIndex=coreIndexMarks[idx]??1;
   stepStack[idx]();
 }
 function mount(node,progressState){
   const idx=stepStack.length-1;
   if(trailMarks[idx]===undefined)trailMarks[idx]=trail.length;
   if(answersMarks[idx]===undefined)answersMarks[idx]=JSON.parse(JSON.stringify(answers));
-  if(coreIndexMarks[idx]===undefined)coreIndexMarks[idx]=coreIndex;
   STAGE.innerHTML='';renderProgress(progressState||'step');STAGE.appendChild(node);
   if(stepStack.length>1&&progressState!=='final'){
     const b=document.createElement('button');b.className='back';b.textContent='‹ Back to previous step';b.onclick=goBack;STAGE.appendChild(b);
@@ -469,7 +466,6 @@ function notDirectlyLiable(title,rateLine,facts,extraNote){result('review','NOT 
    STEP A — Revenue Threshold Test (Art 1.1.1–1.1.2)
    ================================================================== */
 function stepA(){
-  coreIndex=1;
   const revTip=tip("“Consolidated Financial Statements” and “Ultimate Parent Entity”: A Group is a collection of Entities related through ownership/control whose financials are included in the UPE’s Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds). The Ultimate Parent Entity is an Entity with a Controlling Interest in others, not itself controlled by another Entity — or the Main Entity in a Permanent-Establishment-only structure. Controlling Interest means an Ownership Interest requiring line-by-line consolidation of the Entity’s assets, liabilities, income, expenses and cash flows under an Acceptable Financial Accounting Standard (or that would require it if Consolidated Financial Statements were prepared).",`${CITE.group}; ${CITE.upe}`);
   let helpEl;
   const node=optionCard(
@@ -544,7 +540,6 @@ function stepA_proration(){
    STEP B — MNE Group Test (Art 1.2.1)
    ================================================================== */
 function stepB(){
-  coreIndex=2;
   const node=optionCard(
     `Does the Group include at least one Entity or Permanent Establishment located outside the jurisdiction where its Ultimate Parent Entity is located? ${tip("A Group is a collection of Entities related through ownership/control whose financials are included in the UPE's Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds). An MNE Group is a Group with at least one Entity or Permanent Establishment outside the UPE's home jurisdiction.",CITE.group)}`,
     null,
@@ -562,13 +557,12 @@ function stepB(){
    STEP C — Identify the Ultimate Parent Entity (Art 1.4, Art 1.6 SWF override)
    ================================================================== */
 function stepC(){
-  coreIndex=3;
   const node=optionCard(
     `Is the Ultimate Parent Entity a sovereign wealth fund (or itself owned by one) that qualifies as a Governmental Entity? ${tip("Controlling Interest means an Ownership Interest requiring line-by-line consolidation of the Entity's assets, liabilities, income, expenses and cash flows under an Acceptable Financial Accounting Standard (or that would require it if Consolidated Financial Statements were prepared).",CITE.upe)}`,
     `Standard UPE identification (Art 1.4.1): an Entity with a Controlling Interest in others, not itself controlled by another Entity — or the Main Entity in a Permanent-Establishment-only structure.`,
     [
       {key:'A',label:'No — standard UPE identification applies',action:()=>{record("UPE is a sovereign wealth fund / Governmental Entity?","No","");push(stepD);}},
-      {key:'B',label:'Yes — the UPE is (or is owned by) a sovereign wealth fund Governmental Entity',action:()=>{record("UPE is a sovereign wealth fund / Governmental Entity?","Yes","");push(stepC_swf);}}
+      {key:'B',label:'Yes — the UPE is (or is owned by) a sovereign wealth fund Governmental Entity',action:()=>{record("UPE is a sovereign wealth fund / Governmental Entity?","Yes","");answers.tookSWF=true;push(stepC_swf);}}
     ],'UPE Identification');
   mount(node,'step');fixTooltips();
 }
@@ -587,7 +581,6 @@ function stepC_swf(){
    STEP D — Is the UAE Entity a Constituent Entity? (Art 1.3)
    ================================================================== */
 function stepD(){
-  coreIndex=4;
   const node=optionCard(
     `Is the UAE Entity included in the Group's Consolidated Financial Statements (or excluded only for size/materiality/held-for-sale reasons), or is it a Permanent Establishment of such an Entity? ${tip("This establishes whether the UAE Entity is potentially a Constituent Entity before testing Excluded Entity status. A Constituent Entity is an Entity included in the Group's Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds), or a Permanent Establishment of a Main Entity that is part of the Group.",CITE.constituent)}`,
     null,
@@ -630,7 +623,6 @@ const E_TILES=[
 const E_ELECTABLE=['t7','t9','t10'];
 
 function stepE(){
-  coreIndex=5;
   let peNote='';
   if(answers.isPE){
     peNote=`<div class="q-note"><strong>You indicated this UAE Entity is a Permanent Establishment of a Main Entity.</strong> ${tip("If the Main Entity qualifies as an Excluded Entity under tiles 1–6, its Permanent Establishments are automatically also Excluded. If the Main Entity qualifies only under tile 7 or 8 (the ancillary/asset-holding tests), the Permanent Establishment's own activities must be independently tested against those same tests.",CITE.peExcluded)} Apply the tiles below to the Main Entity's classification for tiles 1–6, or independently to this Permanent Establishment's own activities for tiles 7–8.</div>`;
@@ -654,6 +646,7 @@ function handleE(selected){
   }
   const electable=selected.filter(k=>E_ELECTABLE.includes(k));
   if(electable.length>0){
+    answers.tookElection=true;
     push(()=>stepE_election(selected,electable));
   } else {
     concludeE(selected,selected,false,[]);
@@ -700,7 +693,6 @@ function concludeE(selectedAll,operative,electionMade,electedKeys){
    STEP F — Charging confirmation (Art 2.1–2.3)
    ================================================================== */
 function stepF(){
-  coreIndex=6;
   const invFundTip=E_TILES.find(t=>t.key==='t5').tip;
   const reivTip=E_TILES.find(t=>t.key==='t6').tip;
   const ieTip=tip(
@@ -723,7 +715,7 @@ function stepF(){
   mount(node,'step');fixTooltips();
 }
 
-function start(){trail=[];stepStack=[];answers={};trailMarks=[];answersMarks=[];coreIndexMarks=[];coreIndex=1;STAGE.innerHTML='';push(stepA);}
+function start(){trail=[];stepStack=[];answers={};trailMarks=[];answersMarks=[];STAGE.innerHTML='';push(stepA);}
 start();
 </script>
 </body>
