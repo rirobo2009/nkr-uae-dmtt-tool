@@ -223,6 +223,212 @@
 </div>
 
 <script>
+/* ==================================================================
+   Legal citations — Module 1 (CD 142/2024 Annexure, Art 1 & Art 2)
+   ================================================================== */
+const CITE={
+  revThreshold:"Art. 1.1.1, CD 142/2024 Annexure",
+  revProration:"Art. 1.1.2, CD 142/2024 Annexure",
+  group:"Art. 1.2.1–1.2.3, CD 142/2024 Annexure",
+  upe:"Art. 1.4.1, CD 142/2024 Annexure; Art. 18 (Controlling Interest)"
+};
+
+/* ==================================================================
+   Tooltip helper
+   ================================================================== */
+function tip(text,cite){return `<span class="info" tabindex="0">i<span class="tip">${text}${cite?`<cite>${cite}</cite>`:''}</span></span>`;}
+function fixTooltips(){
+  document.querySelectorAll('.info').forEach(el=>{
+    const r=el.getBoundingClientRect();
+    if(r.left>window.innerWidth*0.62)el.classList.add('tip-left');
+  });
+}
+function closeAllTips(except){
+  document.querySelectorAll('.info.open').forEach(el=>{ if(el!==except) el.classList.remove('open'); });
+}
+document.addEventListener('click',function(e){
+  const info=e.target.closest('.info');
+  if(info){
+    e.preventDefault();e.stopPropagation();
+    const wasOpen=info.classList.contains('open');
+    closeAllTips(info);
+    if(wasOpen){ info.classList.remove('open'); } else { info.classList.add('open'); }
+    return;
+  }
+  closeAllTips(null);
+},true);
+
+/* ==================================================================
+   Step engine — step stack, progress, back navigation, recorded trail
+   ================================================================== */
+let trail=[],stepStack=[],answers={},trailMarks=[],answersMarks=[],coreIndexMarks=[],coreIndex=1;
+const STAGE=document.getElementById('stage'),PROG=document.getElementById('progress');
+const CORE_LABELS=["Revenue Threshold","MNE Group","UPE Identification","Constituent Entity","Excluded Entity","Investment Entity"];
+
+function stepLabel(name){
+  return `Step ${coreIndex} of ${CORE_LABELS.length}${name?` · ${name}`:''}`;
+}
+
+function renderProgress(state){
+  PROG.innerHTML='';
+  const total=CORE_LABELS.length;
+  for(let i=0;i<total;i++){
+    const pip=document.createElement('div');let cls='pip';
+    const stepNo=i+1;
+    if(stepNo<coreIndex || (state==='final' && stepNo<=coreIndex)) cls+=' done';
+    else if(stepNo===coreIndex && state!=='final') cls+=' active';
+    pip.className=cls;
+    const mark=cls.includes('done')?'✓':stepNo;
+    pip.innerHTML=`<span class="dot">${mark}</span><span class="lbl-txt">${CORE_LABELS[i]}</span>`;
+    PROG.appendChild(pip);
+    const s=document.createElement('span');s.className='sep';PROG.appendChild(s);
+  }
+  const resPip=document.createElement('div');let rcls='pip';
+  if(state==='final') rcls+=' done';
+  resPip.className=rcls;
+  resPip.innerHTML=`<span class="dot">${state==='final'?'✓':total+1}</span><span class="lbl-txt">Result</span>`;
+  PROG.appendChild(resPip);
+}
+
+function push(fn){stepStack.push(fn);fn();}
+function goBack(){
+  if(stepStack.length<=1)return;
+  stepStack.pop();
+  const idx=stepStack.length-1;
+  trail=trail.slice(0,trailMarks[idx]??0);
+  answers=JSON.parse(JSON.stringify(answersMarks[idx]??{}));
+  coreIndex=coreIndexMarks[idx]??1;
+  stepStack[idx]();
+}
+function mount(node,progressState){
+  const idx=stepStack.length-1;
+  if(trailMarks[idx]===undefined)trailMarks[idx]=trail.length;
+  if(answersMarks[idx]===undefined)answersMarks[idx]=JSON.parse(JSON.stringify(answers));
+  if(coreIndexMarks[idx]===undefined)coreIndexMarks[idx]=coreIndex;
+  STAGE.innerHTML='';renderProgress(progressState||'step');STAGE.appendChild(node);
+  if(stepStack.length>1&&progressState!=='final'){
+    const b=document.createElement('button');b.className='back';b.textContent='‹ Back to previous step';b.onclick=goBack;STAGE.appendChild(b);
+  }
+}
+function record(q,a,cls){trail.push({q,a,cls:cls||''});}
+
+function optionCard(question,note,opts,stepName){
+  const div=document.createElement('div');div.className='card';
+  div.innerHTML=`<div class="step-num">${stepLabel(stepName)}</div><div class="q">${question}</div>${note?`<div class="q-note">${note}</div>`:''}<div class="options"></div>`;
+  const box=div.querySelector('.options');
+  opts.forEach((o,idx)=>{
+    const b=document.createElement('button');b.className='opt';
+    b.innerHTML=`<span class="key">${o.key||String.fromCharCode(65+idx)}</span><span class="lbl">${o.label}${o.tipHTML||''}${o.sub?`<small>${o.sub}</small>`:''}</span>`;
+    b.onclick=o.action;box.appendChild(b);
+  });
+  return div;
+}
+
+/* ==================================================================
+   Result / exit screens
+   ================================================================== */
+function factsBlock(facts){
+  const d=document.createElement('div');d.className='card facts';d.innerHTML=`<h3>Provisions relied upon</h3>`;
+  facts.forEach(f=>{const el=document.createElement('div');el.className='fact';el.innerHTML=`<div class="ft">${f.t}</div><div class="fb">${f.b}</div>${f.c?`<cite>${f.c}</cite>`:''}`;d.appendChild(el);});
+  return d;
+}
+function pathBlock(){
+  const d=document.createElement('div');d.className='card path';d.innerHTML=`<h3>Inputs entered</h3>`;
+  trail.forEach(t=>{const r=document.createElement('div');r.className='path-row';r.innerHTML=`<span class="pq">${t.q}</span><span class="pa ${t.cls}">${t.a}</span>`;d.appendChild(r);});
+  return d;
+}
+function restartRow(){
+  const wrap=document.createElement('div');wrap.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin-top:4px';
+  const r=document.createElement('button');r.className='btn ghost';r.textContent='Start a new assessment';r.onclick=start;
+  wrap.appendChild(r);return wrap;
+}
+function result(kind,tag,title,rateLine,facts,extraNote){
+  const node=document.createElement('div');const v=document.createElement('div');v.className='verdict '+kind;
+  v.innerHTML=`<div class="tag">${tag}</div><h2>${title}</h2><div class="rate-line">${rateLine}</div>${extraNote?`<p>${extraNote}</p>`:''}`;
+  node.appendChild(v);node.appendChild(factsBlock(facts));node.appendChild(pathBlock());node.appendChild(restartRow());
+  mount(node,'final');fixTooltips();
+}
+function outOfScope(title,rateLine,facts,extraNote){result('pass','OUT OF SCOPE',title,rateLine,facts,extraNote);}
+function inScope(title,rateLine,facts,extraNote){result('review','IN SCOPE',title,rateLine,facts,extraNote);}
+function notDirectlyLiable(title,rateLine,facts,extraNote){result('review','NOT DIRECTLY LIABLE',title,rateLine,facts,extraNote);}
+
+/* ==================================================================
+   STEP A — Revenue Threshold Test (Art 1.1.1–1.1.2)
+   ================================================================== */
+function stepA(){
+  coreIndex=1;
+  const revTip=tip("“Consolidated Financial Statements” and “Ultimate Parent Entity”: A Group is a collection of Entities related through ownership/control whose financials are included in the UPE’s Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds). The Ultimate Parent Entity is an Entity with a Controlling Interest in others, not itself controlled by another Entity — or the Main Entity in a Permanent-Establishment-only structure. Controlling Interest means an Ownership Interest requiring line-by-line consolidation of the Entity’s assets, liabilities, income, expenses and cash flows under an Acceptable Financial Accounting Standard (or that would require it if Consolidated Financial Statements were prepared).",`${CITE.group}; ${CITE.upe}`);
+  let helpEl;
+  const node=optionCard(
+    `In at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year, did the MNE Group's Ultimate Parent Entity report annual consolidated revenue of EUR 750 million or more in its Consolidated Financial Statements? ${revTip}`,
+    null,
+    [
+      {key:'A',label:'Yes',action:()=>{record("Revenue ≥ EUR 750m in 2 of preceding 4 FYs?","Yes","yes");push(stepA_proration);}},
+      {key:'B',label:'No',action:()=>{record("Revenue ≥ EUR 750m in 2 of preceding 4 FYs?","No","no");
+        outOfScope("Out of scope — revenue threshold not met.",
+          "The MNE Group did not report EUR 750 million or more of annual consolidated revenue in at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year. UAE DMTT does not apply.",
+          [{t:"The EUR 750m revenue threshold is the entry gate to UAE DMTT.",b:"UAE DMTT applies only to MNE Groups whose Ultimate Parent Entity reported consolidated revenue of EUR 750 million or more in at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year. This test is not met on the facts entered.",c:CITE.revThreshold}]);}},
+      {key:'C',label:'Not sure — help me check',action:()=>{helpEl.classList.remove('hide');}}
+    ],'Revenue Threshold Test');
+  helpEl=document.createElement('div');helpEl.className='q-note hide';
+  helpEl.innerHTML=`Check the Ultimate Parent Entity's Consolidated Financial Statements for each of the last 4 Fiscal Years (the tested Fiscal Year and the 3 before it). If annual consolidated revenue was EUR 750 million or more in at least 2 of those 4 years, answer <b>Yes</b>. If a Fiscal Year is shorter than 12 months, its EUR 750 million comparison threshold is pro-rated — the next question covers that. Once you have checked, select Yes or No above.`;
+  node.insertBefore(helpEl,node.querySelector('.options'));
+  mount(node,'step');fixTooltips();
+}
+
+function stepA_proration(){
+  const node=document.createElement('div');node.className='card';
+  node.innerHTML=`<div class="step-num">${stepLabel('Revenue Threshold Test — short Fiscal Year check')}</div>
+    <div class="q">Was any of those 4 Fiscal Years shorter than 12 months? ${tip("If one or more of the Fiscal Years taken into account is of a period other than 12 months, the EUR 750 million threshold is adjusted proportionally to correspond with the length of the relevant Fiscal Year.",CITE.revProration)}</div>
+    <div class="q-note">This only records the adjusted comparison threshold for that specific short year — it does not change the Yes/No answer you already gave.</div>
+    <div class="options">
+      <button class="opt" id="prYes"><span class="key">A</span><span class="lbl">Yes — one of the 4 years was shorter than 12 months</span></button>
+      <button class="opt" id="prNo"><span class="key">B</span><span class="lbl">No — all 4 years were full 12-month periods</span></button>
+    </div>
+    <div id="prCalc" class="hide" style="margin-top:18px">
+      <div class="q-note"><strong>Adjusted threshold</strong> ${tip("Adjusted threshold = EUR 750,000,000 × (days in the short Fiscal Year ÷ 365). For example, a 6-month Fiscal Year uses an approximately EUR 375m threshold for that year.",CITE.revProration)} Enter the start and end date of the short Fiscal Year to compute its adjusted threshold.</div>
+      <div class="num-row">
+        <div class="field"><label for="prStart">Period start</label><input id="prStart" type="date"></div>
+        <div class="field"><label for="prEnd">Period end</label><input id="prEnd" type="date"></div>
+        <button class="btn" id="prCalcBtn">Calculate</button>
+      </div>
+      <div id="prResult" class="q-note hide" style="margin-top:14px"></div>
+      <div id="prErr" class="hide" style="color:var(--red);font-size:13px;margin-top:10px"></div>
+    </div>
+    <div style="margin-top:20px"><button class="btn primary" id="prContinue">Continue</button></div>`;
+  mount(node,'step');fixTooltips();
+  let shortYear=false,computedThreshold=null,days=null;
+  const calcBox=node.querySelector('#prCalc');
+  node.querySelector('#prYes').onclick=()=>{shortYear=true;node.querySelector('#prYes').classList.add('selected');node.querySelector('#prNo').classList.remove('selected');calcBox.classList.remove('hide');};
+  node.querySelector('#prNo').onclick=()=>{shortYear=false;node.querySelector('#prNo').classList.add('selected');node.querySelector('#prYes').classList.remove('selected');calcBox.classList.add('hide');computedThreshold=null;};
+  node.querySelector('#prCalcBtn').onclick=()=>{
+    const s=node.querySelector('#prStart').value,e=node.querySelector('#prEnd').value,err=node.querySelector('#prErr'),res=node.querySelector('#prResult');
+    if(!s||!e){err.textContent="Enter both dates.";err.classList.remove('hide');res.classList.add('hide');return;}
+    const sd=new Date(s+'T00:00:00'),ed=new Date(e+'T00:00:00');
+    if(isNaN(sd)||isNaN(ed)||ed<sd){err.textContent="Enter a valid start and end date, with end on or after start.";err.classList.remove('hide');res.classList.add('hide');return;}
+    err.classList.add('hide');
+    days=Math.round((ed-sd)/86400000)+1;
+    computedThreshold=750000000*(days/365);
+    const fmt=n=>Math.round(n).toLocaleString('en-AE');
+    res.innerHTML=`Period length: <b>${days} days</b>. Adjusted EUR 750m threshold for this Fiscal Year: <b>EUR ${fmt(computedThreshold)}</b>.`;
+    res.classList.remove('hide');
+  };
+  node.querySelector('#prContinue').onclick=()=>{
+    if(shortYear){
+      if(computedThreshold===null){const err=node.querySelector('#prErr');err.textContent="Calculate the adjusted threshold before continuing, or select ‘No’ above.";err.classList.remove('hide');return;}
+      const fmt=n=>Math.round(n).toLocaleString('en-AE');
+      record("Any of the 4 Fiscal Years shorter than 12 months?","Yes","");
+      record("Short Fiscal Year length",`${days} days`,"");
+      record("Pro-rated EUR 750m threshold for that year",`EUR ${fmt(computedThreshold)}`,"");
+    } else {
+      record("Any of the 4 Fiscal Years shorter than 12 months?","No","");
+    }
+    push(stepB);
+  };
+}
+
+function start(){trail=[];stepStack=[];answers={};trailMarks=[];answersMarks=[];coreIndexMarks=[];coreIndex=1;STAGE.innerHTML='';push(stepA);}
+start();
 </script>
 </body>
 </html>
