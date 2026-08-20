@@ -366,25 +366,35 @@ function optionCard(question,note,opts,stepName){
 /* ==================================================================
    Result / exit screens
    ================================================================== */
+function pdfHeaderBlock(){
+  const d=document.createElement('div');d.className='card';
+  const dateStr=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  d.innerHTML=`<h3 style="margin-bottom:10px">UAE DMTT — Module 1: Applicability Gate</h3>
+    <div class="q-note" style="margin-bottom:0">Assessment generated on <b>${dateStr}</b>. This is an automated preliminary assessment based on Cabinet Decision No. 142 of 2024 (Annexure) and the OECD Commentary/Guidance adopted by Ministerial Decision No. 88 of 2025. It does not constitute tax advice and is not a substitute for review by a qualified UAE tax adviser.</div>`;
+  return d;
+}
 function factsBlock(facts){
-  const d=document.createElement('div');d.className='card facts';d.innerHTML=`<h3>Provisions relied upon</h3>`;
+  const d=document.createElement('div');d.className='card facts';d.innerHTML=`<h3>Section 2 — Provisions Relied Upon</h3>`;
   facts.forEach(f=>{const el=document.createElement('div');el.className='fact';el.innerHTML=`<div class="ft">${f.t}</div><div class="fb">${f.b}</div>${f.c?`<cite>${f.c}</cite>`:''}`;d.appendChild(el);});
   return d;
 }
 function pathBlock(){
-  const d=document.createElement('div');d.className='card path';d.innerHTML=`<h3>Inputs entered</h3>`;
+  const d=document.createElement('div');d.className='card path';d.innerHTML=`<h3>Section 1 — Inputs Entered</h3>`;
   trail.forEach(t=>{const r=document.createElement('div');r.className='path-row';r.innerHTML=`<span class="pq">${t.q}</span><span class="pa ${t.cls}">${t.a}</span>`;d.appendChild(r);});
   return d;
 }
-function restartRow(){
+function actionRow(){
   const wrap=document.createElement('div');wrap.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin-top:4px';
+  const p=document.createElement('button');p.className='btn primary';p.textContent='Download PDF';p.onclick=()=>{window.print();};
   const r=document.createElement('button');r.className='btn ghost';r.textContent='Start a new assessment';r.onclick=start;
-  wrap.appendChild(r);return wrap;
+  wrap.appendChild(p);wrap.appendChild(r);return wrap;
 }
 function result(kind,tag,title,rateLine,facts,extraNote){
-  const node=document.createElement('div');const v=document.createElement('div');v.className='verdict '+kind;
-  v.innerHTML=`<div class="tag">${tag}</div><h2>${title}</h2><div class="rate-line">${rateLine}</div>${extraNote?`<p>${extraNote}</p>`:''}`;
-  node.appendChild(v);node.appendChild(factsBlock(facts));node.appendChild(pathBlock());node.appendChild(restartRow());
+  const node=document.createElement('div');
+  const v=document.createElement('div');v.className='verdict '+kind;
+  v.innerHTML=`<div class="tag">Section 3 — Conclusion · ${tag}</div><h2>${title}</h2><div class="rate-line">${rateLine}</div>${extraNote?`<p>${extraNote}</p>`:''}`;
+  node.appendChild(pdfHeaderBlock());
+  node.appendChild(pathBlock());node.appendChild(factsBlock(facts));node.appendChild(v);node.appendChild(actionRow());
   mount(node,'final');fixTooltips();
 }
 function outOfScope(title,rateLine,facts,extraNote){result('pass','OUT OF SCOPE',title,rateLine,facts,extraNote);}
