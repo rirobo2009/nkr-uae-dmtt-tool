@@ -427,6 +427,49 @@ function stepA_proration(){
   };
 }
 
+/* ==================================================================
+   STEP B — MNE Group Test (Art 1.2.1)
+   ================================================================== */
+function stepB(){
+  coreIndex=2;
+  const node=optionCard(
+    `Does the Group include at least one Entity or Permanent Establishment located outside the jurisdiction where its Ultimate Parent Entity is located? ${tip("A Group is a collection of Entities related through ownership/control whose financials are included in the UPE's Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds). An MNE Group is a Group with at least one Entity or Permanent Establishment outside the UPE's home jurisdiction.",CITE.group)}`,
+    null,
+    [
+      {key:'A',label:'Yes',action:()=>{record("Group has an Entity/PE outside the UPE's jurisdiction?","Yes","yes");push(stepC);}},
+      {key:'B',label:'No',action:()=>{record("Group has an Entity/PE outside the UPE's jurisdiction?","No","no");
+        outOfScope("Out of scope — not an MNE Group.",
+          "The Group is confined to a single jurisdiction — it has no Entity or Permanent Establishment outside the Ultimate Parent Entity's home jurisdiction. It is not an MNE Group, so UAE DMTT does not apply.",
+          [{t:"UAE DMTT applies only to MNE Groups.",b:"A Group is an MNE Group only if it includes at least one Entity or Permanent Establishment located outside the jurisdiction where its Ultimate Parent Entity is located. A purely domestic Group falls outside UAE DMTT regardless of its revenue.",c:CITE.group}]);}}
+    ],'MNE Group Test');
+  mount(node,'step');fixTooltips();
+}
+
+/* ==================================================================
+   STEP C — Identify the Ultimate Parent Entity (Art 1.4, Art 1.6 SWF override)
+   ================================================================== */
+function stepC(){
+  coreIndex=3;
+  const node=optionCard(
+    `Is the Ultimate Parent Entity a sovereign wealth fund (or itself owned by one) that qualifies as a Governmental Entity? ${tip("Controlling Interest means an Ownership Interest requiring line-by-line consolidation of the Entity's assets, liabilities, income, expenses and cash flows under an Acceptable Financial Accounting Standard (or that would require it if Consolidated Financial Statements were prepared).",CITE.upe)}`,
+    `Standard UPE identification (Art 1.4.1): an Entity with a Controlling Interest in others, not itself controlled by another Entity — or the Main Entity in a Permanent-Establishment-only structure.`,
+    [
+      {key:'A',label:'No — standard UPE identification applies',action:()=>{record("UPE is a sovereign wealth fund / Governmental Entity?","No","");push(stepD);}},
+      {key:'B',label:'Yes — the UPE is (or is owned by) a sovereign wealth fund Governmental Entity',action:()=>{record("UPE is a sovereign wealth fund / Governmental Entity?","Yes","");push(stepC_swf);}}
+    ],'UPE Identification');
+  mount(node,'step');fixTooltips();
+}
+
+function stepC_swf(){
+  const node=optionCard(
+    `Under the Art 1.6 substitution rule, the sovereign wealth fund itself is not treated as the Ultimate Parent Entity for UAE DMTT scope purposes. Instead, the Entity in which it holds a direct Controlling Interest — where that Entity itself controls other Entities, or is a Main Entity with Permanent Establishments — is treated as the Ultimate Parent Entity. ${tip("Where the Ultimate Parent Entity is a sovereign wealth fund that qualifies as a Governmental Entity, the Entity in which the sovereign wealth fund holds a direct Controlling Interest is treated as the Ultimate Parent Entity for scope purposes, provided that Entity itself has a Controlling Interest in other Entities or is a Main Entity with Permanent Establishments.",CITE.upe+"; Art. 1.6, CD 142/2024 Annexure")}`,
+    `Re-run Steps A–B in your own analysis using this substituted Ultimate Parent Entity's consolidated revenue and structure, then confirm below to continue.`,
+    [
+      {key:'A',label:'Confirmed — I have identified the substituted Ultimate Parent Entity under Art 1.6',action:()=>{record("Art 1.6 substituted UPE identified?","Yes","yes");push(stepD);}}
+    ],'UPE Identification — sovereign wealth fund substitution');
+  mount(node,'step');fixTooltips();
+}
+
 function start(){trail=[];stepStack=[];answers={};trailMarks=[];answersMarks=[];coreIndexMarks=[];coreIndex=1;STAGE.innerHTML='';push(stepA);}
 start();
 </script>
