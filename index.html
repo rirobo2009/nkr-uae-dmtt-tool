@@ -293,12 +293,12 @@ const CITE={
   group:"Art. 1.2.1–1.2.3, CD 142/2024 Annexure",
   upe:"Art. 1.4.1, CD 142/2024 Annexure; Art. 18 (Controlling Interest)",
   constituent:"Art. 1.3, CD 142/2024 Annexure",
-  exclGov:"Art. 1.5.1; Art. 18 (Governmental Entity), CD 142/2024 Annexure",
-  exclIntlOrg:"Art. 1.5.1; Art. 18 (International Organisation), CD 142/2024 Annexure",
-  exclNpo:"Art. 1.5.1; Art. 18 (Non-profit Organisation), CD 142/2024 Annexure",
-  exclPension:"Art. 1.5.1; Art. 18 (Pension Fund / Pension Services Entity), CD 142/2024 Annexure",
-  exclInvFund:"Art. 1.5.1; Art. 18 (Investment Fund), CD 142/2024 Annexure",
-  exclReiv:"Art. 1.5.1; Art. 18 (Real Estate Investment Vehicle), CD 142/2024 Annexure",
+  exclGov:"Art. 1.5; Art. 18 (Governmental Entity), CD 142/2024 Annexure",
+  exclIntlOrg:"Art. 1.5; Art. 18 (International Organisation), CD 142/2024 Annexure",
+  exclNpo:"Art. 1.5; Art. 18 (Non-profit Organisation), CD 142/2024 Annexure",
+  exclPension:"Art. 1.5; Art. 18 (Pension Fund / Pension Services Entity), CD 142/2024 Annexure",
+  exclInvFund:"Art. 1.5; Art. 18 (Investment Fund), CD 142/2024 Annexure",
+  exclReiv:"Art. 1.5; Art. 18 (Real Estate Investment Vehicle), CD 142/2024 Annexure",
   excl95:"Art. 1.5.2(a), CD 142/2024 Annexure",
   excl85:"Art. 1.5.2(b), CD 142/2024 Annexure",
   exclHeldByExternal:"Art. 1.8, CD 142/2024 Annexure",
@@ -696,8 +696,6 @@ function concludeE(selectedAll,operative,electionMade,electedKeys){
    STEP F — Charging confirmation (Art 2.1–2.3)
    ================================================================== */
 function stepF(){
-  const invFundTip=E_TILES.find(t=>t.key==='t5').tip;
-  const reivTip=E_TILES.find(t=>t.key==='t6').tip;
   const ieTip=tip(
     `Investment Entity means: (a) an Investment Fund, a Real Estate Investment Vehicle, or an Insurance Investment Entity; (b) an Entity that is at least 95% owned directly by an Entity described in (a), or through a chain of such Entities, and that operates exclusively or almost exclusively to hold assets or invest funds for the benefit of such Investment Entities; or (c) an Entity where at least 85% of the value of the Entity is owned by an Entity referred to in (a), provided substantially all of the Entity's income is Excluded Dividends or Excluded Equity Gain or Loss excluded from Pillar Two Income or Loss under Art 3.2.1(b) or (c). Investment Fund and Real Estate Investment Vehicle carry the same statutory tests as in the Excluded Entity screening above (see tiles for the Investment Fund and REIV tests). An Insurance Investment Entity is an Entity that would meet the Investment Fund/REIV definition but for being established in relation to insurance or annuity contract liabilities, and is wholly owned by one or more Entities regulated as an insurance company in the Group, in the jurisdiction the insurance company is located (including a Flow-through Entity subject to equivalent regulation).`,
     CITE.investmentEntity
