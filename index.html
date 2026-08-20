@@ -26,7 +26,7 @@
   header.masthead{border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);margin-bottom:20px;position:sticky;top:4px;background:var(--header-bg-green);z-index:100;padding:16px 22px}
   .head-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
   .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
-  .logo-mark img{height:22px;width:auto;display:block}
+  .logo-mark img{height:66px;width:auto;display:block}
   .logo-mark .logo-light{display:block}
   .logo-mark .logo-dark{display:none}
   .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#fff;font-weight:700;margin-bottom:6px}
@@ -148,7 +148,7 @@
 
 @media (max-width:560px){
     header.masthead{padding-bottom:10px;margin-bottom:6px}
-    .logo-mark img{height:16px}
+    .logo-mark img{height:48px}
     h1{font-size:18px}
     .head-top{flex-direction:row;align-items:flex-end;gap:8px}
     .explore{padding:5px 8px;font-size:10px;white-space:normal;text-align:center;flex-shrink:0}
@@ -173,6 +173,14 @@
     header.masthead .sub{color:var(--text-secondary)!important}
     .logo-mark .logo-light{display:block!important}
     .logo-mark .logo-dark{display:none!important}
+    /* PDF logo size/position is intentionally decoupled from the on-screen
+       logo (which is sized independently above) — this is the only rule
+       that controls it, restored to the original PDF size (57px) x1.25,
+       positioned top-right of the header via the existing head-right column
+       (the Explore button that normally shares that column is hidden in
+       print, so the logo alone occupies the corner). */
+    .logo-mark img{height:71.25px!important;width:auto!important}
+    .head-right{gap:0!important}
     .wrap{max-width:100%}
     .card,.verdict{box-shadow:none;break-inside:avoid;border:1px solid #ccc}
     .legal-strip{break-inside:avoid}
