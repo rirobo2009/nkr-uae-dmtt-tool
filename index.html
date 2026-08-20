@@ -231,7 +231,19 @@ const CITE={
   revProration:"Art. 1.1.2, CD 142/2024 Annexure",
   group:"Art. 1.2.1–1.2.3, CD 142/2024 Annexure",
   upe:"Art. 1.4.1, CD 142/2024 Annexure; Art. 18 (Controlling Interest)",
-  constituent:"Art. 1.3, CD 142/2024 Annexure"
+  constituent:"Art. 1.3, CD 142/2024 Annexure",
+  exclGov:"Art. 1.5.1; Art. 18 (Governmental Entity), CD 142/2024 Annexure",
+  exclIntlOrg:"Art. 1.5.1; Art. 18 (International Organisation), CD 142/2024 Annexure",
+  exclNpo:"Art. 1.5.1; Art. 18 (Non-profit Organisation), CD 142/2024 Annexure",
+  exclPension:"Art. 1.5.1; Art. 18 (Pension Fund / Pension Services Entity), CD 142/2024 Annexure",
+  exclInvFund:"Art. 1.5.1; Art. 18 (Investment Fund), CD 142/2024 Annexure",
+  exclReiv:"Art. 1.5.1; Art. 18 (Real Estate Investment Vehicle), CD 142/2024 Annexure",
+  excl95:"Art. 1.5.2(a), CD 142/2024 Annexure",
+  excl85:"Art. 1.5.2(b), CD 142/2024 Annexure",
+  exclHeldByExternal:"Art. 1.8, CD 142/2024 Annexure",
+  exclNpoOwned:"Art. 1.9, CD 142/2024 Annexure",
+  fiveYearElection:"Art. 1.5.3, CD 142/2024 Annexure",
+  peExcluded:"Art. 1.7, CD 142/2024 Annexure"
 };
 
 /* ==================================================================
@@ -312,6 +324,29 @@ function mount(node,progressState){
   }
 }
 function record(q,a,cls){trail.push({q,a,cls:cls||''});}
+
+function tileGrid(question,note,tiles,onContinue,stepName){
+  const div=document.createElement('div');div.className='card';
+  div.innerHTML=`<div class="step-num">${stepLabel(stepName)}</div><div class="q">${question}</div>${note?`<div class="q-note">${note}</div>`:''}<div class="tiles"></div>`;
+  const box=div.querySelector('.tiles');
+  const selected=new Set();
+  tiles.forEach(t=>{
+    const b=document.createElement('button');b.className='tile';b.type='button';
+    b.innerHTML=`<span class="box"></span><span class="lbl"><b>${t.label}</b>${t.tipHTML||''}</span>`;
+    b.onclick=()=>{
+      if(selected.has(t.key)){selected.delete(t.key);b.classList.remove('selected');b.querySelector('.box').textContent='';}
+      else{selected.add(t.key);b.classList.add('selected');b.querySelector('.box').textContent='✓';}
+    };
+    box.appendChild(b);
+  });
+  const cont=document.createElement('div');cont.style.cssText='margin-top:4px';
+  cont.innerHTML=`<div class="q-note" style="margin-bottom:14px">Select any tiles that apply, or click Continue if none apply.</div>`;
+  const btn=document.createElement('button');btn.className='btn primary';btn.textContent='Continue';
+  btn.onclick=()=>onContinue(Array.from(selected));
+  cont.appendChild(btn);
+  div.appendChild(cont);
+  return div;
+}
 
 function optionCard(question,note,opts,stepName){
   const div=document.createElement('div');div.className='card';
@@ -481,13 +516,107 @@ function stepD(){
     null,
     [
       {key:'A',label:'Yes, included in consolidation',action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, included in consolidation","yes");push(stepE);}},
-      {key:'B',label:"Yes, it's a UAE Permanent Establishment of a Main Entity",action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, UAE Permanent Establishment of a Main Entity","yes");push(stepE);}},
+      {key:'B',label:"Yes, it's a UAE Permanent Establishment of a Main Entity",action:()=>{answers.isPE=true;record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, UAE Permanent Establishment of a Main Entity","yes");push(stepE);}},
       {key:'C',label:'No / Not sure',sub:'The Entity is not included in the Group\'s Consolidated Financial Statements and is not a Permanent Establishment of a consolidated Main Entity',action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","No / Not sure","no");
         outOfScope("Out of scope — not a Constituent Entity.",
           "The UAE Entity is not included in the Group's Consolidated Financial Statements (other than on size/materiality/held-for-sale grounds) and is not a Permanent Establishment of a Main Entity that is part of the Group. It does not meet the gateway definition of a Constituent Entity, so UAE DMTT does not apply to it.",
           [{t:"Only a Constituent Entity can be charged to UAE DMTT.",b:"A Constituent Entity is an Entity included in the Group's Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds), or a Permanent Establishment of such an Entity. An Entity that meets neither limb is not a Constituent Entity and falls outside the charge in Art 2.1.",c:CITE.constituent}]);}}
     ],'Constituent Entity Check');
   mount(node,'step');fixTooltips();
+}
+
+/* ==================================================================
+   STEP E — Excluded Entity screening (Art 1.5, 1.6.1, 1.7, 1.8, 1.9)
+   ================================================================== */
+const E_TILES=[
+  {key:'t1',label:'Governmental Entity',cite:CITE.exclGov,
+   tip:"Full 4-part test: (a) part of, or wholly owned by, a government; (b) principal purpose is a government function, or managing/investing assets for a government without carrying on a trade or business; (c) accountable to a government for overall performance and reports information to it annually; (d) assets vest in a government on dissolution, and to the extent it distributes net earnings, these are only distributed to a government with no private person benefiting."},
+  {key:'t2',label:'International Organisation',cite:CITE.exclIntlOrg,
+   tip:"3-part test: an intergovernmental or supranational organisation comprised primarily of governments, that has an effective headquarters or immunities agreement with the jurisdiction it is located in, and whose income cannot inure to the benefit of private persons."},
+  {key:'t3',label:'Non-profit Organisation',cite:CITE.exclNpo,
+   tip:"5-part test: established and operated in its Jurisdiction for listed purposes (e.g. charitable, religious, scientific, artistic, cultural, athletic, educational, or similar purposes, or as a business/professional organisation, social welfare organisation or similar); substantially all income is exempt from income tax in its Jurisdiction; has no shareholders/members with an ownership or beneficial interest in its income/assets; income/assets may not be distributed to, or applied for the benefit of, a private person other than in pursuit of its exempt purposes or as reasonable compensation; assets vest in another Non-profit Organisation or a government on dissolution."},
+  {key:'t4',label:'Pension Fund (or Pension Services Entity)',cite:CITE.exclPension,
+   tip:"Pension Fund: an entity established and regulated as such to provide retirement benefits (plus ancillary/incidental benefits) to individuals, supervised by a regulator, and regulated as a retirement benefit arrangement. Pension Services Entity: an entity established and operated exclusively or almost exclusively to invest funds for the benefit of Pension Fund(s), or to carry out activities ancillary to the regulated pension activities of Pension Fund(s), provided it is part of the same Group as those Pension Funds."},
+  {key:'t5',label:'Investment Fund that is itself the Ultimate Parent Entity',cite:CITE.exclInvFund,
+   tip:"7-part Investment Fund test — only relevant where this Fund IS the Ultimate Parent Entity: a pooled investment vehicle that (1) is designed to pool assets from investors (who may include Governmental/other Entities with a common investment objective); (2) invests in accordance with a defined investment policy; (3) allows investors to reduce transaction, research and analytical costs, or spread risk collectively; (4) is designed to generate investment income or gains, or protection against a particular/general event/outcome; (5) investors have a right of return from the assets of the vehicle or income earned; (6) is, or its manager is, regulated as an investment fund in the jurisdiction it is established/managed; (7) is managed by professional investment fund managers on behalf of investors."},
+  {key:'t6',label:'Real Estate Investment Vehicle that is itself the Ultimate Parent Entity',cite:CITE.exclReiv,
+   tip:"Only relevant where this vehicle IS the Ultimate Parent Entity — a widely held vehicle that predominantly holds immovable property, and is subject to a single level of taxation in its hands or the hands of its interest holders, with at most one year of deferral."},
+  {key:'t7',label:'≥95% owned holding/ancillary vehicle',cite:CITE.excl95,
+   tip:"None of the above apply, but the Entity is at least 95% owned (directly, or indirectly through a chain of such Entities) by one or more Entities described in tiles 1–6 above (excluding a Pension Services Entity), and the Entity exists solely or almost solely to hold assets or invest funds for their benefit, or carries out only activities that are ancillary to those carried out by them."},
+  {key:'t8',label:'≥85% owned, substantially all Excluded Dividend/Equity Gain income',cite:CITE.excl85,
+   tip:"None of the above apply, but at least 85% of the value of the Entity is owned by one or more Entities described in tiles 1–6 above, provided substantially all of the Entity's income is Excluded Dividends or Excluded Equity Gain or Loss."},
+  {key:'t9',label:'Held by an external Investment Fund or REIV (outside the Group)',cite:CITE.exclHeldByExternal,
+   tip:"The Entity is held by an Investment Fund or Real Estate Investment Vehicle that is not itself a Group Entity — this deems the ≥95% ownership condition in the tile above satisfied."},
+  {key:'t10',label:'≥100% owned by Non-profit Organisation(s)',cite:CITE.exclNpoOwned,
+   tip:"The Entity is 100% owned by one or more Non-profit Organisations, AND the Group's revenue (excluding revenue of Non-profit Organisations and other Excluded Entities) is under EUR 750 million, AND the revenue of non-Excluded-Entities is under 25% of the MNE Group's total revenue."}
+];
+const E_ELECTABLE=['t7','t9','t10'];
+
+function stepE(){
+  coreIndex=5;
+  let peNote='';
+  if(answers.isPE){
+    peNote=`<div class="q-note"><strong>You indicated this UAE Entity is a Permanent Establishment of a Main Entity.</strong> ${tip("If the Main Entity qualifies as an Excluded Entity under tiles 1–6, its Permanent Establishments are automatically also Excluded. If the Main Entity qualifies only under tile 7 or 8 (the ancillary/asset-holding tests), the Permanent Establishment's own activities must be independently tested against those same tests.",CITE.peExcluded)} Apply the tiles below to the Main Entity's classification for tiles 1–6, or independently to this Permanent Establishment's own activities for tiles 7–8.</div>`;
+  }
+  const tilesForGrid=E_TILES.map(t=>({key:t.key,label:t.label,tipHTML:tip(t.tip,t.cite)}));
+  const node=tileGrid(
+    `Does the UAE Entity match any of the following? ${tip("Any box checked (unless reversed by the Art 1.5.3 Five-Year Election) means the UAE Entity is an Excluded Entity, not a Constituent Entity, for this entity.",CITE.fiveYearElection)}`,
+    `Multi-select — a UAE Entity may meet more than one of these tests at once.${peNote}`,
+    tilesForGrid,
+    (selected)=>handleE(selected),
+    'Excluded Entity Screening'
+  );
+  mount(node,'step');fixTooltips();
+}
+
+function handleE(selected){
+  if(selected.length===0){
+    record("Excluded Entity tests matched","None","yes");
+    push(stepF);
+    return;
+  }
+  const electable=selected.filter(k=>E_ELECTABLE.includes(k));
+  if(electable.length>0){
+    push(()=>stepE_election(selected,electable));
+  } else {
+    concludeE(selected,selected,false,[]);
+  }
+}
+
+function stepE_election(selected,electable){
+  const names=electable.map(k=>E_TILES.find(t=>t.key===k).label).join('; ');
+  const node=optionCard(
+    `You matched a test that carries a Five-Year Election (${names}). A Filing Constituent Entity may elect NOT to treat this Entity as Excluded under these tests. ${tip("Where the Entity would otherwise be Excluded under the ≥95% ancillary/asset-holding test, the ≥85% dividend/equity-gain test as extended by Art 1.8, or the Non-profit-owned test, a Filing Constituent Entity may elect for the Entity not to be treated as an Excluded Entity on that basis. This is a Five-Year Election.",CITE.fiveYearElection)} Do you wish to make this election?`,
+    `Electing in means the UAE Entity is treated as a Constituent Entity for this test (e.g. to access elections/reliefs only available to Constituent Entities), even though it would otherwise be Excluded on this basis.`,
+    [
+      {key:'A',label:'No — do not make the election (Entity remains Excluded on this basis)',action:()=>{record("Five-Year Election made (Art 1.5.3)?","No","");concludeE(selected,selected,false,electable);}},
+      {key:'B',label:'Yes — make the Five-Year Election',action:()=>{record("Five-Year Election made (Art 1.5.3)?","Yes",electable.length===selected.length?"yes":"");
+        const operative=selected.filter(k=>!electable.includes(k));
+        concludeE(selected,operative,true,electable);}}
+    ],'Excluded Entity Screening — Five-Year Election');
+  mount(node,'step');fixTooltips();
+}
+
+function concludeE(selectedAll,operative,electionMade,electedKeys){
+  selectedAll.forEach(k=>{
+    const t=E_TILES.find(x=>x.key===k);
+    const isElected=electionMade&&electedKeys.includes(k)&&!operative.includes(k);
+    record("Excluded Entity test matched",t.label+(isElected?" (elected out under Art 1.5.3)":""),isElected?"":"no");
+  });
+  if(operative.length===0){
+    push(stepF);
+    return;
+  }
+  const facts=operative.map(k=>{
+    const t=E_TILES.find(x=>x.key===k);
+    return {t:`Excluded Entity — ${t.label}.`,b:t.tip,c:t.cite};
+  });
+  if(answers.isPE){
+    facts.push({t:"Permanent Establishment flow-through.",b:"If the Main Entity qualifies as Excluded under tiles 1–6, its Permanent Establishments are automatically also Excluded. If the Main Entity qualifies only under tile 7 or 8, the Permanent Establishment's own activities must be independently tested against those same tests.",c:CITE.peExcluded});
+  }
+  outOfScope("Out of scope — Excluded Entity.",
+    "The UAE Entity matches one or more of the Excluded Entity tests and is therefore not a Constituent Entity for UAE DMTT purposes. This result is entity-specific — other UAE entities in the same Group may still be in scope and should be assessed separately.",
+    facts);
 }
 
 function start(){trail=[];stepStack=[];answers={};trailMarks=[];answersMarks=[];coreIndexMarks=[];coreIndex=1;STAGE.innerHTML='';push(stepA);}
