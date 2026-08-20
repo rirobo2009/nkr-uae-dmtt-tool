@@ -224,6 +224,55 @@
 
 <script>
 /* ==================================================================
+   Lead capture (Google Sheets) — same webhook & payload shape as
+   qfzptool.html, plus a source_tool field to distinguish rows
+   ================================================================== */
+const LEAD_CAPTURE_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyEfpaq6MPdKVBpSlbHXDHK7TwgdSODyzGi5g0Y7LCcVSzhZqMOZ8kZq-Sv9e2_kmUW/exec';
+const LEAD_STORAGE_KEY = 'nkr_dmtt_applicability_tool_lead_v1';
+
+function getSavedLead(){
+  try { return JSON.parse(localStorage.getItem(LEAD_STORAGE_KEY) || 'null'); }
+  catch(e){ return null; }
+}
+function saveLead(lead){ localStorage.setItem(LEAD_STORAGE_KEY, JSON.stringify(lead)); }
+function validEmail(email){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+function submitLeadCapture(payload){
+  if(!LEAD_CAPTURE_WEBHOOK_URL || LEAD_CAPTURE_WEBHOOK_URL.indexOf('PASTE_') === 0) return;
+  try{
+    fetch(LEAD_CAPTURE_WEBHOOK_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(payload)
+    }).catch(function(){});
+  } catch(e){}
+}
+function requireLeadCapture(onDone){
+  const existing = getSavedLead();
+  if(existing && existing.email){ onDone(existing); return; }
+  const modal = document.getElementById('leadModal');
+  const err = document.getElementById('leadError');
+  modal.classList.add('show');
+  document.getElementById('leadSubmitBtn').onclick = function(){
+    const lead = {
+      tool: 'UAE DMTT Applicability Gate — Module 1',
+      name: document.getElementById('leadName').value.trim(),
+      email: document.getElementById('leadEmail').value.trim(),
+      company: document.getElementById('leadCompany').value.trim(),
+      toolVersion: 'DMTT-Module1 v1',
+      pageUrl: (typeof location !== 'undefined' ? location.href : ''),
+      timestamp: new Date().toISOString(),
+      source_tool: 'dmtt_applicability'
+    };
+    if(!lead.name || !lead.company || !validEmail(lead.email)){ err.style.display='block'; return; }
+    err.style.display='none';
+    saveLead(lead);
+    submitLeadCapture(lead);
+    modal.classList.remove('show');
+    onDone(lead);
+  };
+}
+
+/* ==================================================================
    Legal citations — Module 1 (CD 142/2024 Annexure, Art 1 & Art 2)
    ================================================================== */
 const CITE={
@@ -385,7 +434,7 @@ function pathBlock(){
 }
 function actionRow(){
   const wrap=document.createElement('div');wrap.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin-top:4px';
-  const p=document.createElement('button');p.className='btn primary';p.textContent='Download PDF';p.onclick=()=>{window.print();};
+  const p=document.createElement('button');p.className='btn primary';p.textContent='Download PDF';p.onclick=()=>{requireLeadCapture(function(){window.print();});};
   const r=document.createElement('button');r.className='btn ghost';r.textContent='Start a new assessment';r.onclick=start;
   wrap.appendChild(p);wrap.appendChild(r);return wrap;
 }
