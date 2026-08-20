@@ -504,12 +504,19 @@ function stepA_proration(){
       <div id="prResult" class="q-note hide" style="margin-top:14px"></div>
       <div id="prErr" class="hide" style="color:var(--red);font-size:13px;margin-top:10px"></div>
     </div>
-    <div style="margin-top:20px"><button class="btn primary" id="prContinue">Continue</button></div>`;
+    <div id="prContinueWrap" class="hide" style="margin-top:20px"><button class="btn primary" id="prContinue">Continue</button></div>`;
   mount(node,'step');fixTooltips();
-  let shortYear=false,computedThreshold=null,days=null;
+  let computedThreshold=null,days=null;
   const calcBox=node.querySelector('#prCalc');
-  node.querySelector('#prYes').onclick=()=>{shortYear=true;node.querySelector('#prYes').classList.add('selected');node.querySelector('#prNo').classList.remove('selected');calcBox.classList.remove('hide');};
-  node.querySelector('#prNo').onclick=()=>{shortYear=false;node.querySelector('#prNo').classList.add('selected');node.querySelector('#prYes').classList.remove('selected');calcBox.classList.add('hide');computedThreshold=null;};
+  const continueWrap=node.querySelector('#prContinueWrap');
+  node.querySelector('#prYes').onclick=()=>{
+    node.querySelector('#prYes').classList.add('selected');node.querySelector('#prNo').classList.remove('selected');
+    calcBox.classList.remove('hide');continueWrap.classList.remove('hide');
+  };
+  node.querySelector('#prNo').onclick=()=>{
+    record("Any of the 4 Fiscal Years shorter than 12 months?","No","");
+    push(stepB);
+  };
   node.querySelector('#prCalcBtn').onclick=()=>{
     const s=node.querySelector('#prStart').value,e=node.querySelector('#prEnd').value,err=node.querySelector('#prErr'),res=node.querySelector('#prResult');
     if(!s||!e){err.textContent="Enter both dates.";err.classList.remove('hide');res.classList.add('hide');return;}
@@ -523,15 +530,11 @@ function stepA_proration(){
     res.classList.remove('hide');
   };
   node.querySelector('#prContinue').onclick=()=>{
-    if(shortYear){
-      if(computedThreshold===null){const err=node.querySelector('#prErr');err.textContent="Calculate the adjusted threshold before continuing, or select ‘No’ above.";err.classList.remove('hide');return;}
-      const fmt=n=>Math.round(n).toLocaleString('en-AE');
-      record("Any of the 4 Fiscal Years shorter than 12 months?","Yes","");
-      record("Short Fiscal Year length",`${days} days`,"");
-      record("Pro-rated EUR 750m threshold for that year",`EUR ${fmt(computedThreshold)}`,"");
-    } else {
-      record("Any of the 4 Fiscal Years shorter than 12 months?","No","");
-    }
+    if(computedThreshold===null){const err=node.querySelector('#prErr');err.textContent="Calculate the adjusted threshold before continuing.";err.classList.remove('hide');return;}
+    const fmt=n=>Math.round(n).toLocaleString('en-AE');
+    record("Any of the 4 Fiscal Years shorter than 12 months?","Yes","");
+    record("Short Fiscal Year length",`${days} days`,"");
+    record("Pro-rated EUR 750m threshold for that year",`EUR ${fmt(computedThreshold)}`,"");
     push(stepB);
   };
 }
