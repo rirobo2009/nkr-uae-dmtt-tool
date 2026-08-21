@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DMTT Applicability Gate — Automated Test Suite</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:900px;margin:0 auto;padding:24px 20px 80px;color:#14283F;line-height:1.5}
+  h1{font-size:20px}
+  p.lede{color:#4A5F7A;font-size:13.5px;max-width:700px}
+  code{background:#F5F7FA;padding:1px 5px;border-radius:3px;font-size:12.5px}
+  #summary{font-size:16px;font-weight:700;padding:14px 18px;border-radius:8px;margin:18px 0}
+  #summary.pass{background:#E4F5EE;color:#178a63;border:1px solid #B8E0CE}
+  #summary.fail{background:#FBEAEA;color:#B3261E;border:1px solid #E8C2BE}
+  .group{margin:18px 0;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden}
+  .group-title{background:#F5F7FA;padding:8px 14px;font-weight:700;font-size:13.5px}
+  .case{padding:6px 14px;font-size:13px;border-top:1px solid #E2E8F0;display:flex;gap:8px;align-items:flex-start}
+  .case.pass{color:#178a63}
+  .case.fail{color:#B3261E;background:#FFF6F5}
+  .case .mark{flex-shrink:0;font-weight:700}
+  .case .detail{color:#4A5F7A;font-size:11.5px;display:block;margin-top:2px}
+  button{font-family:inherit;font-weight:700;font-size:13px;padding:8px 16px;border-radius:8px;border:1.5px solid #14283F;background:#14283F;color:#fff;cursor:pointer}
+  #sandbox{position:absolute;left:-9999px;top:-9999px;width:800px}
+</style>
+</head>
+<body>
+<h1>UAE DMTT Applicability Gate — Automated Test Suite</h1>
+<p class="lede">
+  Loads the live decision-tree logic straight out of <code>index.html</code>'s
+  &lt;script&gt; block into a hidden sandbox, drives it exactly the way a user would
+  (real clicks on the rendered DOM — same buttons, same handlers), and asserts on
+  conclusions, step counts, and Article citations against
+  <code>UAE-DMTT-Module1-Applicability-Spec.md</code>. Requires this file to be
+  served over http(s) so <code>fetch('index.html')</code> works — either locally
+  (<code>python3 -m http.server</code> from this directory) or directly against
+  the deployed site.
+</p>
+<button onclick="location.reload()">Re-run tests</button>
+<div id="summary">Running…</div>
+<div id="results"></div>
+
+<!-- Minimal DOM skeleton the app's script expects to find on load. -->
+<div id="sandbox">
+  <header class="masthead"></header>
+  <div class="progress" id="progress"></div>
+  <div id="stage"></div>
+</div>
+
+<script>
+(async function(){
+  const summaryEl=document.getElementById('summary');
+  const resultsEl=document.getElementById('results');
+
+  // ---- load & eval the app's script verbatim (indirect eval = global scope,
+  // so index.html's functions/consts become directly callable below) ----
+  let appScript;
+  try{
+    const res=await fetch('index.html');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const html=await res.text();
+    const m=html.match(/<script>([\s\S]*)<\/script>/);
+    if(!m) throw new Error('Could not find <script> block in index.html');
+    appScript=m[1];
+  }catch(e){
+    summaryEl.className='fail';
+    summaryEl.textContent='Could not load index.html: '+e.message+' — serve this directory over http(s) and reload.';
+    return;
+  }
+  (0, eval)(appScript); // defines push/mount/stepA../CITE/E_TILES/... and renders stepA into #stage via its own trailing start()
+
+  // ---------------------------------------------------------------------
+  // Tiny assertion framework
+  // ---------------------------------------------------------------------
+  const groups=[]; // {name, cases:[{desc,pass,detail}]}
+  let current=null;
+  function tc(name, fn){
+    current={name, cases:[]};
+    groups.push(current);
+    try{ fn(); }
+    catch(e){ current.cases.push({desc:'scenario threw an exception',pass:false,detail:(e&&e.stack)||String(e)}); }
+  }
+  function assert(desc,cond,detail){ current.cases.push({desc,pass:!!cond,detail:detail||''}); }
+  function assertIncludes(desc,haystack,needle){ assert(desc,(haystack||'').includes(needle),'expected to include '+JSON.stringify(needle)+', got '+JSON.stringify(haystack)); }
+
+  // ---------------------------------------------------------------------
+  // DOM-driving helpers — mirror real user interaction with the rendered tool
+  // ---------------------------------------------------------------------
+  const stage=()=>document.getElementById('stage');
+  const opts=()=>[...stage().querySelectorAll('.options .opt')];
+  const clickOpt=(i)=>{ const b=opts()[i]; if(!b) throw new Error('option index '+i+' not found (only '+opts().length+' options)'); b.click(); };
+  const tiles=()=>[...stage().querySelectorAll('.tiles .tile')];
+  const clickTileByLabel=(label)=>{ const b=tiles().find(t=>t.querySelector('b').textContent===label); if(!b) throw new Error('tile not found: '+label); b.click(); };
+  const clickContinueTiles=()=>{ const b=stage().querySelector('.card .btn.primary'); if(!b) throw new Error('tile-grid Continue button not found'); b.click(); };
+  const stepNum=()=>{ const el=stage().querySelector('.step-num'); return el?el.textContent:''; };
+  const verdictTag=()=>{ const el=stage().querySelector('.verdict .tag'); return el?el.textContent:''; };
+  const verdictTitle=()=>{ const el=stage().querySelector('.verdict h2'); return el?el.textContent:''; };
+  const factCites=()=>[...stage().querySelectorAll('.facts .fact cite')].map(c=>c.textContent);
+  const sectionHeadings=()=>[...stage().querySelectorAll('h3')].map(h=>h.textContent);
+  const pathRowText=()=>[...stage().querySelectorAll('.path-row')].map(r=>r.textContent).join(' | ');
+  const reset=()=>{ start(); };
+
+  function assertVerdict(tagSubstr,titleSubstr){
+    assert('verdict tag includes "'+tagSubstr+'"', verdictTag().includes(tagSubstr), 'tag='+verdictTag());
+    assert('verdict title includes "'+titleSubstr+'"', verdictTitle().includes(titleSubstr), 'title='+verdictTitle());
+  }
+  function assertCiteIncludes(sub){
+    const c=factCites().join(' | ');
+    assert('Provisions Relied Upon cites "'+sub+'"', c.includes(sub), 'citations='+c);
+  }
+  // Fix #2 (prior session) regression check: Conclusion=Section1, Inputs=Section2,
+  // Provisions=Section3, on every conclusion reached — screen and PDF share this
+  // same DOM, so asserting screen order here covers PDF order too.
+  function assertSectionOrder(){
+    const hs=sectionHeadings();
+    assert('Section order/labels: Conclusion(1) → Inputs Entered(2) → Provisions Relied Upon(3)',
+      verdictTag().startsWith('Section 1 — Conclusion') &&
+      hs.includes('Section 2 — Inputs Entered') &&
+      hs.includes('Section 3 — Provisions Relied Upon'),
+      'tag='+verdictTag()+' headings='+JSON.stringify(hs));
+  }
+
+  // Reach Step E (Excluded Entity screening) via the base path: A=Yes,
+  // proration=No, B=Yes, C=No (standard UPE, no SWF sub-flow), D=Yes(included).
+  function toStepE(){
+    reset();
+    clickOpt(0); // A: Yes
+    document.getElementById('prNo').click(); // proration: No -> B
+    clickOpt(0); // B: Yes -> C
+    clickOpt(0); // C: No — standard UPE -> D
+    clickOpt(0); // D: Yes, included in consolidation -> E
+  }
+  // Same, but D answered "Yes, UAE Permanent Establishment" (isPE=true).
+  function toStepE_asPE(){
+    reset();
+    clickOpt(0);
+    document.getElementById('prNo').click();
+    clickOpt(0);
+    clickOpt(0);
+    clickOpt(1); // D: Yes, it's a UAE PE of a Main Entity
+  }
+  // Reach Step C (UPE identification).
+  function toStepC(){
+    reset();
+    clickOpt(0);
+    document.getElementById('prNo').click();
+    clickOpt(0); // B: Yes -> C
+  }
+  function driveEmptyEtoScope(){ // E with no tiles selected -> F -> IN SCOPE
+    clickContinueTiles();
+    clickOpt(0); // F: No -> IN SCOPE
+  }
+
+  // =======================================================================
+  // 1. Exit points / conclusion types
+  // =======================================================================
+  tc('Step A — No (revenue threshold not met)', ()=>{
+    reset();
+    clickOpt(1); // No
+    assertVerdict('OUT OF SCOPE','revenue threshold not met');
+    assertCiteIncludes('1.1.1');
+    assertSectionOrder();
+  });
+
+  tc('Step B — No (not an MNE Group)', ()=>{
+    reset();
+    clickOpt(0); // A: Yes
+    document.getElementById('prNo').click();
+    clickOpt(1); // B: No
+    assertVerdict('OUT OF SCOPE','not an MNE Group');
+    assertCiteIncludes('1.2.1');
+    assertSectionOrder();
+  });
+
+  tc('Step D — No / Not sure (not a Constituent Entity)', ()=>{
+    reset();
+    clickOpt(0);
+    document.getElementById('prNo').click();
+    clickOpt(0); // B Yes
+    clickOpt(0); // C No-standard
+    clickOpt(2); // D: No / Not sure
+    assertVerdict('OUT OF SCOPE','not a Constituent Entity');
+    assertCiteIncludes('1.3');
+    assertSectionOrder();
+  });
+
+  tc('Step F — No (IN SCOPE)', ()=>{
+    toStepE();
+    clickContinueTiles(); // no Excluded Entity tiles -> F
+    clickOpt(0); // F: No -> IN SCOPE
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertCiteIncludes('2.1');
+    assertSectionOrder();
+  });
+
+  tc('Step F — Yes (NOT DIRECTLY LIABLE — Investment Entity, Art 2.3)', ()=>{
+    toStepE();
+    clickContinueTiles();
+    clickOpt(1); // F: Yes -> NOT DIRECTLY LIABLE
+    assertVerdict('NOT DIRECTLY LIABLE','NOT DIRECTLY LIABLE');
+    assertCiteIncludes('2.3');
+    assertSectionOrder();
+  });
+
+  tc('Step C=Yes → SWF sub-step (Step 5 of 8) — No (Art 1.6.2 not satisfied)', ()=>{
+    toStepC();
+    clickOpt(1); // C: Yes — UPE is/owned by SWF Governmental Entity
+    assertIncludes('lands on "Step 5 of 8" for the SWF sub-flow', stepNum(), 'Step 5 of 8');
+    clickOpt(1); // swf sub-step: No — neither (a) nor (b) is met
+    assertVerdict('REVIEW REQUIRED','Article 1.6.2 conditions not satisfied');
+    assertCiteIncludes('1.6.2');
+    assertSectionOrder();
+  });
+
+  // =======================================================================
+  // 2. All 10 Excluded Entity tiles, individually
+  //    (spec citation per tile: Art 1.5.2(a)=t7, 1.5.2(b)=t8, 1.8=t9, 1.9=t10;
+  //    tiles 1–6 are cited generically to Art 1.5 + Art 18 in the spec, with
+  //    no further sub-article breakdown given, so we assert both markers.)
+  // =======================================================================
+  const singleTileCases=[
+    ['Governmental Entity',['1.5','18']],
+    ['International Organisation',['1.5','18']],
+    ['Non-profit Organisation',['1.5','18']],
+    ['Pension Fund (or Pension Services Entity)',['1.5','18']],
+    ['Investment Fund that is itself the Ultimate Parent Entity',['1.5','18']],
+    ['Real Estate Investment Vehicle that is itself the Ultimate Parent Entity',['1.5','18']],
+    ['≥95% owned holding/ancillary vehicle',['1.5.2(a)']],
+    ['≥85% owned, substantially all Excluded Dividend/Equity Gain income',['1.5.2(b)']],
+    ['≥100% owned by Non-profit Organisation(s)',['1.9']]
+  ];
+  singleTileCases.forEach(([label,expectedCites])=>{
+    tc('Excluded Entity tile — '+label, ()=>{
+      toStepE();
+      clickTileByLabel(label);
+      clickContinueTiles();
+      const electable=['≥95% owned holding/ancillary vehicle','≥100% owned by Non-profit Organisation(s)'].includes(label);
+      if(electable) clickOpt(0); // Five-Year Election: No — do not elect (stays Excluded)
+      assertVerdict('OUT OF SCOPE','Excluded Entity');
+      expectedCites.forEach(assertCiteIncludes);
+      assertSectionOrder();
+    });
+  });
+  tc('Excluded Entity tile — Held by an external Investment Fund or REIV (t9, incl. purpose-limb sub-step)', ()=>{
+    toStepE();
+    clickTileByLabel('Held by an external Investment Fund or REIV — ownership limb only');
+    clickContinueTiles();
+    assertIncludes('routes through the Art 1.8 purpose-limb sub-question', stepNum(), 'Art 1.8 ownership deeming');
+    clickOpt(1); // purpose limb: Yes — also met (keep t9 operative/Excluded)
+    clickOpt(0); // Five-Year Election: No — do not elect
+    assertVerdict('OUT OF SCOPE','Excluded Entity');
+    assertCiteIncludes('1.8');
+    assertSectionOrder();
+  });
+
+  // =======================================================================
+  // 3. Multi-tile combinations
+  // =======================================================================
+  tc('Excluded Entity combo — electable + non-electable together (Governmental Entity + ≥95% owned)', ()=>{
+    toStepE();
+    clickTileByLabel('Governmental Entity');
+    clickTileByLabel('≥95% owned holding/ancillary vehicle');
+    clickContinueTiles();
+    clickOpt(0); // election: No — both stay operative/Excluded
+    assertVerdict('OUT OF SCOPE','Excluded Entity');
+    assertCiteIncludes('1.5.2(a)');
+    assert('facts list includes both matched tests', factCites().length>=2, 'cites='+JSON.stringify(factCites()));
+    assertSectionOrder();
+  });
+  tc('Excluded Entity combo — two electable tiles together, election declined', ()=>{
+    toStepE();
+    clickTileByLabel('≥95% owned holding/ancillary vehicle');
+    clickTileByLabel('≥100% owned by Non-profit Organisation(s)');
+    clickContinueTiles();
+    clickOpt(0); // election: No — both stay Excluded
+    assertVerdict('OUT OF SCOPE','Excluded Entity');
+    assertCiteIncludes('1.5.2(a)');
+    assertCiteIncludes('1.9');
+    assertSectionOrder();
+  });
+  tc('Excluded Entity combo — two electable tiles together, election made (proceeds to Step F, not an exit)', ()=>{
+    toStepE();
+    clickTileByLabel('≥95% owned holding/ancillary vehicle');
+    clickTileByLabel('≥100% owned by Non-profit Organisation(s)');
+    clickContinueTiles();
+    clickOpt(1); // election: Yes — elect both in
+    assertIncludes('electing both in routes to Step F rather than exiting', stepNum(), 'Investment Entity Charging Confirmation');
+    clickOpt(0); // F: No -> IN SCOPE
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertIncludes('Inputs Entered records the Art 1.5.3 election on the result screen', pathRowText(), 'Art 1.5.3');
+    assertSectionOrder();
+  });
+
+  // =======================================================================
+  // 4. Both Five-Year Election outcomes
+  //    ("No" is already exercised by every electable single-tile case above;
+  //    this pair makes both outcomes explicit and independently checkable.)
+  // =======================================================================
+  tc('Five-Year Election — No (Entity remains Excluded)', ()=>{
+    toStepE();
+    clickTileByLabel('≥100% owned by Non-profit Organisation(s)');
+    clickContinueTiles();
+    clickOpt(0); // No — do not elect
+    assertVerdict('OUT OF SCOPE','Excluded Entity');
+    assertCiteIncludes('1.9');
+    assertSectionOrder();
+  });
+  tc('Five-Year Election — Yes (elects in, proceeds to Step F, reaches IN SCOPE)', ()=>{
+    toStepE();
+    clickTileByLabel('≥100% owned by Non-profit Organisation(s)');
+    clickContinueTiles();
+    clickOpt(1); // Yes — make the election
+    assertIncludes('routes to Step F after electing in', stepNum(), 'Investment Entity Charging Confirmation');
+    clickOpt(0); // F: No -> IN SCOPE
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertCiteIncludes('2.1');
+    assertIncludes('Inputs Entered records the election as made on the result screen', pathRowText(), 'Art 1.5.3');
+    assertSectionOrder();
+  });
+
+  // =======================================================================
+  // 5. Both SWF branches at Step C
+  // =======================================================================
+  tc('Step C — No (standard UPE identification, no SWF sub-step; total 7 steps)', ()=>{
+    toStepC();
+    clickOpt(0); // C: No — standard UPE
+    assertIncludes('does not insert an 8th step', stepNum(), 'of 7');
+    clickOpt(0); // D: Yes, included
+    clickContinueTiles(); // E: no tiles -> F
+    clickOpt(0); // F: No -> IN SCOPE
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertSectionOrder();
+  });
+  tc('Step C — Yes → SWF sub-step Yes ((a)/(b) met, proceeds to Step D, total 8 steps)', ()=>{
+    toStepC();
+    clickOpt(1); // C: Yes — SWF Governmental Entity
+    assertIncludes('lands on "Step 5 of 8"', stepNum(), 'Step 5 of 8');
+    clickOpt(0); // swf sub-step: Yes — (a) or (b) is met
+    clickOpt(0); // D: Yes, included
+    clickContinueTiles();
+    clickOpt(0); // F: No -> IN SCOPE
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertSectionOrder();
+  });
+  // (SWF sub-step "No" outcome is covered under section 1 above — the new
+  // Art 1.6.2-not-satisfied exit is itself one of the required conclusion types.)
+
+  // =======================================================================
+  // 6. Pro-ration sub-step, both answers
+  // =======================================================================
+  tc('Pro-ration — No (all 4 FYs full 12 months)', ()=>{
+    reset();
+    clickOpt(0); // A: Yes
+    document.getElementById('prNo').click();
+    assertIncludes('proceeds straight to the MNE Group Test', stepNum(), 'MNE Group Test');
+  });
+  tc('Pro-ration — Yes (short FY, verifies the adjusted-threshold calculation)', ()=>{
+    reset();
+    clickOpt(0); // A: Yes
+    document.getElementById('prYes').click();
+    document.getElementById('prStart').value='2023-01-01';
+    document.getElementById('prEnd').value='2023-06-30';
+    document.getElementById('prCalcBtn').click();
+    const sd=new Date('2023-01-01T00:00:00'), ed=new Date('2023-06-30T00:00:00');
+    const expectedDays=Math.round((ed-sd)/86400000)+1;
+    const expectedThreshold=Math.round(750000000*(expectedDays/365)).toLocaleString('en-AE');
+    const resultText=document.getElementById('prResult').textContent;
+    assertIncludes('period length computed correctly (Art 1.1.2 pro-ration)', resultText, expectedDays+' days');
+    assertIncludes('adjusted EUR 750m threshold computed correctly', resultText, expectedThreshold);
+    document.getElementById('prContinue').click();
+    assertIncludes('proceeds to the MNE Group Test after Continue', stepNum(), 'MNE Group Test');
+    // Drive to a conclusion screen (where Inputs Entered actually renders) and
+    // confirm the pro-ration facts were recorded into the trail correctly.
+    clickOpt(1); // B: No -> Out of Scope (fastest path to a result screen)
+    assertVerdict('OUT OF SCOPE','not an MNE Group');
+    assertIncludes('Inputs Entered records the short-FY length', pathRowText(), expectedDays+' days');
+    assertIncludes('Inputs Entered records the pro-rated threshold', pathRowText(), expectedThreshold);
+  });
+
+  // =======================================================================
+  // Bonus: PE flow-through note (Art 1.7) when the UAE Entity is itself a PE
+  // =======================================================================
+  tc('Permanent Establishment (isPE) + Excluded tile — Art 1.7 flow-through fact included', ()=>{
+    toStepE_asPE();
+    clickTileByLabel('Governmental Entity');
+    clickContinueTiles();
+    assertVerdict('OUT OF SCOPE','Excluded Entity');
+    assertCiteIncludes('1.7');
+    assertSectionOrder();
+  });
+
+  // ---------------------------------------------------------------------
+  // Render report
+  // ---------------------------------------------------------------------
+  let total=0,passed=0;
+  groups.forEach(g=>{
+    const box=document.createElement('div'); box.className='group';
+    const gPass=g.cases.every(c=>c.pass);
+    box.innerHTML=`<div class="group-title">${gPass?'✅':'❌'} ${g.name}</div>`;
+    g.cases.forEach(c=>{
+      total++; if(c.pass)passed++;
+      const row=document.createElement('div'); row.className='case '+(c.pass?'pass':'fail');
+      row.innerHTML=`<span class="mark">${c.pass?'✓':'✗'}</span><span>${c.desc}${c.detail&&!c.pass?`<span class="detail">${c.detail.replace(/</g,'&lt;')}</span>`:''}</span>`;
+      box.appendChild(row);
+    });
+    resultsEl.appendChild(box);
+  });
+  const failed=total-passed;
+  summaryEl.className=failed===0?'pass':'fail';
+  summaryEl.textContent=(failed===0?'✅ ':'❌ ')+passed+' / '+total+' assertions passed across '+groups.length+' scenarios'+(failed?' — '+failed+' FAILED':'');
+  window.__TEST_SUMMARY__={total,passed,failed,groups:groups.length,
+    failures:groups.flatMap(g=>g.cases.filter(c=>!c.pass).map(c=>g.name+' :: '+c.desc+' — '+c.detail))};
+  console.log('[DMTT tests]', window.__TEST_SUMMARY__.passed+'/'+window.__TEST_SUMMARY__.total, 'across', groups.length, 'scenarios');
+  if(failed) console.error('[DMTT tests] failures:', window.__TEST_SUMMARY__.failures);
+})();
+</script>
+</body>
+</html>
