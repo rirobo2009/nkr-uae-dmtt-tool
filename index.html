@@ -52,13 +52,13 @@
 
   .info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--nkr-navy);color:#fff;font-size:11px;font-weight:700;font-style:italic;cursor:help;vertical-align:middle;margin-left:6px;position:relative;flex-shrink:0;line-height:1;user-select:none}
   .info:hover,.info:focus,.info.open{background:var(--accent-primary);outline:none}
-  .info .tip{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);width:min(360px,80vw);background:var(--nkr-navy);color:var(--nkr-offwhite);font-style:normal;font-weight:400;font-size:12.5px;line-height:1.5;letter-spacing:.01em;padding:12px 14px;border-radius:8px;box-shadow:var(--shadow-lg);opacity:0;visibility:hidden;transition:opacity .15s;z-index:200;text-align:left;pointer-events:none}
-  .info .tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:7px solid transparent;border-top-color:var(--nkr-navy)}
+  .info .tip{position:absolute;bottom:calc(100% + 10px);left:0;width:min(360px,80vw);background:var(--nkr-navy);color:var(--nkr-offwhite);font-style:normal;font-weight:400;font-size:12.5px;line-height:1.5;letter-spacing:.01em;padding:12px 14px;border-radius:8px;box-shadow:var(--shadow-lg);opacity:0;visibility:hidden;transition:opacity .15s;z-index:200;text-align:left;pointer-events:none}
+  .info .tip::after{content:"";position:absolute;top:100%;left:var(--arrow-left,50%);transform:translateX(-50%);border:7px solid transparent;border-top-color:var(--nkr-navy)}
   .info .tip cite{display:block;margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,.2);color:#9FD3C7;font-style:normal;font-size:11px;letter-spacing:.02em}
   .info:hover .tip,.info:focus .tip,.info.open .tip{opacity:1;visibility:visible}
   .info.open .tip{pointer-events:auto}
-  .info.tip-left .tip{left:auto;right:0;transform:none}
-  .info.tip-left .tip::after{left:auto;right:6px;transform:none}
+  .info.tip-below .tip{bottom:auto;top:calc(100% + 10px)}
+  .info.tip-below .tip::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--nkr-navy)}
 
   .options{display:flex;flex-direction:column;gap:10px}
   .opt{text-align:left;font-family:inherit;font-size:15px;color:var(--text-primary);background:#fff;border:1.5px solid var(--nkr-teal);border-radius:8px;padding:14px 16px;cursor:pointer;transition:.15s;line-height:1.4;display:flex;align-items:flex-start;gap:12px;width:100%}
@@ -150,14 +150,12 @@
     header.masthead{padding-bottom:10px;margin-bottom:6px}
     .logo-mark img{height:48px}
     h1{font-size:18px}
-    .head-top{align-items:flex-start;gap:8px}
+    .head-top{align-items:center;gap:8px}
+    .head-right{gap:4px}
     .explore{padding:5px 8px;font-size:10px;white-space:normal;text-align:center;flex-shrink:0}
     .explore svg{display:none}
     .card{padding:20px 18px}.verdict{padding:20px}
-    .info .tip{width:min(260px,72vw);left:0;right:auto;transform:none}
-    .info .tip::after{left:16px;transform:none}
-    .info.tip-left .tip{left:auto;right:0}
-    .info.tip-left .tip::after{left:auto;right:16px}
+    .info .tip{width:min(260px,72vw)}
     .tile{flex-basis:100%}
   }
 @media print{
@@ -303,6 +301,8 @@ const CITE={
   revProration:"Art. 1.1.2, CD 142/2024 Annexure",
   group:"Art. 1.2.1–1.2.3, CD 142/2024 Annexure",
   upe:"Art. 1.4.1, CD 142/2024 Annexure; Art. 18 (Controlling Interest)",
+  swf:"Art. 1.6.1–1.6.2, CD 142/2024 Annexure",
+  swfSub:"Art. 1.6.2, CD 142/2024 Annexure",
   constituent:"Art. 1.3, CD 142/2024 Annexure",
   exclGov:"Art. 1.5; Art. 18 (Governmental Entity), CD 142/2024 Annexure",
   exclIntlOrg:"Art. 1.5; Art. 18 (International Organisation), CD 142/2024 Annexure",
@@ -326,11 +326,29 @@ const CITE={
    ================================================================== */
 function tip(text,cite){return `<span class="info" tabindex="0">i<span class="tip">${text}${cite?`<cite>${cite}</cite>`:''}</span></span>`;}
 function fixTooltips(){
+  const margin=8;
+  const headerEl=document.querySelector('header.masthead');
+  const headerTop=headerEl?headerEl.getBoundingClientRect().top:0;
   document.querySelectorAll('.info').forEach(el=>{
-    const r=el.getBoundingClientRect();
-    if(r.left>window.innerWidth*0.62)el.classList.add('tip-left');
+    el.classList.remove('tip-below');
+    const tipEl=el.querySelector('.tip');
+    if(!tipEl)return;
+    const iconRect=el.getBoundingClientRect();
+    const tipRect=tipEl.getBoundingClientRect();
+    // Horizontal: centre the tip under the icon, then clamp so neither edge
+    // crosses the viewport's left/right boundary.
+    let left=(iconRect.left+iconRect.width/2)-tipRect.width/2;
+    if(left+tipRect.width>window.innerWidth-margin)left=window.innerWidth-margin-tipRect.width;
+    if(left<margin)left=margin;
+    tipEl.style.left=`${left-iconRect.left}px`;
+    tipEl.style.setProperty('--arrow-left',`${(iconRect.left+iconRect.width/2)-left}px`);
+    // Vertical: the tip normally opens above the icon. If that would render
+    // it beyond the sticky header's top edge (clipped off-screen), flip it
+    // to open below the icon instead.
+    if(iconRect.top-10-tipRect.height<headerTop)el.classList.add('tip-below');
   });
 }
+window.addEventListener('resize',fixTooltips);
 function closeAllTips(except){
   document.querySelectorAll('.info.open').forEach(el=>{ if(el!==except) el.classList.remove('open'); });
 }
@@ -446,12 +464,12 @@ function pdfHeaderBlock(){
   return d;
 }
 function factsBlock(facts){
-  const d=document.createElement('div');d.className='card facts';d.innerHTML=`<h3>Section 2 — Provisions Relied Upon</h3>`;
+  const d=document.createElement('div');d.className='card facts';d.innerHTML=`<h3>Section 3 — Provisions Relied Upon</h3>`;
   facts.forEach(f=>{const el=document.createElement('div');el.className='fact';el.innerHTML=`<div class="ft">${f.t}</div><div class="fb">${f.b}</div>${f.c?`<cite>${f.c}</cite>`:''}`;d.appendChild(el);});
   return d;
 }
 function pathBlock(){
-  const d=document.createElement('div');d.className='card path';d.innerHTML=`<h3>Section 1 — Inputs Entered</h3>`;
+  const d=document.createElement('div');d.className='card path';d.innerHTML=`<h3>Section 2 — Inputs Entered</h3>`;
   trail.forEach(t=>{const r=document.createElement('div');r.className='path-row';r.innerHTML=`<span class="pq">${t.q}</span><span class="pa ${t.cls}">${t.a}</span>`;d.appendChild(r);});
   return d;
 }
@@ -464,21 +482,21 @@ function actionRow(){
 function result(kind,tag,title,rateLine,facts,extraNote){
   const node=document.createElement('div');
   const v=document.createElement('div');v.className='verdict '+kind;
-  v.innerHTML=`<div class="tag">Section 3 — Conclusion · ${tag}</div><h2>${title}</h2><div class="rate-line">${rateLine}</div>${extraNote?`<p>${extraNote}</p>`:''}`;
+  v.innerHTML=`<div class="tag">Section 1 — Conclusion · ${tag}</div><h2>${title}</h2><div class="rate-line">${rateLine}</div>${extraNote?`<p>${extraNote}</p>`:''}`;
   node.appendChild(pdfHeaderBlock());
-  node.appendChild(pathBlock());node.appendChild(factsBlock(facts));node.appendChild(v);node.appendChild(actionRow());
+  node.appendChild(v);node.appendChild(pathBlock());node.appendChild(factsBlock(facts));node.appendChild(actionRow());
   mount(node,'final');fixTooltips();
 }
 function outOfScope(title,rateLine,facts,extraNote){result('pass','OUT OF SCOPE',title,rateLine,facts,extraNote);}
 function inScope(title,rateLine,facts,extraNote){result('review','IN SCOPE',title,rateLine,facts,extraNote);}
 function notDirectlyLiable(title,rateLine,facts,extraNote){result('review','NOT DIRECTLY LIABLE',title,rateLine,facts,extraNote);}
+function reviewRequired(title,rateLine,facts,extraNote){result('fail','REVIEW REQUIRED',title,rateLine,facts,extraNote);}
 
 /* ==================================================================
    STEP A — Revenue Threshold Test (Art 1.1.1–1.1.2)
    ================================================================== */
 function stepA(){
   const revTip=tip("“Consolidated Financial Statements” and “Ultimate Parent Entity”: A Group is a collection of Entities related through ownership/control whose financials are included in the UPE’s Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds). The Ultimate Parent Entity is an Entity with a Controlling Interest in others, not itself controlled by another Entity — or the Main Entity in a Permanent-Establishment-only structure. Controlling Interest means an Ownership Interest requiring line-by-line consolidation of the Entity’s assets, liabilities, income, expenses and cash flows under an Acceptable Financial Accounting Standard (or that would require it if Consolidated Financial Statements were prepared).",`${CITE.group}; ${CITE.upe}`);
-  let helpEl;
   const node=optionCard(
     `In at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year, did the MNE Group's Ultimate Parent Entity report annual consolidated revenue of EUR 750 million or more in its Consolidated Financial Statements? ${revTip}`,
     null,
@@ -487,12 +505,8 @@ function stepA(){
       {key:'B',label:'No',action:()=>{record("Revenue ≥ EUR 750m in 2 of preceding 4 FYs?","No","no");
         outOfScope("Out of scope — revenue threshold not met.",
           "The MNE Group did not report EUR 750 million or more of annual consolidated revenue in at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year. UAE DMTT does not apply.",
-          [{t:"The EUR 750m revenue threshold is the entry gate to UAE DMTT.",b:"UAE DMTT applies only to MNE Groups whose Ultimate Parent Entity reported consolidated revenue of EUR 750 million or more in at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year. This test is not met on the facts entered.",c:CITE.revThreshold}]);}},
-      {key:'C',label:'Not sure — help me check',action:()=>{helpEl.classList.remove('hide');}}
+          [{t:"The EUR 750m revenue threshold is the entry gate to UAE DMTT.",b:"UAE DMTT applies only to MNE Groups whose Ultimate Parent Entity reported consolidated revenue of EUR 750 million or more in at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year. This test is not met on the facts entered.",c:CITE.revThreshold}]);}}
     ],'Revenue Threshold Test');
-  helpEl=document.createElement('div');helpEl.className='q-note hide';
-  helpEl.innerHTML=`Check the Ultimate Parent Entity's Consolidated Financial Statements for each of the last 4 Fiscal Years (the tested Fiscal Year and the 3 before it). If annual consolidated revenue was EUR 750 million or more in at least 2 of those 4 years, answer <b>Yes</b>. If a Fiscal Year is shorter than 12 months, its EUR 750 million comparison threshold is pro-rated — the next question covers that. Once you have checked, select Yes or No above.`;
-  node.insertBefore(helpEl,node.querySelector('.options'));
   mount(node,'step');fixTooltips();
 }
 
@@ -583,11 +597,15 @@ function stepC(){
 
 function stepC_swf(){
   const node=optionCard(
-    `Under the Art 1.6 substitution rule, the sovereign wealth fund itself is not treated as the Ultimate Parent Entity for UAE DMTT scope purposes. Instead, the Entity in which it holds a direct Controlling Interest — where that Entity itself controls other Entities, or is a Main Entity with Permanent Establishments — is treated as the Ultimate Parent Entity. ${tip("Where the Ultimate Parent Entity is a sovereign wealth fund that qualifies as a Governmental Entity, the Entity in which the sovereign wealth fund holds a direct Controlling Interest is treated as the Ultimate Parent Entity for scope purposes, provided that Entity itself has a Controlling Interest in other Entities or is a Main Entity with Permanent Establishments.",CITE.upe+"; Art. 1.6, CD 142/2024 Annexure")}`,
-    `Re-run Steps A–B in your own analysis using this substituted Ultimate Parent Entity's consolidated revenue and structure, then confirm below to continue.`,
+    `Does the Entity in which the sovereign wealth fund holds a direct Controlling Interest either (a) itself hold a Controlling Interest in another Entity, or (b) act as a Main Entity with Permanent Establishments in other jurisdictions? ${tip("Art 1.6.1 provides that a sovereign wealth fund qualifying as a Governmental Entity is not itself treated as the Ultimate Parent Entity. Art 1.6.2 instead treats the Entity in which the sovereign wealth fund holds a direct Controlling Interest as the Ultimate Parent Entity — but only where that substitute Entity itself has a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions.",CITE.swf)}`,
+    `Art 1.6.1: the sovereign wealth fund itself is not treated as the Ultimate Parent Entity. Art 1.6.2: the Entity in which it holds a direct Controlling Interest is treated as the Ultimate Parent Entity instead — but only if it meets (a) or (b) below.`,
     [
-      {key:'A',label:'Confirmed — I have identified the substituted Ultimate Parent Entity under Art 1.6',action:()=>{record("Art 1.6 substituted UPE identified?","Yes","yes");push(stepD);}}
-    ],'UPE Identification — sovereign wealth fund substitution');
+      {key:'A',label:'Yes — (a) or (b) is met',sub:"The substitute Entity itself holds a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions",action:()=>{record("Art 1.6.2 substitute UPE conditions met (controls another Entity, or Main Entity with PEs)?","Yes","yes");push(stepD);}},
+      {key:'B',label:'No — neither (a) nor (b) is met',sub:"The substitute Entity neither controls another Entity nor acts as a Main Entity with Permanent Establishments in other jurisdictions",action:()=>{record("Art 1.6.2 substitute UPE conditions met (controls another Entity, or Main Entity with PEs)?","No","no");
+        reviewRequired("Article 1.6.2 conditions not satisfied — professional review required.",
+          "The Ultimate Parent Entity is a sovereign wealth fund qualifying as a Governmental Entity, so under Art 1.6.1 it is not itself treated as the Ultimate Parent Entity. On the facts entered, the Entity in which it holds a direct Controlling Interest neither itself holds a Controlling Interest in another Entity, nor acts as a Main Entity with Permanent Establishments in other jurisdictions. Art 1.6.2's substitution conditions are therefore not met, so no Ultimate Parent Entity has been identified under this rule — this assessment cannot proceed on a self-service basis and should be reviewed by a qualified UAE tax adviser.",
+          [{t:"Art 1.6.2 substitution conditions not met.",b:"Where the Ultimate Parent Entity is a sovereign wealth fund qualifying as a Governmental Entity, Art 1.6.2 only treats the Entity in which it holds a direct Controlling Interest as the Ultimate Parent Entity if that substitute Entity itself has a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions. Neither condition is met on the facts entered.",c:CITE.swfSub}]);}}
+    ],'UPE Identification — sovereign wealth fund substitution (Art 1.6.2)');
   mount(node,'step');fixTooltips();
 }
 
