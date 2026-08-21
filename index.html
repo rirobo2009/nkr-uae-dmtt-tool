@@ -175,11 +175,16 @@
     .logo-mark .logo-dark{display:none!important}
     /* PDF logo size/position is intentionally decoupled from the on-screen
        logo (which is sized independently above) — this is the only rule
-       that controls it, restored to the original PDF size (57px) x1.25,
-       positioned top-right of the header via the existing head-right column
-       (the Explore button that normally shares that column is hidden in
-       print, so the logo alone occupies the corner). */
-    .logo-mark img{height:71.25px!important;width:auto!important}
+       that controls it, positioned top-right of the header via the existing
+       head-right column (the Explore button that normally shares that
+       column is hidden in print, so the logo alone occupies the corner).
+       Sized by width (155px — the same footprint the old height:71.25px
+       rule produced under the previous, narrower logo file) with
+       height:auto, not a fixed height: a fixed height was exactly what
+       made this oversized when the cropped logo's aspect ratio changed
+       (2.17:1 -> 2.69:1), same bug the on-screen rules had before they
+       were switched to width-based sizing. */
+    .logo-mark img{width:155px!important;height:auto!important}
     .head-right{gap:0!important}
     .wrap{max-width:100%}
     .card,.verdict{box-shadow:none;break-inside:avoid;border:1px solid #ccc}
