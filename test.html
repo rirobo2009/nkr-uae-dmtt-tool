@@ -200,11 +200,12 @@
     assertSectionOrder();
   });
 
-  tc('Step C=Yes → SWF sub-step (Step 5 of 8) — No (Art 1.6.2 not satisfied)', ()=>{
+  tc('Step C=Yes → SWF branch (Step 5 of 9) → Direct → No (Art 1.6.2 not satisfied)', ()=>{
     toStepC();
     clickOpt(1); // C: Yes — UPE is/owned by SWF Governmental Entity
-    assertIncludes('lands on "Step 5 of 8" for the SWF sub-flow', stepNum(), 'Step 5 of 8');
-    clickOpt(1); // swf sub-step: No — neither (a) nor (b) is met
+    assertIncludes('lands on "Step 5 of 9" for the SWF direct/holding-company branch', stepNum(), 'Step 5 of 9');
+    clickOpt(0); // branch: Directly
+    clickOpt(1); // direct (a)/(b) sub-step: No — neither (a) nor (b) is met
     assertVerdict('REVIEW REQUIRED','Article 1.6.2 conditions not satisfied');
     assertCiteIncludes('1.6.2');
     assertSectionOrder();
@@ -317,31 +318,68 @@
   });
 
   // =======================================================================
-  // 5. Both SWF branches at Step C
+  // 5. SWF sub-flow — direct/holding-company branch at Step C
+  //    Full permutation check: direct x{Yes,No}, holding-company x{Yes,No}
+  //    = 4 paths through the Art 1.6.2 substitution sub-flow (TTGREG1 §4.2.3.1).
   // =======================================================================
-  tc('Step C — No (standard UPE identification, no SWF sub-step; total 7 steps)', ()=>{
+  tc('Step C — No (standard UPE identification, no SWF sub-flow; total 7 steps)', ()=>{
     toStepC();
     clickOpt(0); // C: No — standard UPE
-    assertIncludes('does not insert an 8th step', stepNum(), 'of 7');
+    assertIncludes('does not insert the SWF branch steps', stepNum(), 'of 7');
     clickOpt(0); // D: Yes, included
     clickContinueTiles(); // E: no tiles -> F
     clickOpt(0); // F: No -> IN SCOPE
     assertVerdict('IN SCOPE','IN SCOPE');
     assertSectionOrder();
   });
-  tc('Step C — Yes → SWF sub-step Yes ((a)/(b) met, proceeds to Step D, total 8 steps)', ()=>{
+  tc('SWF sub-flow — Direct → Yes ((a)/(b) met, proceeds to Step D, total 9 steps)', ()=>{
     toStepC();
     clickOpt(1); // C: Yes — SWF Governmental Entity
-    assertIncludes('lands on "Step 5 of 8"', stepNum(), 'Step 5 of 8');
-    clickOpt(0); // swf sub-step: Yes — (a) or (b) is met
+    assertIncludes('lands on "Step 5 of 9" for the direct/holding-company branch', stepNum(), 'Step 5 of 9');
+    clickOpt(0); // branch: Directly
+    assertIncludes('lands on "Step 6 of 9" for the direct (a)/(b) test', stepNum(), 'Step 6 of 9');
+    clickOpt(0); // direct (a)/(b): Yes — (a) or (b) is met
+    assertIncludes('proceeds to Step D as "Step 7 of 9"', stepNum(), 'Step 7 of 9');
     clickOpt(0); // D: Yes, included
     clickContinueTiles();
     clickOpt(0); // F: No -> IN SCOPE
     assertVerdict('IN SCOPE','IN SCOPE');
+    assertIncludes('Inputs Entered records the direct branch answer', pathRowText(), 'Directly');
     assertSectionOrder();
   });
-  // (SWF sub-step "No" outcome is covered under section 1 above — the new
-  // Art 1.6.2-not-satisfied exit is itself one of the required conclusion types.)
+  tc('SWF sub-flow — Direct → No (Art 1.6.2 not satisfied)', ()=>{
+    toStepC();
+    clickOpt(1); // C: Yes — SWF Governmental Entity
+    clickOpt(0); // branch: Directly
+    clickOpt(1); // direct (a)/(b): No — neither (a) nor (b) is met
+    assertVerdict('REVIEW REQUIRED','Article 1.6.2 conditions not satisfied');
+    assertCiteIncludes('1.6.2');
+    assertSectionOrder();
+  });
+  tc('SWF sub-flow — Through a wholly-owned holding company → Yes ((a)/(b) met against entity held via the holding company, total 9 steps)', ()=>{
+    toStepC();
+    clickOpt(1); // C: Yes — SWF Governmental Entity
+    clickOpt(1); // branch: Through a wholly-owned holding company
+    assertIncludes('lands on "Step 6 of 9" for the holding-company (a)/(b) test', stepNum(), 'Step 6 of 9');
+    clickOpt(0); // holdco (a)/(b): Yes — (a) or (b) is met
+    assertIncludes('proceeds to Step D as "Step 7 of 9"', stepNum(), 'Step 7 of 9');
+    clickOpt(0); // D: Yes, included
+    clickContinueTiles();
+    clickOpt(0); // F: No -> IN SCOPE
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertIncludes('Inputs Entered records the holding-company branch answer', pathRowText(), 'wholly-owned holding company');
+    assertSectionOrder();
+  });
+  tc('SWF sub-flow — Through a wholly-owned holding company → No (Art 1.6.2 not satisfied, holding-company chain)', ()=>{
+    toStepC();
+    clickOpt(1); // C: Yes — SWF Governmental Entity
+    clickOpt(1); // branch: Through a wholly-owned holding company
+    clickOpt(1); // holdco (a)/(b): No — neither (a) nor (b) is met
+    assertVerdict('REVIEW REQUIRED','Article 1.6.2 conditions not satisfied');
+    assertCiteIncludes('1.6.2');
+    assertCiteIncludes('TTGREG1');
+    assertSectionOrder();
+  });
 
   // =======================================================================
   // 6. Pro-ration sub-step, both answers

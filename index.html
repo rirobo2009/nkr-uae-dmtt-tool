@@ -236,7 +236,7 @@
   </header>
 
   <div class="legal-strip">
-    <strong>Legal basis (primary sources only):</strong> Cabinet Decision No. 142 of 2024 (Annexure), Article 1 (Scope of Application) &amp; Article 2.1–2.3 (Charging Provision), Article 18 (Definitions) · Ministerial Decision No. 88 of 2025 (adopted OECD Commentary/Guidance).
+    <strong>Legal basis (primary sources only):</strong> Cabinet Decision No. 142 of 2024 (Annexure), Article 1 (Scope of Application) &amp; Article 2.1–2.3 (Charging Provision), Article 18 (Definitions) · Ministerial Decision No. 96 of 2026 (adopted OECD Commentary/Guidance).
   </div>
 
   <div class="progress" id="progress"></div>
@@ -308,6 +308,8 @@ const CITE={
   upe:"Art. 1.4.1, CD 142/2024 Annexure; Art. 18 (Controlling Interest)",
   swf:"Art. 1.6.1–1.6.2, CD 142/2024 Annexure",
   swfSub:"Art. 1.6.2, CD 142/2024 Annexure",
+  swfHoldco:"Art. 1.6.1–1.6.2, CD 142/2024 Annexure; TTGREG1 §4.2.3.1",
+  currencyConversion:"TTGREG1 §4.3",
   constituent:"Art. 1.3, CD 142/2024 Annexure",
   exclGov:"Art. 1.5; Art. 18 (Governmental Entity), CD 142/2024 Annexure",
   exclIntlOrg:"Art. 1.5; Art. 18 (International Organisation), CD 142/2024 Annexure",
@@ -378,14 +380,16 @@ const STAGE=document.getElementById('stage'),PROG=document.getElementById('progr
 /* Base sequential steps on every path that reaches Step F: Revenue Threshold,
    the short-Fiscal-Year sub-step (always shown once Step A = Yes), MNE Group,
    UPE Identification, Constituent Entity, Excluded Entity, Investment Entity.
-   Two further steps are conditional and only counted once the user's answers
-   make them definitely apply: the Art 1.6 sovereign wealth fund sub-flow, and
-   the Art 1.5.3 Five-Year Election sub-step. This keeps "Step X of Y" accurate
-   for whichever path is actually being walked, recomputed from current answers
+   Further steps are conditional and only counted once the user's answers
+   make them definitely apply: the Art 1.6 sovereign wealth fund sub-flow (2
+   steps — the direct/holding-company branch, then the (a)/(b) test applied
+   to whichever entity that branch identifies), and the Art 1.5.3 Five-Year
+   Election sub-step (1 step). This keeps "Step X of Y" accurate for
+   whichever path is actually being walked, recomputed from current answers
    (which are themselves correctly restored on Back). */
 const BASE_STEP_COUNT=7;
 function totalStepsEstimate(){
-  return BASE_STEP_COUNT + (answers.tookSWF?1:0) + (answers.tookElection?1:0) + (answers.tookT9Purpose?1:0);
+  return BASE_STEP_COUNT + (answers.tookSWF?2:0) + (answers.tookElection?1:0) + (answers.tookT9Purpose?1:0);
 }
 function stepLabel(name){
   const depth=stepStack.length;
@@ -465,7 +469,7 @@ function pdfHeaderBlock(){
   const d=document.createElement('div');d.className='card';
   const dateStr=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
   d.innerHTML=`<h3 style="margin-bottom:10px">UAE DMTT — Module 1: Applicability Gate</h3>
-    <div class="q-note" style="margin-bottom:0">Assessment generated on <b>${dateStr}</b>. This is an automated preliminary assessment based on Cabinet Decision No. 142 of 2024 (Annexure) and the OECD Commentary/Guidance adopted by Ministerial Decision No. 88 of 2025. It does not constitute tax advice and is not a substitute for review by a qualified UAE tax adviser.</div>`;
+    <div class="q-note" style="margin-bottom:0">Assessment generated on <b>${dateStr}</b>. This is an automated preliminary assessment based on Cabinet Decision No. 142 of 2024 (Annexure) and the OECD Commentary/Guidance adopted by Ministerial Decision No. 96 of 2026. It does not constitute tax advice and is not a substitute for review by a qualified UAE tax adviser.</div>`;
   return d;
 }
 function factsBlock(facts){
@@ -502,8 +506,9 @@ function reviewRequired(title,rateLine,facts,extraNote){result('fail','REVIEW RE
    ================================================================== */
 function stepA(){
   const revTip=tip("“Consolidated Financial Statements” and “Ultimate Parent Entity”: A Group is a collection of Entities related through ownership/control whose financials are included in the UPE’s Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds). The Ultimate Parent Entity is an Entity with a Controlling Interest in others, not itself controlled by another Entity — or the Main Entity in a Permanent-Establishment-only structure. Controlling Interest means an Ownership Interest requiring line-by-line consolidation of the Entity’s assets, liabilities, income, expenses and cash flows under an Acceptable Financial Accounting Standard (or that would require it if Consolidated Financial Statements were prepared).",`${CITE.group}; ${CITE.upe}`);
+  const currencyTip=tip("If your Consolidated Financial Statements are prepared in a currency other than EUR, you must convert revenue using the average daily reference rate for December prior to the relevant Fiscal Year — as quoted by the European Central Bank, or by the Central Bank of the UAE if the European Central Bank does not quote one, or another FTA-acceptable source reflecting that month's average rate if neither does — before comparing against the EUR 750 million threshold.",CITE.currencyConversion);
   const node=optionCard(
-    `In at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year, did the MNE Group's Ultimate Parent Entity report annual consolidated revenue of EUR 750 million or more in its Consolidated Financial Statements? ${revTip}`,
+    `In at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year, did the MNE Group's Ultimate Parent Entity report annual consolidated revenue of EUR 750 million or more in its Consolidated Financial Statements? ${revTip} ${currencyTip}`,
     null,
     [
       {key:'A',label:'Yes',action:()=>{record("Revenue ≥ EUR 750m in 2 of preceding 4 FYs?","Yes","yes");push(stepA_proration);}},
@@ -602,15 +607,63 @@ function stepC(){
 
 function stepC_swf(){
   const node=optionCard(
-    `Does the Entity in which the sovereign wealth fund holds a direct Controlling Interest either (a) itself hold a Controlling Interest in another Entity, or (b) act as a Main Entity with Permanent Establishments in other jurisdictions? ${tip("Art 1.6.1 provides that a sovereign wealth fund qualifying as a Governmental Entity is not itself treated as the Ultimate Parent Entity. Art 1.6.2 instead treats the Entity in which the sovereign wealth fund holds a direct Controlling Interest as the Ultimate Parent Entity — but only where that substitute Entity itself has a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions.",CITE.swf)}`,
-    `Art 1.6.1: the sovereign wealth fund itself is not treated as the Ultimate Parent Entity. Art 1.6.2: the Entity in which it holds a direct Controlling Interest is treated as the Ultimate Parent Entity instead — but only if it meets (a) or (b) below.`,
+    `Does the sovereign wealth fund hold its Controlling Interest in that Entity directly, or through a wholly-owned holding company? ${tip("Art 1.6.2 treats the Entity in which the sovereign wealth fund holds a Controlling Interest as the Ultimate Parent Entity, subject to the (a)/(b) conditions. Per the FTA's Scope and Registration Guide (TTGREG1 §4.2.3.1), where that Controlling Interest is held through a wholly-owned holding company rather than directly, neither the sovereign wealth fund nor the holding company can be the Ultimate Parent Entity — the (a)/(b) conditions are instead tested against the Entity in which the holding company holds the Controlling Interest.",CITE.swfHoldco)}`,
+    `Art 1.6.1: the sovereign wealth fund itself is never treated as the Ultimate Parent Entity. Which Entity the (a)/(b) test in Art 1.6.2 is applied to depends on whether the sovereign wealth fund's Controlling Interest is held directly, or through a wholly-owned holding company.`,
     [
-      {key:'A',label:'Yes — (a) or (b) is met',sub:"The substitute Entity itself holds a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions",action:()=>{record("Art 1.6.2 substitute UPE conditions met (controls another Entity, or Main Entity with PEs)?","Yes","yes");push(stepD);}},
-      {key:'B',label:'No — neither (a) nor (b) is met',sub:"The substitute Entity neither controls another Entity nor acts as a Main Entity with Permanent Establishments in other jurisdictions",action:()=>{record("Art 1.6.2 substitute UPE conditions met (controls another Entity, or Main Entity with PEs)?","No","no");
-        reviewRequired("Article 1.6.2 conditions not satisfied — professional review required.",
-          "The Ultimate Parent Entity is a sovereign wealth fund qualifying as a Governmental Entity, so under Art 1.6.1 it is not itself treated as the Ultimate Parent Entity. On the facts entered, the Entity in which it holds a direct Controlling Interest neither itself holds a Controlling Interest in another Entity, nor acts as a Main Entity with Permanent Establishments in other jurisdictions. Art 1.6.2's substitution conditions are therefore not met, so no Ultimate Parent Entity has been identified under this rule — this assessment cannot proceed on a self-service basis and should be reviewed by a qualified UAE tax adviser.",
-          [{t:"Art 1.6.2 substitution conditions not met.",b:"Where the Ultimate Parent Entity is a sovereign wealth fund qualifying as a Governmental Entity, Art 1.6.2 only treats the Entity in which it holds a direct Controlling Interest as the Ultimate Parent Entity if that substitute Entity itself has a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions. Neither condition is met on the facts entered.",c:CITE.swfSub}]);}}
+      {key:'A',label:'Directly',sub:"The sovereign wealth fund holds its Controlling Interest directly in the Entity",action:()=>{record("Sovereign wealth fund holds its Controlling Interest directly, or through a wholly-owned holding company?","Directly","");push(()=>stepC_swf_test('direct'));}},
+      {key:'B',label:'Through a wholly-owned holding company',sub:"The sovereign wealth fund holds a wholly-owned holding company, which in turn holds the Controlling Interest in the Entity",action:()=>{record("Sovereign wealth fund holds its Controlling Interest directly, or through a wholly-owned holding company?","Through a wholly-owned holding company","");push(()=>stepC_swf_test('holdco'));}}
     ],'UPE Identification — sovereign wealth fund substitution (Art 1.6.2)');
+  mount(node,'step');fixTooltips();
+}
+
+/* The (a)/(b) test that follows the direct/holding-company branch above is
+   the same question, options and exit screen shape in both cases — only the
+   specific Entity being tested (and the wording/citations that follow from
+   that) differs. Kept as one parameterised step rather than two near-
+   duplicate functions; SWF_TEST_VARIANT carries every string that differs
+   between the branches, verbatim per TTGREG1 §4.2.3.1. */
+const SWF_TEST_VARIANT={
+  direct:{
+    question:"Does the Entity in which the sovereign wealth fund holds a direct Controlling Interest either (a) itself hold a Controlling Interest in another Entity, or (b) act as a Main Entity with Permanent Establishments in other jurisdictions?",
+    tipText:"Art 1.6.1 provides that a sovereign wealth fund qualifying as a Governmental Entity is not itself treated as the Ultimate Parent Entity. Art 1.6.2 instead treats the Entity in which the sovereign wealth fund holds a direct Controlling Interest as the Ultimate Parent Entity — but only where that substitute Entity itself has a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions.",
+    tipCite:CITE.swf,
+    note:"Art 1.6.1: the sovereign wealth fund itself is not treated as the Ultimate Parent Entity. Art 1.6.2: the Entity in which it holds a direct Controlling Interest is treated as the Ultimate Parent Entity instead — but only if it meets (a) or (b) below.",
+    recordQ:"Art 1.6.2 substitute UPE conditions met (controls another Entity, or Main Entity with PEs)?",
+    yesSub:"The substitute Entity itself holds a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions",
+    noSub:"The substitute Entity neither controls another Entity nor acts as a Main Entity with Permanent Establishments in other jurisdictions",
+    reviewNarrative:"The Ultimate Parent Entity is a sovereign wealth fund qualifying as a Governmental Entity, so under Art 1.6.1 it is not itself treated as the Ultimate Parent Entity. On the facts entered, the Entity in which it holds a direct Controlling Interest neither itself holds a Controlling Interest in another Entity, nor acts as a Main Entity with Permanent Establishments in other jurisdictions. Art 1.6.2's substitution conditions are therefore not met, so no Ultimate Parent Entity has been identified under this rule — this assessment cannot proceed on a self-service basis and should be reviewed by a qualified UAE tax adviser.",
+    factT:"Art 1.6.2 substitution conditions not met.",
+    factB:"Where the Ultimate Parent Entity is a sovereign wealth fund qualifying as a Governmental Entity, Art 1.6.2 only treats the Entity in which it holds a direct Controlling Interest as the Ultimate Parent Entity if that substitute Entity itself has a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions. Neither condition is met on the facts entered.",
+    factCite:CITE.swfSub,
+    stepName:'UPE Identification — sovereign wealth fund substitution, direct holding (Art 1.6.2)'
+  },
+  holdco:{
+    question:"Does the Entity in which the wholly-owned holding company holds a Controlling Interest either (a) itself hold a Controlling Interest in another Entity, or (b) act as a Main Entity with Permanent Establishments in other jurisdictions?",
+    tipText:"Per TTGREG1 §4.2.3.1, where a sovereign wealth fund qualifying as a Governmental Entity holds its Controlling Interest through a wholly-owned holding company, neither the sovereign wealth fund nor the holding company can be the Ultimate Parent Entity. Instead, the (a)/(b) test is applied to the Entity in which the holding company holds the Controlling Interest — that Entity becomes the Ultimate Parent Entity if either condition is met.",
+    tipCite:CITE.swfHoldco,
+    note:"Art 1.6.1: the sovereign wealth fund itself is not treated as the Ultimate Parent Entity. Per TTGREG1 §4.2.3.1, the wholly-owned holding company cannot be the Ultimate Parent Entity either — the (a)/(b) test is applied one level further down, to the Entity the holding company itself holds a Controlling Interest in.",
+    recordQ:"Art 1.6.2 substitute UPE conditions met against the Entity held via the holding company (controls another Entity, or Main Entity with PEs)?",
+    yesSub:"The Entity held by the holding company itself holds a Controlling Interest in another Entity, or is a Main Entity with Permanent Establishments in other jurisdictions",
+    noSub:"The Entity held by the holding company neither controls another Entity nor acts as a Main Entity with Permanent Establishments in other jurisdictions",
+    reviewNarrative:"The Ultimate Parent Entity is a sovereign wealth fund qualifying as a Governmental Entity that holds its Controlling Interest through a wholly-owned holding company. Under Art 1.6.1 the sovereign wealth fund is not itself treated as the Ultimate Parent Entity, and per TTGREG1 §4.2.3.1 the wholly-owned holding company cannot be the Ultimate Parent Entity either. On the facts entered, the Entity in which the holding company holds a Controlling Interest neither itself holds a Controlling Interest in another Entity, nor acts as a Main Entity with Permanent Establishments in other jurisdictions. Art 1.6.2's substitution conditions are therefore not met against that Entity, so no Ultimate Parent Entity has been identified under this rule — this assessment cannot proceed on a self-service basis and should be reviewed by a qualified UAE tax adviser.",
+    factT:"Art 1.6.2 substitution conditions not met (holding-company chain).",
+    factB:"Where a sovereign wealth fund qualifying as a Governmental Entity holds its Controlling Interest through a wholly-owned holding company, TTGREG1 §4.2.3.1 confirms neither the sovereign wealth fund nor the holding company can be the Ultimate Parent Entity — the (a)/(b) test is instead applied to the Entity the holding company itself holds a Controlling Interest in. Neither condition is met on the facts entered.",
+    factCite:CITE.swfHoldco,
+    stepName:'UPE Identification — sovereign wealth fund substitution, holding-company chain (Art 1.6.2)'
+  }
+};
+function stepC_swf_test(kind){
+  const v=SWF_TEST_VARIANT[kind];
+  const node=optionCard(
+    `${v.question} ${tip(v.tipText,v.tipCite)}`,
+    v.note,
+    [
+      {key:'A',label:'Yes — (a) or (b) is met',sub:v.yesSub,action:()=>{record(v.recordQ,"Yes","yes");push(stepD);}},
+      {key:'B',label:'No — neither (a) nor (b) is met',sub:v.noSub,action:()=>{record(v.recordQ,"No","no");
+        reviewRequired("Article 1.6.2 conditions not satisfied — professional review required.",
+          v.reviewNarrative,
+          [{t:v.factT,b:v.factB,c:v.factCite}]);}}
+    ],v.stepName);
   mount(node,'step');fixTooltips();
 }
 
