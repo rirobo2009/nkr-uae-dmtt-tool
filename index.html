@@ -334,8 +334,16 @@ const CITE={
 function tip(text,cite){return `<span class="info" tabindex="0">i<span class="tip">${text}${cite?`<cite>${cite}</cite>`:''}</span></span>`;}
 function fixTooltips(){
   const margin=8;
-  const headerEl=document.querySelector('header.masthead');
-  const headerTop=headerEl?headerEl.getBoundingClientRect().top:0;
+  // Boundary above which the tip must never render: the top of the step card
+  // itself, not just the sticky masthead. On an unscrolled page the masthead's
+  // own top edge sits above the (non-sticky) legal-strip, so a tip that clears
+  // the masthead can still land on top of the legal-strip; the stage's top is
+  // the one edge that's always immediately after all of that header chrome,
+  // in both the unscrolled state (masthead + legal-strip both in flow) and the
+  // scrolled state (masthead pinned via position:sticky, legal-strip scrolled
+  // out of view above it).
+  const stageEl=document.getElementById('stage');
+  const boundaryTop=stageEl?stageEl.getBoundingClientRect().top:0;
   document.querySelectorAll('.info').forEach(el=>{
     el.classList.remove('tip-below');
     const tipEl=el.querySelector('.tip');
@@ -350,9 +358,10 @@ function fixTooltips(){
     tipEl.style.left=`${left-iconRect.left}px`;
     tipEl.style.setProperty('--arrow-left',`${(iconRect.left+iconRect.width/2)-left}px`);
     // Vertical: the tip normally opens above the icon. If that would render
-    // it beyond the sticky header's top edge (clipped off-screen), flip it
-    // to open below the icon instead.
-    if(iconRect.top-10-tipRect.height<headerTop)el.classList.add('tip-below');
+    // it above the stage boundary (overlapping the header/legal-strip chrome,
+    // or clipped off-screen if scrolled so the masthead is pinned there),
+    // flip it to open below the icon instead.
+    if(iconRect.top-10-tipRect.height<boundaryTop)el.classList.add('tip-below');
   });
 }
 window.addEventListener('resize',fixTooltips);
@@ -508,7 +517,7 @@ function stepA(){
   const revTip=tip("“Consolidated Financial Statements” and “Ultimate Parent Entity”: A Group is a collection of Entities related through ownership/control whose financials are included in the UPE’s Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds). The Ultimate Parent Entity is an Entity with a Controlling Interest in others, not itself controlled by another Entity — or the Main Entity in a Permanent-Establishment-only structure. Controlling Interest means an Ownership Interest requiring line-by-line consolidation of the Entity’s assets, liabilities, income, expenses and cash flows under an Acceptable Financial Accounting Standard (or that would require it if Consolidated Financial Statements were prepared).",`${CITE.group}; ${CITE.upe}`);
   const currencyTip=tip("If your Consolidated Financial Statements are prepared in a currency other than EUR, you must convert revenue using the average daily reference rate for December prior to the relevant Fiscal Year — as quoted by the European Central Bank, or by the Central Bank of the UAE if the European Central Bank does not quote one, or another FTA-acceptable source reflecting that month's average rate if neither does — before comparing against the EUR 750 million threshold.",CITE.currencyConversion);
   const node=optionCard(
-    `In at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year, did the MNE Group's Ultimate Parent Entity report annual consolidated revenue of EUR 750 million or more in its Consolidated Financial Statements? ${revTip} ${currencyTip}`,
+    `In at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year, did the MNE Group's Ultimate Parent Entity report annual consolidated revenue of EUR 750 million or more${currencyTip} in its Consolidated Financial Statements? ${revTip}`,
     null,
     [
       {key:'A',label:'Yes',action:()=>{record("Revenue ≥ EUR 750m in 2 of preceding 4 FYs?","Yes","yes");push(stepA_proration);}},
