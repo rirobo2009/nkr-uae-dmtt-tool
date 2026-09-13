@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAE DMTT — Compliance Calendar</title>
+<style>
+  :root{
+    color-scheme: light;
+    --nkr-navy:#14283F;--nkr-teal:#2A6F77;--nkr-green:#1D9E75;--nkr-green-dark:#115F46;--nkr-offwhite:#F5F7FA;
+    --bg-page:#FFFFFF;--bg-surface:#F5F7FA;--text-primary:#14283F;--text-secondary:#2A6F77;
+    --accent-primary:#1D9E75;--accent-warning:#D97706;--warning-bg:#FBF1E4;--border:#E2E8F0;
+    --red:#B3261E;--red-bg:#FBEAEA;--green-bg:#E4F5EE;
+    --text-primary-ondark:#F5F7FA;--text-secondary-ondark:#7FA8AD;
+    --nkr-navy-soft:#4A5F7A;--highlight-blue:#94DCF8;
+    --shadow:0 2px 10px rgba(20,40,63,.06);--shadow-lg:0 8px 30px rgba(20,40,63,.16);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--bg-surface);color:var(--text-primary);line-height:1.6;padding:28px 16px 80px}
+  .wrap{max-width:1100px;margin:0 auto}
+
+  .brand-bar{position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--nkr-navy),var(--nkr-teal),var(--nkr-green));z-index:101}
+
+  header.masthead{border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);margin-bottom:20px;position:sticky;top:4px;background:var(--highlight-blue);z-index:100;padding:16px 22px}
+  .head-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+  .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+  .logo-mark img{width:135px;height:auto;display:block}
+  .logo-mark .logo-light{display:block}
+  .logo-mark .logo-dark{display:none}
+  .eyebrow{font-size:11px;letter-spacing:normal;text-transform:uppercase;color:var(--nkr-green-dark);font-weight:700;margin-bottom:6px}
+  h1{font-size:24px;line-height:1.2;color:var(--nkr-navy);font-weight:700;letter-spacing:-.01em}
+  .sub{margin-top:6px;color:var(--nkr-navy-soft);font-weight:400;font-size:13.5px;max-width:680px}
+  .explore{flex-shrink:0;font-weight:700;font-size:12.5px;letter-spacing:.02em;color:#fff;background:var(--nkr-navy);border:1.5px solid var(--nkr-navy);border-radius:8px;padding:7px 14px;text-decoration:none;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .explore:hover{background:#1c3a5c}
+  .explore svg{width:12px;height:12px}
+
+  .legal-strip{font-size:11.5px;color:var(--text-secondary);background:#fff;border:1px solid var(--border);border-left:4px solid var(--nkr-teal);border-radius:6px;padding:10px 14px;margin:16px 0 26px;letter-spacing:.01em;line-height:1.5;box-shadow:var(--shadow)}
+  .legal-strip strong{color:var(--nkr-navy)}
+
+  /* ---- entry inputs ---- */
+  .entry-card{background:#fff;border:1.5px solid var(--nkr-teal);border-radius:10px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:22px}
+  .entry-card h2{font-size:16px;color:var(--nkr-navy);font-weight:700;margin-bottom:4px}
+  .entry-card .entry-note{font-size:13px;color:var(--text-secondary);margin-bottom:16px;max-width:680px}
+  .entry-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:220px}
+  .field label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);font-weight:700}
+  .field input[type=date]{font-family:inherit;font-size:15px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-surface);color:var(--text-primary)}
+  .field input[type=date]:focus{outline:none;border-color:var(--nkr-navy);background:#fff}
+
+  .choice-group{display:flex;flex-direction:column;gap:5px}
+  .choice-group>label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);font-weight:700}
+  .choice-tiles{display:flex;gap:10px;flex-wrap:wrap}
+  .choice-tile{text-align:left;font-family:inherit;font-size:13.5px;color:var(--text-primary);background:#fff;border:1.5px solid var(--nkr-teal);border-radius:8px;padding:11px 13px;cursor:pointer;transition:.15s;line-height:1.4;display:flex;align-items:flex-start;gap:9px;flex:1 1 220px;min-width:220px}
+  .choice-tile:hover{border-color:var(--nkr-navy);background:var(--highlight-blue)}
+  .choice-tile.selected{border-color:var(--accent-primary);background:var(--green-bg)}
+  .choice-tile .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border);background:#fff;flex-shrink:0;display:grid;place-items:center;margin-top:1px;transition:.15s;font-size:11px;font-weight:700;color:#fff}
+  .choice-tile.selected .box{background:var(--accent-primary);border-color:var(--accent-primary)}
+  .choice-tile b{display:block;font-weight:600;color:var(--nkr-navy);margin-bottom:2px}
+  .choice-tile small{color:var(--text-secondary)}
+
+  /* ---- callouts ---- */
+  .callout-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .callout{flex:1 1 320px;border-radius:10px;padding:18px 20px;border:1px solid;box-shadow:var(--shadow)}
+  .callout.good{background:var(--green-bg);border-color:#B8E0CE}
+  .callout.caution{background:var(--warning-bg);border-color:#EAD4A8}
+  .callout .tag{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .callout.good .tag{color:var(--accent-primary)}
+  .callout.caution .tag{color:var(--accent-warning)}
+  .callout h3{font-size:15.5px;color:var(--nkr-navy);font-weight:700;margin-bottom:8px}
+  .callout p{font-size:13.5px;color:var(--text-primary);line-height:1.55}
+  .callout cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:10px;letter-spacing:.02em}
+
+  /* ---- cards grid ---- */
+  .m4-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:22px}
+  @media (max-width:760px){ .m4-grid{grid-template-columns:1fr} .entry-row{flex-direction:column} .callout-row{flex-direction:column} }
+  .m4-card{background:#fff;border:1.5px solid var(--nkr-teal);border-radius:10px;box-shadow:var(--shadow);padding:22px 22px 20px;display:flex;flex-direction:column;gap:12px}
+  .m4-card h2{font-size:17px;color:var(--nkr-navy);font-weight:700}
+  .m4-card .summary{font-size:13.5px;color:var(--text-secondary);line-height:1.5}
+  .m4-card .deadline-box{background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+  .m4-card .deadline-box .label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);font-weight:700;margin-bottom:4px}
+  .m4-card .deadline-box .value{font-size:17px;color:var(--nkr-navy);font-weight:700}
+  .m4-card .deadline-box .value.computed{color:var(--nkr-green-dark)}
+  .m4-card .deadline-box .rule-note{font-size:12px;color:var(--text-secondary);margin-top:6px;line-height:1.5}
+
+  .warn-box{border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;border:1px solid}
+  .warn-box.amber{background:var(--warning-bg);border-color:#EAD4A8;color:var(--text-primary)}
+  .warn-box.red{background:var(--red-bg);border-color:#E8C2BE;color:var(--text-primary)}
+  .warn-box b{color:var(--nkr-navy)}
+  .warn-box a{color:var(--nkr-navy);font-weight:700}
+
+  .m4-card details{font-size:13px;border-top:1px solid var(--border);padding-top:10px}
+  .m4-card summary{cursor:pointer;font-weight:700;color:var(--accent-primary);font-size:12.5px;letter-spacing:.02em;list-style:none}
+  .m4-card summary::-webkit-details-marker{display:none}
+  .m4-card summary::before{content:"+ ";}
+  .m4-card details[open] summary::before{content:"– ";}
+  .m4-card .detail-body{margin-top:10px;color:var(--text-secondary);line-height:1.6}
+  .m4-card .detail-body p{margin-bottom:8px}
+  .m4-card .detail-body cite{display:block;font-style:normal;font-size:11px;color:var(--accent-primary);margin-top:6px}
+
+  .minor-note{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:22px;font-size:13px}
+  .minor-note summary{cursor:pointer;font-weight:700;color:var(--nkr-navy);list-style:none}
+  .minor-note summary::-webkit-details-marker{display:none}
+  .minor-note summary::before{content:"+ ";color:var(--accent-primary)}
+  .minor-note[open] summary::before{content:"– ";}
+  .minor-note .detail-body{margin-top:10px;color:var(--text-secondary);line-height:1.6}
+  .minor-note cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:6px}
+
+  .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .btn{font-family:inherit;font-weight:700;font-size:14px;letter-spacing:.02em;color:#fff;background:var(--nkr-navy);border:none;border-radius:8px;padding:13px 22px;cursor:pointer;transition:.15s}
+  .btn:hover{background:#1c3a5c}
+  .btn:focus-visible{outline:3px solid var(--accent-primary);outline-offset:2px}
+  .btn.primary{background:var(--accent-primary)}
+  .btn.primary:hover{background:#178a63}
+
+  .lead-modal{position:fixed;inset:0;background:rgba(20,40,63,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
+  .lead-modal.show{display:flex}
+  .lead-box{width:100%;max-width:460px;background:#fff;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-lg);padding:26px}
+  .lead-box h2{margin:0 0 8px;font-weight:700;color:var(--nkr-navy);font-size:20px}
+  .lead-box p{margin:0 0 18px;color:var(--text-secondary);font-size:13px;line-height:1.55}
+  .lead-box .form-row{margin-bottom:13px;display:block}
+  .lead-box label{display:block;margin-bottom:5px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary)}
+  .lead-box input{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:15px;background:var(--bg-surface);color:var(--text-primary)}
+  .lead-box input:focus{outline:none;border-color:var(--nkr-navy);background:#fff}
+  .lead-error{color:var(--red);font-size:12px;display:none;margin-bottom:12px}
+  .lead-box .btn{width:100%;justify-content:center;margin-top:4px}
+
+  footer{text-align:center;font-size:11px;color:var(--text-secondary);margin-top:30px;letter-spacing:.02em;line-height:1.7}
+  footer .verified{color:var(--nkr-navy);font-weight:700}
+  footer a{color:var(--nkr-navy);text-decoration:none;border-bottom:1px solid var(--accent-primary)}
+  .disclaimer{font-size:11.5px;color:var(--text-secondary);background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;line-height:1.55;margin:0 0 20px}
+  .disclaimer strong{color:var(--nkr-navy)}
+
+@media print{
+    .btn,.explore,.lead-modal,.brand-bar,.entry-note,.field,.choice-tiles,.choice-group>label{display:none!important}
+    .action-row{display:none!important}
+    body{background:#fff;padding:0}
+    header.masthead{position:static!important;background:var(--highlight-blue)!important;border:1px solid #ccc!important;box-shadow:none!important}
+    header.masthead .head-top{align-items:flex-start!important}
+    header.masthead .head-right{align-self:flex-start!important}
+    header.masthead .eyebrow{color:var(--nkr-green-dark)!important}
+    header.masthead h1{color:var(--nkr-navy)!important}
+    header.masthead .sub{color:var(--nkr-navy)!important}
+    .logo-mark .logo-light{display:block!important}
+    .logo-mark .logo-dark{display:none!important}
+    .logo-mark img{width:155px!important;height:auto!important}
+    .head-right{gap:0!important}
+    .wrap{max-width:100%}
+    .entry-card{box-shadow:none;border:1px solid #ccc}
+    .m4-grid{grid-template-columns:1fr 1fr}
+    .m4-card,.callout{box-shadow:none;break-inside:avoid;border:1px solid #ccc}
+    .minor-note{break-inside:avoid}
+    .legal-strip{break-inside:avoid}
+    .m4-card details,.minor-note{ }
+  }
+</style>
+</head>
+<body>
+<div class="brand-bar"></div>
+
+<div class="lead-modal" id="leadModal">
+  <div class="lead-box">
+    <h2>Your details</h2>
+    <p>Enter your details to download the PDF compliance calendar. Your details may be recorded by this tool provider. The dates you entered above are not transmitted.</p>
+    <div class="lead-error" id="leadError">Please complete name, company name and a valid email address.</div>
+    <div class="form-row">
+      <label for="leadName">Name</label>
+      <input type="text" id="leadName" placeholder="Your name">
+    </div>
+    <div class="form-row">
+      <label for="leadCompany">Company name</label>
+      <input type="text" id="leadCompany" placeholder="Company name">
+    </div>
+    <div class="form-row">
+      <label for="leadEmail">Email</label>
+      <input type="text" id="leadEmail" placeholder="name@company.com">
+    </div>
+    <button class="btn" id="leadSubmitBtn">Download PDF</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="head-top">
+      <div class="head-title">
+        <div class="eyebrow">UAE Domestic Minimum Top-up Tax · Module 4</div>
+        <h1>Compliance Calendar</h1>
+        <div class="sub">Registration, return filing, deregistration and notification deadlines for an entity already confirmed in scope of UAE DMTT.</div>
+      </div>
+      <div class="head-right">
+        <div class="logo-mark">
+          <img class="logo-light" src="assets/nkr-logo-light.png" alt="NKR Auditing LLC">
+          <img class="logo-dark" src="assets/nkr-logo-dark.png" alt="NKR Auditing LLC">
+        </div>
+        <a class="explore" href="https://nkr.ae/automations" target="_blank" rel="noopener">Explore more
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="legal-strip">
+    <strong>Legal basis (primary sources only):</strong> Cabinet Decision No. 142 of 2024 (Annexure), Articles 8.1, 11, 12, 13, 14 &amp; 15 · TTGREG1 (Scope &amp; Registration Guide) Sections 8–9 · FTA Decision No. 12 of 2026 (Registration and Deregistration Timelines) · Ministerial Decision No. 133 of 2026 (Pillar Two Information Return filer specification).
+  </div>
+
+  <div class="entry-card">
+    <h2>Your details</h2>
+    <div class="entry-note">Enter your first in-scope Fiscal Year end date to personalize the deadlines below. Every card is shown either way — the general rule displays until you enter a date.</div>
+    <div class="entry-row">
+      <div class="field">
+        <label for="fyEndDate">First in-scope Fiscal Year end date</label>
+        <input type="date" id="fyEndDate">
+      </div>
+      <div class="choice-group">
+        <label>Registration approach</label>
+        <div class="choice-tiles">
+          <button type="button" class="choice-tile" id="regPathEntity" data-path="entity">
+            <span class="box"></span>
+            <span><b>Entity-by-Entity</b><small>Each in-scope UAE Entity registers separately, its own TRN.</small></span>
+          </button>
+          <button type="button" class="choice-tile" id="regPathDdfe" data-path="ddfe">
+            <span class="box"></span>
+            <span><b>DDFE</b><small>One appointed member registers, files and pays for the Group.</small></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="callouts"></div>
+  <div id="cards" class="m4-grid"></div>
+  <div id="minorNotes"></div>
+
+  <div class="action-row">
+    <button class="btn primary" id="downloadPdfBtn">Download PDF</button>
+  </div>
+
+  <div class="disclaimer" id="disclaimerBlock"></div>
+
+  <footer>
+    Not tax advice. Confirm any position against the primary legislation and a qualified UAE tax adviser before filing.<br>
+    <span class="verified">Designed and verified by <a href="https://nkr.ae" target="_blank" rel="noopener">NKR Auditing LLC</a></span>
+  </footer>
+</div>
+
+<script>
+/* ==================================================================
+   Lead capture (Google Sheets) — same webhook & payload shape as
+   index.html/qfzptool.html, distinguished by source_tool.
+   ================================================================== */
+const LEAD_CAPTURE_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyEfpaq6MPdKVBpSlbHXDHK7TwgdSODyzGi5g0Y7LCcVSzhZqMOZ8kZq-Sv9e2_kmUW/exec';
+const LEAD_STORAGE_KEY = 'nkr_dmtt_compliance_calendar_lead_v1';
+
+function getSavedLead(){
+  try { return JSON.parse(localStorage.getItem(LEAD_STORAGE_KEY) || 'null'); }
+  catch(e){ return null; }
+}
+function saveLead(lead){ localStorage.setItem(LEAD_STORAGE_KEY, JSON.stringify(lead)); }
+function validEmail(email){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+function submitLeadCapture(payload){
+  if(!LEAD_CAPTURE_WEBHOOK_URL || LEAD_CAPTURE_WEBHOOK_URL.indexOf('PASTE_') === 0) return;
+  try{
+    fetch(LEAD_CAPTURE_WEBHOOK_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(payload)
+    }).catch(function(){});
+  } catch(e){}
+}
+function requireLeadCapture(onDone){
+  const existing = getSavedLead();
+  if(existing && existing.email){ onDone(existing); return; }
+  const modal = document.getElementById('leadModal');
+  const err = document.getElementById('leadError');
+  modal.classList.add('show');
+  document.getElementById('leadSubmitBtn').onclick = function(){
+    const lead = {
+      tool: 'UAE DMTT Compliance Calendar — Module 4',
+      name: document.getElementById('leadName').value.trim(),
+      email: document.getElementById('leadEmail').value.trim(),
+      company: document.getElementById('leadCompany').value.trim(),
+      toolVersion: 'DMTT-Module4 v1',
+      pageUrl: (typeof location !== 'undefined' ? location.href : ''),
+      timestamp: new Date().toISOString(),
+      source_tool: 'dmtt_compliance_calendar'
+    };
+    if(!lead.name || !lead.company || !validEmail(lead.email)){ err.style.display='block'; return; }
+    err.style.display='none';
+    saveLead(lead);
+    submitLeadCapture(lead);
+    modal.classList.remove('show');
+    onDone(lead);
+  };
+}
+
+/* ==================================================================
+   Legal citations — Module 4 (CD 142/2024 Annexure Art 8.1/11-15,
+   TTGREG1 §8-9, FTA Decision No. 12 of 2026, MD 133/2026)
+   ================================================================== */
+const CITE_M4={
+  regGeneral:"Art. 13.1, CD 142/2024 Annexure; Art. 2, FTA Decision No. 12 of 2026",
+  regTwoPaths:"TTGREG1 §8.1",
+  regCTInteraction:"TTGREG1 §8.1",
+  regWhere:"TTGREG1 §9.1",
+  regPenalty:"Art. 14.1(d), CD 142/2024 Annexure; FTA Decision No. 12 of 2026; TTGREG1 §8.5",
+  deregGeneral:"Art. 13.3, CD 142/2024 Annexure; Art. 3, FTA Decision No. 12 of 2026",
+  deregHardGate:"Art. 3.3, FTA Decision No. 12 of 2026",
+  deregDiscretionary:"Art. 13.2, CD 142/2024 Annexure; Art. 3.5, FTA Decision No. 12 of 2026",
+  notification:"Art. 4, FTA Decision No. 12 of 2026",
+  tutReturn:"Art. 8.1.1–8.1.3, CD 142/2024 Annexure",
+  girWho:"Art. 2, Ministerial Decision No. 133 of 2026",
+  girExemption:"Art. 2.3, Ministerial Decision No. 133 of 2026",
+  girNotify:"Art. 2.4, Ministerial Decision No. 133 of 2026",
+  girDeadline:"Art. 15.4, CD 142/2024 Annexure; Ministerial Decision No. 133 of 2026",
+  payment:"Art. 11.1, CD 142/2024 Annexure",
+  jointSeveral:"Art. 12, CD 142/2024 Annexure",
+  penaltyRelief:"Art. 14.3, CD 142/2024 Annexure",
+  gaar:"Art. 14.1(a)–(c), CD 142/2024 Annexure; Federal Decree-Law No. 47 of 2022, Art. 50, 56 & 59"
+};
+
+/* ==================================================================
+   Deadline computation — pure functions, no DOM dependency, so they
+   are directly unit-testable from test.html regardless of whether a
+   given obligation's trigger date is wired to a live UI input yet.
+   All dates are UTC-midnight Date objects to avoid timezone drift
+   between the <input type=date> value and the computed deadline.
+   ================================================================== */
+function parseDateInput(value){
+  // value: "YYYY-MM-DD" from <input type=date>, or falsy.
+  if(!value) return null;
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if(!m) return null;
+  return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
+}
+function addMonthsUTC(date,n){
+  // Deliberately NOT date.setUTCMonth(getUTCMonth()+n) — that overflows past
+  // month-end whenever the target month is shorter than the source day-of-
+  // month (e.g. 31 Dec + 6 -> 1 Jul instead of 30 Jun, since June has only
+  // 30 days). Clamp to the target month's actual last day instead, which is
+  // the standard "same day N months later, or month-end if that day doesn't
+  // exist" convention for statutory deadline math.
+  const y=date.getUTCFullYear(),m=date.getUTCMonth(),day=date.getUTCDate();
+  const targetFirst=new Date(Date.UTC(y,m+n,1));
+  const daysInTargetMonth=new Date(Date.UTC(targetFirst.getUTCFullYear(),targetFirst.getUTCMonth()+1,0)).getUTCDate();
+  return new Date(Date.UTC(targetFirst.getUTCFullYear(),targetFirst.getUTCMonth(),Math.min(day,daysInTargetMonth)));
+}
+function fmtDate(date){
+  if(!date) return null;
+  return date.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+}
+
+// Obligation A — Registration (Art 13.1, FTAD 12/2026 Art 2).
+// General rule: FY end + 7 months. Transitional override: if that FY end
+// is before 30 April 2026, flat 30 November 2026 regardless of the above.
+const REG_OVERRIDE_THRESHOLD=Date.UTC(2026,3,30); // 30 Apr 2026
+const REG_OVERRIDE_DEADLINE=Date.UTC(2026,10,30); // 30 Nov 2026
+function computeRegistrationDeadline(fyEndDate){
+  if(!fyEndDate) return null;
+  if(fyEndDate.getTime()<REG_OVERRIDE_THRESHOLD) return new Date(REG_OVERRIDE_DEADLINE);
+  return addMonthsUTC(fyEndDate,7);
+}
+
+// Obligation B — Deregistration (Art 13.3, FTAD 12/2026 Art 3).
+// General rule: 6 months from the earlier of (cessation date) or (end of
+// FY leaving scope). Transitional override: if cessation is before 30 Jun
+// 2026, flat 31 December 2026. Not wired to a live UI input this pass —
+// no trigger-event date is collected, since this obligation only becomes
+// active once an entity actually ceases to exist or falls out of scope
+// (see spec §2.B, §4.1). Kept as a tested pure function for that reason.
+const DEREG_OVERRIDE_THRESHOLD=Date.UTC(2026,5,30); // 30 Jun 2026
+const DEREG_OVERRIDE_DEADLINE=Date.UTC(2026,11,31); // 31 Dec 2026
+function computeDeregistrationDeadline(triggerDate){
+  if(!triggerDate) return null;
+  if(triggerDate.getTime()<DEREG_OVERRIDE_THRESHOLD) return new Date(DEREG_OVERRIDE_DEADLINE);
+  return addMonthsUTC(triggerDate,6);
+}
+
+// Obligation C — In/Out-of-Scope Notification (FTAD 12/2026 Art 4).
+// 6 months from the end of the tested FY the group fell out of scope. No
+// transitional override is stated for this obligation. Not wired to a
+// live UI input this pass, for the same reason as Deregistration.
+function computeNotificationDeadline(testedFYEndDate){
+  if(!testedFYEndDate) return null;
+  return addMonthsUTC(testedFYEndDate,6);
+}
+
+// Obligation D — Top-up Tax Return + Payment (Art 8.1.1-8.1.3, Art 11.1).
+// 15 months after Reporting FY end; 18 months if that FY is the entity's
+// first Transition Year. This module treats the single FY-end date it
+// collects as the first Transition Year, since it is defined to the user
+// as "your first in-scope Fiscal Year end date" — i.e. by construction
+// the first Reporting FY this tool can ever compute for is a first
+// Transition Year. Payment mirrors this deadline exactly (Art 11.1) —
+// no separate calculation.
+function computeTopUpTaxReturnDeadline(fyEndDate){
+  if(!fyEndDate) return null;
+  return addMonthsUTC(fyEndDate,18);
+}
+function computePaymentDeadline(fyEndDate){ return computeTopUpTaxReturnDeadline(fyEndDate); }
+
+// Obligation D (GIR) — Pillar Two Information Return (Art 15.4, MD
+// 133/2026). Always 15 months after Reporting FY end — CONFIRMED no
+// Transition Year extension exists (checked CD 142, TTGREG1, TTGEIE1,
+// MD 133/2026 and the OECD GIR template directly). Do not add an
+// override branch here without a cited source for one.
+function computeGIRDeadline(fyEndDate){
+  if(!fyEndDate) return null;
+  return addMonthsUTC(fyEndDate,15);
+}
+
+/* ==================================================================
+   Entry input wiring
+   ================================================================== */
+let regPath=null; // 'entity' | 'ddfe' | null
+
+function selectRegPath(path){
+  regPath=path;
+  document.getElementById('regPathEntity').classList.toggle('selected',path==='entity');
+  document.getElementById('regPathDdfe').classList.toggle('selected',path==='ddfe');
+  renderAll();
+}
+document.getElementById('regPathEntity').addEventListener('click',()=>selectRegPath('entity'));
+document.getElementById('regPathDdfe').addEventListener('click',()=>selectRegPath('ddfe'));
+document.getElementById('fyEndDate').addEventListener('input',renderAll);
+
+function currentFyEndDate(){ return parseDateInput(document.getElementById('fyEndDate').value); }
+
+/* ==================================================================
+   Render orchestration — cards/callouts are appended by later sections
+   of this script via renderers pushed onto RENDERERS; renderAll() just
+   re-runs all of them so every card stays in sync with the entry inputs.
+   ================================================================== */
+const RENDERERS=[];
+function renderAll(){ RENDERERS.forEach(fn=>fn()); }
+
+/* ==================================================================
+   PDF header / disclaimer (mirrors index.html's pdfHeaderBlock pattern)
+   ================================================================== */
+function renderDisclaimer(){
+  const dateStr=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('disclaimerBlock').innerHTML=
+    `<strong>UAE DMTT — Module 4: Compliance Calendar.</strong> Generated on ${dateStr}. `+
+    `This is an automated preliminary summary of registration, return filing, deregistration and `+
+    `notification deadlines based on Cabinet Decision No. 142 of 2024 (Annexure), TTGREG1, FTA Decision `+
+    `No. 12 of 2026 and Ministerial Decision No. 133 of 2026. It does not constitute tax advice and is `+
+    `not a substitute for review by a qualified UAE tax adviser.`;
+}
+document.getElementById('downloadPdfBtn').addEventListener('click',()=>{
+  requireLeadCapture(function(){ window.print(); });
+});
+
+renderDisclaimer();
+renderAll();
+</script>
+</body>
+</html>
