@@ -39,6 +39,11 @@
   .legal-strip{font-size:11.5px;color:var(--text-secondary);background:#fff;border:1px solid var(--border);border-left:4px solid var(--nkr-teal);border-radius:6px;padding:10px 14px;margin:16px 0 26px;letter-spacing:.01em;line-height:1.5;box-shadow:var(--shadow)}
   .legal-strip strong{color:var(--nkr-navy)}
 
+  /* ---- tool nav (reusable pattern — same markup/classes in module4-compliance-calendar.html) ---- */
+  .tool-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12.5px}
+  .tool-nav a,.tool-nav .reset-link{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--nkr-navy-soft);background:none;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;padding:2px}
+  .tool-nav a:hover,.tool-nav .reset-link:hover{color:var(--nkr-navy);text-decoration:underline}
+
   .progress{display:flex;align-items:center;gap:12px;margin-bottom:22px}
   .progress-track{flex:1;height:8px;border-radius:99px;background:var(--border);overflow:hidden}
   .progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--nkr-navy),var(--nkr-teal),var(--nkr-green));transition:width .25s}
@@ -159,7 +164,7 @@
     .tile{flex-basis:100%}
   }
 @media print{
-    .opt,.tile,.btn,.back,.progress,.explore,.info,.lead-modal,.brand-bar{display:none!important}
+    .opt,.tile,.btn,.back,.progress,.explore,.info,.lead-modal,.brand-bar,.tool-nav{display:none!important}
     body{background:#fff;padding:0}
     /* Matches the on-screen light-blue masthead. Chrome's print dialog
        defaults "Background graphics" to OFF, which would drop this fill
@@ -197,7 +202,7 @@
 <div class="lead-modal" id="leadModal">
   <div class="lead-box">
     <h2>Your details</h2>
-    <p>Enter your details to download the PDF conclusion. Your details may be recorded by this tool provider. The answers you entered above are not transmitted.</p>
+    <p>Enter your details to print or save the PDF conclusion. Your details may be recorded by this tool provider. The answers you entered above are not transmitted.</p>
     <div class="lead-error" id="leadError">Please complete name, company name and a valid email address.</div>
     <div class="form-row">
       <label for="leadName">Name</label>
@@ -211,11 +216,15 @@
       <label for="leadEmail">Email</label>
       <input type="text" id="leadEmail" placeholder="name@company.com">
     </div>
-    <button class="btn" id="leadSubmitBtn">Download PDF</button>
+    <button class="btn" id="leadSubmitBtn">Print / Save as PDF</button>
   </div>
 </div>
 
 <div class="wrap">
+  <div class="tool-nav">
+    <a href="index.html">🏠 Home</a>
+    <button type="button" class="reset-link" id="startOverBtn">↺ Start over</button>
+  </div>
   <header class="masthead">
     <div class="head-top">
       <div class="head-title">
@@ -493,7 +502,7 @@ function pathBlock(){
 }
 function actionRow(showModule4Link){
   const wrap=document.createElement('div');wrap.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin-top:4px';
-  const p=document.createElement('button');p.className='btn primary';p.textContent='Download PDF';p.onclick=()=>{requireLeadCapture(function(){window.print();});};
+  const p=document.createElement('button');p.className='btn primary';p.textContent='Print / Save as PDF';p.onclick=()=>{requireLeadCapture(function(){window.print();});};
   const r=document.createElement('button');r.className='btn ghost';r.textContent='Start a new assessment';r.onclick=start;
   wrap.appendChild(p);wrap.appendChild(r);
   if(showModule4Link){
@@ -840,6 +849,7 @@ function stepF(){
 }
 
 function start(){trail=[];stepStack=[];answers={};trailMarks=[];answersMarks=[];STAGE.innerHTML='';push(stepA);}
+document.getElementById('startOverBtn').addEventListener('click',start);
 start();
 </script>
 </body>
