@@ -450,6 +450,57 @@ document.getElementById('downloadPdfBtn').addEventListener('click',()=>{
   requireLeadCapture(function(){ window.print(); });
 });
 
+/* ==================================================================
+   Card A — Registration (Art 13.1, FTAD 12/2026 Art 2; TTGREG1 §8.1/8.5/9.1)
+   ================================================================== */
+function cardEl(id){
+  let el=document.getElementById(id);
+  if(!el){ el=document.createElement('div'); el.className='m4-card'; el.id=id; document.getElementById('cards').appendChild(el); }
+  return el;
+}
+function renderRegistrationCard(){
+  const fyEnd=currentFyEndDate();
+  const deadline=computeRegistrationDeadline(fyEnd);
+  const usedOverride=fyEnd && fyEnd.getTime()<REG_OVERRIDE_THRESHOLD;
+
+  let deadlineHtml;
+  if(deadline){
+    deadlineHtml=`<div class="deadline-box"><div class="label">Your registration deadline</div>
+      <div class="value computed">${fmtDate(deadline)}</div>
+      <div class="rule-note">${usedOverride?'Transitional override applied: your first in-scope Fiscal Year ends before 30 April 2026, so the flat 30 November 2026 deadline applies instead of the 7-month calculation.':'General rule applied: 7 months after your first in-scope Fiscal Year end.'}</div></div>`;
+  } else {
+    deadlineHtml=`<div class="deadline-box"><div class="label">General rule</div>
+      <div class="value">FY end + 7 months</div>
+      <div class="rule-note">Unless that Fiscal Year end falls before 30 April 2026, in which case the deadline is a flat 30 November 2026 regardless of the 7-month calculation. Enter your Fiscal Year end date above to see your actual deadline.</div></div>`;
+  }
+
+  let pathHtml;
+  if(regPath==='ddfe'){
+    pathHtml=`<div class="warn-box amber"><b>DDFE approach selected.</b> One appointed member of the Domestic Main Group / Minority-owned Sub-Group / Domestic JV Group registers on behalf of all members and handles filing and payment for them too. A group-level TRN is issued to the DDFE in addition to each member's own TRN. <b>Appointing a DDFE does not reduce any member's own Joint &amp; Several Liability exposure</b> — see the callout below.</div>`;
+  } else if(regPath==='entity'){
+    pathHtml=`<div class="warn-box amber"><b>Entity-by-Entity approach selected.</b> Each in-scope UAE Entity registers separately and receives its own Pillar Two Top-up Tax TRN.</div>`;
+  } else {
+    pathHtml=`<div class="summary">Two registration paths are available — Entity-by-Entity (each in-scope Entity registers separately) or DDFE (one appointed member registers, files and pays on behalf of the Group). Choose one above to see path-specific notes here.</div>`;
+  }
+
+  cardEl('card-registration').innerHTML=`
+    <h2>Registration</h2>
+    <div class="summary">Any Entity subject to Top-up Tax must register — and any Domestic Designated Filing Entity (DDFE), if one is appointed.</div>
+    ${deadlineHtml}
+    ${pathHtml}
+    <div class="warn-box red"><b>AED 10,000 Administrative Penalty</b> applies per Entity for late registration (or per Entity a DDFE fails to register on behalf of). This penalty is <b>not</b> covered by the Penalty Relief Window below — that relief is scoped to Return filing errors only, not registration timeliness.</div>
+    <details>
+      <summary>Learn more</summary>
+      <div class="detail-body">
+        <p>Top-up Tax registration is separate from Corporate Tax registration — an Entity must register for Top-up Tax regardless of its Corporate Tax registration status. If already registered for any UAE tax, the Pillar Two TRN reuses the same first-10-digit Tax Identification Number as existing registrations.</p>
+        <p>Registration is completed via the EmaraTax portal.</p>
+        <p>If an Entity fails to register on time, the FTA may register it on its own initiative based on available information, effective from the date the Entity was originally required to register.</p>
+        <cite>${CITE_M4.regGeneral}; ${CITE_M4.regTwoPaths}; ${CITE_M4.regCTInteraction}; ${CITE_M4.regWhere}; ${CITE_M4.regPenalty}</cite>
+      </div>
+    </details>`;
+}
+RENDERERS.push(renderRegistrationCard);
+
 renderDisclaimer();
 renderAll();
 </script>
