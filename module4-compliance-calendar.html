@@ -476,7 +476,7 @@ function renderRegistrationCard(){
 
   let pathHtml;
   if(regPath==='ddfe'){
-    pathHtml=`<div class="warn-box amber"><b>DDFE approach selected.</b> One appointed member of the Domestic Main Group / Minority-owned Sub-Group / Domestic JV Group registers on behalf of all members and handles filing and payment for them too. A group-level TRN is issued to the DDFE in addition to each member's own TRN. <b>Appointing a DDFE does not reduce any member's own Joint &amp; Several Liability exposure</b> — see the callout below.</div>`;
+    pathHtml=`<div class="warn-box amber"><b>DDFE approach selected.</b> One appointed member of the Domestic Main Group / Minority-owned Sub-Group / Domestic JV Group registers on behalf of all members and handles filing and payment for them too. A group-level TRN is issued to the DDFE in addition to each member's own TRN. <b>Appointing a DDFE does not reduce any member's own Joint &amp; Several Liability exposure</b> — see <a href="#callout-jsl">the callout above</a>.</div>`;
   } else if(regPath==='entity'){
     pathHtml=`<div class="warn-box amber"><b>Entity-by-Entity approach selected.</b> Each in-scope UAE Entity registers separately and receives its own Pillar Two Top-up Tax TRN.</div>`;
   } else {
@@ -595,6 +595,49 @@ function renderNotificationCard(){
     </details>`;
 }
 RENDERERS.push(renderNotificationCard);
+
+/* ==================================================================
+   Cross-cutting callouts — informational/static, no user input (spec
+   §3): Penalty Relief Window (positive framing) and Joint & Several
+   Liability (cautionary framing). Rendered once above the card grid,
+   not nested inside any single card. Penalty Relief's eligibility
+   test depends on Fiscal Year START date, which this module never
+   collects (only FY end) — so this stays a static rule statement, not
+   a computed "does this apply to you" verdict.
+   ================================================================== */
+function renderCallouts(){
+  document.getElementById('callouts').innerHTML=`
+    <div class="callout-row">
+      <div class="callout good">
+        <div class="tag">Good news</div>
+        <h3>Penalty Relief Window</h3>
+        <p>For Fiscal Years beginning on or before 31 December 2026, and not ending after 30 June 2028, <b>no penalties apply</b> for Top-up Tax Return or Pillar Two Information Return filing errors — provided the FTA considers your MNE Group took reasonable measures to correctly apply the Decision.</p>
+        <cite>${CITE_M4.penaltyRelief}</cite>
+      </div>
+      <div class="callout caution" id="callout-jsl">
+        <div class="tag">Cautionary</div>
+        <h3>Joint &amp; Several Liability</h3>
+        <p>All Constituent Entities of a Domestic Main Group or Domestic Minority-owned Sub-Group in the UAE — and any Reverse Hybrid Entities — are jointly and severally liable for their Group's full Top-up Tax. The same applies to JV/JV Subsidiaries of a Domestic JV Group. Individual partners or beneficiaries holding an Ownership Interest in a non-legal-person Constituent Entity are liable to the extent of that Ownership Interest. <b>Appointing a DDFE to register and file on the Group's behalf does not reduce this liability</b> for any member.</p>
+        <cite>${CITE_M4.jointSeveral}</cite>
+      </div>
+    </div>`;
+}
+renderCallouts();
+
+/* ==================================================================
+   Minor info note — General Anti-Abuse Rule, Record-Keeping &
+   Clarifications (Art 14.1(a)-(c)). Deliberately lower-key than the
+   two callouts above (spec §3: "a single expandable info card is
+   enough"), placed below the card grid rather than alongside it.
+   ================================================================== */
+document.getElementById('minorNotes').innerHTML=`
+  <details class="minor-note">
+    <summary>General Anti-Abuse Rule, Record-Keeping &amp; Clarifications</summary>
+    <div class="detail-body">
+      Federal Decree-Law No. 47 of 2022's General Anti-Abuse Rule (Art 50), record-keeping (Art 56), and clarifications (Art 59) provisions apply equally to Top-up Tax — with "Taxable Person" read as "Constituent Entity/Parent Entity," "Corporate Tax" read as including Top-up Tax, and "Tax Period" read as "Fiscal Year."
+      <cite>${CITE_M4.gaar}</cite>
+    </div>
+  </details>`;
 
 renderDisclaimer();
 renderAll();
