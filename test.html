@@ -878,6 +878,60 @@
         !/\.callout[^}]*\{[^}]*display:\s*none/.test(printCss));
       assert('print rules do NOT hide .inputs-summary', !/\.inputs-summary[^}]*\{[^}]*display:\s*none/.test(printCss));
     });
+
+    // -----------------------------------------------------------------
+    // 6. END-date auto-fill from START (start + 1 year - 1 day), a
+    //    default/suggestion the user can freely override — not a lock.
+    // -----------------------------------------------------------------
+    await tc4('END auto-fills from START on a non-leap-year date (start + 1yr - 1 day)', async ()=>{
+      await resetM4();
+      m4SetFyStart('2025-01-01');
+      assert('1 Jan 2025 -> auto-filled to 31 Dec 2025', m4Doc().getElementById('fyEndDate').value==='2025-12-31');
+      m4SetFyStart('2025-04-01'); // still untouched -> should re-auto-fill
+      assert('1 Apr 2025 -> auto-filled to 31 Mar 2026', m4Doc().getElementById('fyEndDate').value==='2026-03-31');
+    });
+
+    await tc4('END auto-fills correctly across a leap year (29 Feb 2028 has no exact anniversary in 2029)', async ()=>{
+      await resetM4();
+      assert('2028 is confirmed a leap year (sanity check on the test date itself)', new Date(Date.UTC(2028,1,29)).getUTCDate()===29);
+      m4SetFyStart('2028-02-29');
+      // addMonthsUTC(29 Feb 2028, 12) clamps to 28 Feb 2029 (2029 isn't
+      // leap), then -1 day -> 27 Feb 2029. Not a fixed 365/366-day offset —
+      // this is the direct, honest result of reusing the same addMonthsUTC
+      // the rest of Module 4's deadline math already relies on.
+      assert('29 Feb 2028 -> auto-filled to 27 Feb 2029', m4Doc().getElementById('fyEndDate').value==='2029-02-27');
+    });
+
+    await tc4('A manually-edited END date is never overwritten by a later START change', async ()=>{
+      await resetM4();
+      m4SetFyStart('2026-01-01');
+      assert('sanity: auto-fill happened first', m4Doc().getElementById('fyEndDate').value==='2026-12-31');
+      m4SetFyEnd('2026-06-30'); // a real, manual edit — e.g. a genuine short Fiscal Year
+      assert('manual edit took effect', m4Doc().getElementById('fyEndDate').value==='2026-06-30');
+      m4SetFyStart('2026-03-01'); // change start again
+      assert('END stays exactly at the manually-entered value, NOT re-auto-filled', m4Doc().getElementById('fyEndDate').value==='2026-06-30');
+      // Confirm this isn't just inert — the rest of the page still reacts
+      // correctly to the untouched manual END value.
+      assertIncludes('"Your details" reflects the manually-entered end date', m4Text('#inputsSummary'), '30 June 2026');
+    });
+
+    await tc4('Auto-fill does not interfere with the out-of-scope gate or the end-before-start check', async ()=>{
+      await resetM4();
+      // Out-of-scope gate: fires correctly even though END was auto-filled,
+      // not typed — the gate only ever looks at START.
+      m4SetFyStart('2023-06-30');
+      assert('END was auto-filled (start + 1yr - 1 day)', m4Doc().getElementById('fyEndDate').value==='2024-06-29');
+      assert('out-of-scope notice still fires with an auto-filled END', m4Text('#outOfScopeNotice').length>0);
+      assert('no computed deadlines', m4Doc().querySelectorAll('.value.computed').length===0);
+
+      // End-before-start check: still fires correctly after a manual edit,
+      // regardless of the auto-fill that happened first.
+      await resetM4();
+      m4SetFyStart('2026-06-30');
+      m4SetFyEnd('2026-01-01'); // manually entered, before start
+      assert('validation error still fires despite an earlier auto-fill having occurred', m4Doc().getElementById('dateValidationError').style.display==='block');
+      assert('no out-of-scope notice (this is a data-entry error, start itself is in scope)', m4Text('#outOfScopeNotice').length===0);
+    });
   }catch(e){
     current={name:'Module 4 test setup',cases:[{desc:'iframe load/setup threw an exception',pass:false,detail:(e&&e.stack)||String(e)}]};
     groups.push(current);
