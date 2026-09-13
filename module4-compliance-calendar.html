@@ -39,10 +39,24 @@
   .legal-strip{font-size:11.5px;color:var(--text-secondary);background:#fff;border:1px solid var(--border);border-left:4px solid var(--nkr-teal);border-radius:6px;padding:10px 14px;margin:16px 0 26px;letter-spacing:.01em;line-height:1.5;box-shadow:var(--shadow)}
   .legal-strip strong{color:var(--nkr-navy)}
 
+  /* ---- tool nav (reusable pattern — same markup/classes in index.html) ---- */
+  .tool-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12.5px}
+  .tool-nav a,.tool-nav .reset-link{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--nkr-navy-soft);background:none;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;padding:2px}
+  .tool-nav a:hover,.tool-nav .reset-link:hover{color:var(--nkr-navy);text-decoration:underline}
+
   /* ---- entry inputs ---- */
   .entry-card{background:#fff;border:1.5px solid var(--nkr-teal);border-radius:10px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:22px}
   .entry-card h2{font-size:16px;color:var(--nkr-navy);font-weight:700;margin-bottom:4px}
   .entry-card .entry-note{font-size:13px;color:var(--text-secondary);margin-bottom:16px;max-width:680px}
+  /* Deliberately NOT in the print-hide list below — unlike the raw
+     input/tiles, this is the readable record of what was entered, the
+     Module 4 equivalent of Module 1's "Inputs Entered" section, and must
+     survive into the PDF (screen and PDF share this DOM, same as Module 1). */
+  .inputs-summary{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+  .inputs-summary .eyebrow-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);font-weight:700;margin-bottom:8px}
+  .inputs-summary .row{font-size:13.5px;color:var(--nkr-navy);margin-bottom:4px}
+  .inputs-summary .row b{font-weight:600}
+  .inputs-summary .row .empty{color:var(--text-secondary);font-style:italic;font-weight:400}
   .entry-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
   .field{display:flex;flex-direction:column;gap:5px;min-width:220px}
   .field label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);font-weight:700}
@@ -133,7 +147,7 @@
   .disclaimer strong{color:var(--nkr-navy)}
 
 @media print{
-    .btn,.explore,.lead-modal,.brand-bar,.entry-note,.field,.choice-tiles,.choice-group>label{display:none!important}
+    .btn,.explore,.lead-modal,.brand-bar,.entry-note,.field,.choice-tiles,.choice-group>label,.tool-nav{display:none!important}
     .action-row{display:none!important}
     body{background:#fff;padding:0}
     header.masthead{position:static!important;background:var(--highlight-blue)!important;border:1px solid #ccc!important;box-shadow:none!important}
@@ -162,7 +176,7 @@
 <div class="lead-modal" id="leadModal">
   <div class="lead-box">
     <h2>Your details</h2>
-    <p>Enter your details to download the PDF compliance calendar. Your details may be recorded by this tool provider. The dates you entered above are not transmitted.</p>
+    <p>Enter your details to print or save the compliance calendar as a PDF. Your details may be recorded by this tool provider. The dates you entered above are not transmitted.</p>
     <div class="lead-error" id="leadError">Please complete name, company name and a valid email address.</div>
     <div class="form-row">
       <label for="leadName">Name</label>
@@ -176,11 +190,15 @@
       <label for="leadEmail">Email</label>
       <input type="text" id="leadEmail" placeholder="name@company.com">
     </div>
-    <button class="btn" id="leadSubmitBtn">Download PDF</button>
+    <button class="btn" id="leadSubmitBtn">Print / Save as PDF</button>
   </div>
 </div>
 
 <div class="wrap">
+  <div class="tool-nav">
+    <a href="index.html">🏠 Home</a>
+    <button type="button" class="reset-link" id="startOverBtn">↺ Start over</button>
+  </div>
   <header class="masthead">
     <div class="head-top">
       <div class="head-title">
@@ -226,6 +244,7 @@
         </div>
       </div>
     </div>
+    <div class="inputs-summary" id="inputsSummary"></div>
   </div>
 
   <div id="callouts"></div>
@@ -233,7 +252,7 @@
   <div id="minorNotes"></div>
 
   <div class="action-row">
-    <button class="btn primary" id="downloadPdfBtn">Download PDF</button>
+    <button class="btn primary" id="downloadPdfBtn">Print / Save as PDF</button>
   </div>
 
   <div class="disclaimer" id="disclaimerBlock"></div>
@@ -349,6 +368,11 @@ function fmtDate(date){
   if(!date) return null;
   return date.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
 }
+// De-duplicates before joining, since the same CITE_M4 value can legitimately
+// back two different facts in one card's Learn More (e.g. TTGREG1 §8.1 covers
+// both the two registration paths and the CT-interaction note) — without
+// this, that citation would print twice back-to-back.
+function citeJoin(...cites){ return [...new Set(cites)].join('; '); }
 
 // Obligation A — Registration (Art 13.1, FTAD 12/2026 Art 2).
 // General rule: FY end + 7 months. Transitional override: if that FY end
@@ -424,6 +448,15 @@ document.getElementById('regPathEntity').addEventListener('click',()=>selectRegP
 document.getElementById('regPathDdfe').addEventListener('click',()=>selectRegPath('ddfe'));
 document.getElementById('fyEndDate').addEventListener('input',renderAll);
 
+function resetModule4(){
+  document.getElementById('fyEndDate').value='';
+  regPath=null;
+  document.getElementById('regPathEntity').classList.remove('selected');
+  document.getElementById('regPathDdfe').classList.remove('selected');
+  renderAll();
+}
+document.getElementById('startOverBtn').addEventListener('click',resetModule4);
+
 function currentFyEndDate(){ return parseDateInput(document.getElementById('fyEndDate').value); }
 
 /* ==================================================================
@@ -433,6 +466,32 @@ function currentFyEndDate(){ return parseDateInput(document.getElementById('fyEn
    ================================================================== */
 const RENDERERS=[];
 function renderAll(){ RENDERERS.forEach(fn=>fn()); }
+
+/* ==================================================================
+   "Your details" inputs summary — the Module 4 equivalent of Module
+   1's "Inputs Entered" section: a plain-text record of what was
+   actually entered, so a user (or the PDF) doesn't have to reverse-
+   engineer it from the computed deadlines further down the page.
+   Registers as a renderer so it stays live-updated exactly like every
+   card below it.
+   ================================================================== */
+function renderInputsSummary(){
+  const fyEnd=currentFyEndDate();
+  const fyRow=fyEnd
+    ? `<b>First in-scope Fiscal Year end date:</b> ${fmtDate(fyEnd)}`
+    : `<b>First in-scope Fiscal Year end date:</b> <span class="empty">Not yet entered</span>`;
+  const pathLabel=regPath==='ddfe' ? 'Domestic Designated Filing Entity (DDFE)'
+    : regPath==='entity' ? 'Entity-by-Entity'
+    : null;
+  const pathRow=pathLabel
+    ? `<b>Registration approach:</b> ${pathLabel}`
+    : `<b>Registration approach:</b> <span class="empty">Not yet selected</span>`;
+  document.getElementById('inputsSummary').innerHTML=
+    `<div class="eyebrow-label">What you've entered</div>`+
+    `<div class="row">${fyRow}</div>`+
+    `<div class="row">${pathRow}</div>`;
+}
+RENDERERS.push(renderInputsSummary);
 
 /* ==================================================================
    PDF header / disclaimer (mirrors index.html's pdfHeaderBlock pattern)
@@ -495,7 +554,7 @@ function renderRegistrationCard(){
         <p>Top-up Tax registration is separate from Corporate Tax registration — an Entity must register for Top-up Tax regardless of its Corporate Tax registration status. If already registered for any UAE tax, the Pillar Two TRN reuses the same first-10-digit Tax Identification Number as existing registrations.</p>
         <p>Registration is completed via the EmaraTax portal.</p>
         <p>If an Entity fails to register on time, the FTA may register it on its own initiative based on available information, effective from the date the Entity was originally required to register.</p>
-        <cite>${CITE_M4.regGeneral}; ${CITE_M4.regTwoPaths}; ${CITE_M4.regCTInteraction}; ${CITE_M4.regWhere}; ${CITE_M4.regPenalty}</cite>
+        <cite>${citeJoin(CITE_M4.regGeneral,CITE_M4.regTwoPaths,CITE_M4.regCTInteraction,CITE_M4.regWhere,CITE_M4.regPenalty)}</cite>
       </div>
     </details>`;
 }
@@ -541,7 +600,7 @@ function renderReturnFilingCard(){
       <div class="detail-body">
         <p><b>Top-up Tax Return:</b> content requirement is equivalent information/reporting to the Pillar Two Information Return; may use the simplified jurisdictional reporting framework.</p>
         <p><b>Pillar Two Information Return (GIR):</b> must be filed by each Constituent Entity (excluding Investment Entities) located in the UAE, each JV and JV Subsidiary located in the UAE, and each Stateless Reverse Hybrid Entity created under UAE law. Filing is not required if a GIR meeting Article 15's requirements has already been filed by the UPE or a Designated Filing Entity in a jurisdiction with a Qualifying Competent Authority Agreement in effect with the UAE for that Reporting Fiscal Year — but the UAE entity/DDFE must still notify the FTA of who is filing on their behalf, whether or not the exemption applies. Uses the OECD's standard GIR template (17 July 2023, as amended).</p>
-        <cite>${CITE_M4.tutReturn}; ${CITE_M4.payment}; ${CITE_M4.girDeadline}; ${CITE_M4.girWho}; ${CITE_M4.girExemption}; ${CITE_M4.girNotify}</cite>
+        <cite>${citeJoin(CITE_M4.tutReturn,CITE_M4.payment,CITE_M4.girDeadline,CITE_M4.girWho,CITE_M4.girExemption,CITE_M4.girNotify)}</cite>
       </div>
     </details>`;
 }
@@ -567,7 +626,7 @@ function renderDeregistrationCard(){
       <summary>Learn more</summary>
       <div class="detail-body">
         <p>If an Entity fails to deregister on time, the FTA may deregister it on its own initiative based on available information, effective from the date the Entity was originally required to act — the same discretionary power that applies to late registration.</p>
-        <cite>${CITE_M4.deregGeneral}; ${CITE_M4.deregHardGate}; ${CITE_M4.deregDiscretionary}</cite>
+        <cite>${citeJoin(CITE_M4.deregGeneral,CITE_M4.deregHardGate,CITE_M4.deregDiscretionary)}</cite>
       </div>
     </details>`;
 }
