@@ -491,18 +491,23 @@ function pathBlock(){
   trail.forEach(t=>{const r=document.createElement('div');r.className='path-row';r.innerHTML=`<span class="pq">${t.q}</span><span class="pa ${t.cls}">${t.a}</span>`;d.appendChild(r);});
   return d;
 }
-function actionRow(){
+function actionRow(showModule4Link){
   const wrap=document.createElement('div');wrap.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin-top:4px';
   const p=document.createElement('button');p.className='btn primary';p.textContent='Download PDF';p.onclick=()=>{requireLeadCapture(function(){window.print();});};
   const r=document.createElement('button');r.className='btn ghost';r.textContent='Start a new assessment';r.onclick=start;
-  wrap.appendChild(p);wrap.appendChild(r);return wrap;
+  wrap.appendChild(p);wrap.appendChild(r);
+  if(showModule4Link){
+    const m=document.createElement('a');m.className='btn primary';m.href='module4-compliance-calendar.html';m.textContent='Continue to Compliance Calendar →';
+    wrap.appendChild(m);
+  }
+  return wrap;
 }
 function result(kind,tag,title,rateLine,facts,extraNote){
   const node=document.createElement('div');
   const v=document.createElement('div');v.className='verdict '+kind;
   v.innerHTML=`<div class="tag">Section 1 — Conclusion · ${tag}</div><h2>${title}</h2><div class="rate-line">${rateLine}</div>${extraNote?`<p>${extraNote}</p>`:''}`;
   node.appendChild(pdfHeaderBlock());
-  node.appendChild(v);node.appendChild(pathBlock());node.appendChild(factsBlock(facts));node.appendChild(actionRow());
+  node.appendChild(v);node.appendChild(pathBlock());node.appendChild(factsBlock(facts));node.appendChild(actionRow(tag==='IN SCOPE'));
   mount(node,'final');fixTooltips();
 }
 function outOfScope(title,rateLine,facts,extraNote){result('pass','OUT OF SCOPE',title,rateLine,facts,extraNote);}
