@@ -1,0 +1,8 @@
+# GitHub Pages build config.
+#
+# docs/ holds internal planning material (specs, findings reports, handoff
+# notes). It is kept in git as a permanent record, but it is not part of the
+# published tool and must not be reachable on dmtt.nkr.ae — this repo is
+# public and Pages serves the repo root, so without this exclude every file
+# under docs/ would be a live URL.
+exclude: [docs]
