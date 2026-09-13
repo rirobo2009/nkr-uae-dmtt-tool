@@ -496,6 +496,11 @@
     try{ await fn(); }
     catch(e){ current.cases.push({desc:'scenario threw an exception',pass:false,detail:(e&&e.stack)||String(e)}); }
   }
+  function m4SetFyStart(dateStr){
+    const inp=m4Doc().getElementById('fyStartDate');
+    inp.value=dateStr;
+    inp.dispatchEvent(new (m4Win().Event)('input'));
+  }
   function m4SetFyEnd(dateStr){
     const inp=m4Doc().getElementById('fyEndDate');
     inp.value=dateStr;
@@ -782,6 +787,96 @@
       await resetM4();
       assertIncludes('main action button relabeled', m4Text('#downloadPdfBtn'), 'Print / Save as PDF');
       assertIncludes('lead-capture modal submit button relabeled to match', m4Text('#leadSubmitBtn'), 'Print / Save as PDF');
+    });
+
+    // -----------------------------------------------------------------
+    // 5. Fiscal Year START date + the CD 142/2024 applicability gate
+    //    (Art 2 of the OUTER Cabinet Decision, not the Annexure's own
+    //    Art 2 Charging Provision). Root cause fixed here: entering an
+    //    impossible/pre-CD142 Fiscal Year previously still produced
+    //    internally contradictory computed deadlines with no warning.
+    // -----------------------------------------------------------------
+    await tc4('START before 1 Jan 2025 — out-of-scope notice shown, every card falls back to general-rule text, zero computed dates anywhere', async ()=>{
+      await resetM4();
+      m4SetFyStart('2023-01-01');
+      m4SetFyEnd('2023-12-31'); // the exact real-world case that surfaced this gap
+      assert('out-of-scope notice is shown', m4Text('#outOfScopeNotice').length>0);
+      assertIncludes('notice names the entered start date', m4Text('#outOfScopeNotice'), '1 January 2023');
+      assertIncludes('notice states the 1 Jan 2025 threshold', m4Text('#outOfScopeNotice'), '1 January 2025');
+      assertIncludes('notice cites the outer Decision\'s Article 2, not the Annexure\'s', m4Text('#outOfScopeNotice'), 'distinct from the Annexure');
+      assert('zero computed deadlines anywhere on the page — not even a stray one', m4Doc().querySelectorAll('.value.computed').length===0);
+      assertIncludes('Registration falls back to its general-rule template', m4Text('#card-registration .deadline-box .value'), '7 months');
+      assertIncludes('Return Filing falls back to its general-rule templates', m4Text('#card-return-filing'), '15 months');
+      assertIncludes('"Your details" still records the entered dates (factual record, not filtered)', m4Text('#inputsSummary'), '1 January 2023');
+      assertIncludes('"Your details" records the entered end date too', m4Text('#inputsSummary'), '31 December 2023');
+    });
+
+    await tc4('START on/off the 1 Jan 2025 boundary — exactly on the date is in scope, one day before is not', async ()=>{
+      await resetM4();
+      m4SetFyStart('2025-01-01'); // "on or after" -> in scope
+      m4SetFyEnd('2025-12-31');
+      assert('exactly 1 Jan 2025 does NOT trigger the out-of-scope notice', m4Text('#outOfScopeNotice').length===0);
+      assert('a real computed deadline is shown', m4Doc().querySelectorAll('.value.computed').length>0);
+
+      await resetM4();
+      m4SetFyStart('2024-12-31'); // one day short -> out of scope
+      m4SetFyEnd('2025-12-31');
+      assert('one day before 1 Jan 2025 DOES trigger the out-of-scope notice', m4Text('#outOfScopeNotice').length>0);
+      assert('no computed deadline in that case', m4Doc().querySelectorAll('.value.computed').length===0);
+    });
+
+    await tc4('START on/after 1 Jan 2025 with a valid END — existing computed-date behavior is unchanged', async ()=>{
+      await resetM4();
+      m4SetFyStart('2026-01-01');
+      m4SetFyEnd('2026-12-31');
+      assert('no out-of-scope notice', m4Text('#outOfScopeNotice').length===0);
+      assert('no validation error', m4Doc().getElementById('dateValidationError').style.display==='none');
+      const vals=m4ComputedValues('card-registration');
+      assert('Registration computes a real deadline, unchanged from before this Fiscal Year Start date existed', vals[0]===fmt(m4Win().computeRegistrationDeadline(d(2026,12,31))));
+      const rf=m4ComputedValues('card-return-filing');
+      assert('Return Filing still computes both deadlines correctly, unchanged', rf[0]===fmt(m4Win().computeTopUpTaxReturnDeadline(d(2026,12,31))) && rf[1]===fmt(m4Win().computeGIRDeadline(d(2026,12,31))));
+    });
+
+    await tc4('END before START — plain data-entry validation message, no computation, no legal notice', async ()=>{
+      await resetM4();
+      m4SetFyStart('2026-06-30');
+      m4SetFyEnd('2026-01-01'); // before start
+      assert('validation error is shown', m4Doc().getElementById('dateValidationError').style.display==='block');
+      assertIncludes('validation error is a plain data-entry message', m4Text('#dateValidationError'), 'must be after the start date');
+      assert('no out-of-scope legal notice (this is a data-entry error, not a CD142 applicability question)', m4Text('#outOfScopeNotice').length===0);
+      assert('no computed deadline anywhere', m4Doc().querySelectorAll('.value.computed').length===0);
+      assertIncludes('Registration still shows its general-rule template', m4Text('#card-registration .deadline-box .value'), '7 months');
+
+      // The validation message is plain UI feedback, not a legal record —
+      // unlike the out-of-scope notice, it should NOT survive into print.
+      function printRules(){
+        for(const sheet of m4Doc().styleSheets){
+          for(const rule of sheet.cssRules){
+            if(rule instanceof m4Win().CSSMediaRule && rule.conditionText==='print') return rule.cssRules;
+          }
+        }
+        return null;
+      }
+      const printCss=[...(printRules()||[])].map(r=>r.cssText).join(' ');
+      assertIncludes('print rules DO hide .field-error (a plain data-entry nudge, not a legal record)', printCss, '.field-error');
+    });
+
+    await tc4('PDF-consistency — out-of-scope notice and .inputs-summary both survive the print stylesheet unhidden', async ()=>{
+      await resetM4();
+      m4SetFyStart('2023-01-01');
+      m4SetFyEnd('2023-12-31');
+      function printRules(){
+        for(const sheet of m4Doc().styleSheets){
+          for(const rule of sheet.cssRules){
+            if(rule instanceof m4Win().CSSMediaRule && rule.conditionText==='print') return rule.cssRules;
+          }
+        }
+        return null;
+      }
+      const printCss=[...(printRules()||[])].map(r=>r.cssText).join(' ');
+      assert('print rules do NOT hide .callout (the out-of-scope notice is a .callout)',
+        !/\.callout[^}]*\{[^}]*display:\s*none/.test(printCss));
+      assert('print rules do NOT hide .inputs-summary', !/\.inputs-summary[^}]*\{[^}]*display:\s*none/.test(printCss));
     });
   }catch(e){
     current={name:'Module 4 test setup',cases:[{desc:'iframe load/setup threw an exception',pass:false,detail:(e&&e.stack)||String(e)}]};
