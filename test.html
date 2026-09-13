@@ -44,8 +44,12 @@
 <div id="summary">Running…</div>
 <div id="results"></div>
 
-<!-- Minimal DOM skeleton the app's script expects to find on load. -->
+<!-- Minimal DOM skeleton the app's script expects to find on load. Must
+     stay in sync with anything index.html's script wires up via
+     getElementById at top level (eval time) — .tool-nav/#startOverBtn
+     added here alongside the pre-existing masthead/progress/stage. -->
 <div id="sandbox">
+  <div class="tool-nav"><a href="index.html">Home</a><button id="startOverBtn"></button></div>
   <header class="masthead"></header>
   <div class="progress" id="progress"></div>
   <div id="stage"></div>
@@ -69,7 +73,9 @@
   // so index.html's functions/consts become directly callable below) ----
   let appScript;
   try{
-    const res=await fetch('index.html');
+    // no-store: a test suite must always reflect the current file on disk,
+    // never a browser-cached copy from an earlier edit during local iteration.
+    const res=await fetch('index.html',{cache:'no-store'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const html=await res.text();
     const m=html.match(/<script>([\s\S]*)<\/script>/);
@@ -441,6 +447,26 @@
   });
 
   // =======================================================================
+  // Bonus: tool nav (Home/Start over) and the PDF button relabel — both
+  // post-review fixes, applied consistently across Module 1 and Module 4.
+  // =======================================================================
+  tc('Tool nav — Home link and Start over reset both present and working', ()=>{
+    reset();
+    clickOpt(1); // A: No -> a result screen, to prove Start over works mid/post-flow too
+    const home=document.querySelector('.tool-nav a');
+    assert('Home link present', !!home);
+    assert('Home link points at index.html (a same-page link here, but the same markup Module 4 uses to point back)', home.getAttribute('href')==='index.html');
+    document.getElementById('startOverBtn').click();
+    assertIncludes('Start over resets the wizard back to Step 1', stepNum(), 'Step 1 of 7');
+  });
+  tc('PDF button relabeled to "Print / Save as PDF" (was "Download PDF", which opens a print dialog, not a direct download)', ()=>{
+    reset();
+    clickOpt(1); // A: No -> a result screen, where the action buttons render
+    const labels=[...document.querySelectorAll('.btn')].map(b=>b.textContent);
+    assert('main action button relabeled', labels.includes('Print / Save as PDF'));
+  });
+
+  // =======================================================================
   // MODULE 4 — Compliance Calendar
   // =======================================================================
   const m4Frame=document.getElementById('m4Frame');
@@ -691,6 +717,71 @@
       assertIncludes('cites FTA Decision No. 12 of 2026', text, 'FTA Decision No. 12 of 2026');
       assertIncludes('cites MD 133/2026', text, 'Ministerial Decision No. 133 of 2026');
       assertIncludes('carries the not-tax-advice disclaimer', text, 'does not constitute tax advice');
+    });
+
+    // -----------------------------------------------------------------
+    // 4. Post-review fixes — regression guards for issues found in a
+    //    live/PDF review of the deployed page.
+    // -----------------------------------------------------------------
+    await tc4('"Your details" box shows what was entered, not an empty box (bug: was blank in the PDF)', async ()=>{
+      await resetM4();
+      let summary=m4Text('#inputsSummary');
+      assertIncludes('placeholder text before anything is entered', summary, 'Not yet entered');
+      assertIncludes('placeholder text before a path is chosen', summary, 'Not yet selected');
+      m4SetFyEnd('2026-12-31');
+      m4ClickRegPath('ddfe');
+      summary=m4Text('#inputsSummary');
+      assertIncludes('shows the entered Fiscal Year end date once set', summary, '31 December 2026');
+      assertIncludes('shows the selected registration approach once chosen', summary, 'Domestic Designated Filing Entity (DDFE)');
+      // The original bug: the box only ever held the raw <input>/tiles, which
+      // the print stylesheet correctly hides — so the box printed empty even
+      // though the values were captured and used correctly elsewhere. Guard
+      // the fix at the CSS level too, not just by checking today's text.
+      function printRules(){
+        for(const sheet of m4Doc().styleSheets){
+          for(const rule of sheet.cssRules){
+            if(rule instanceof m4Win().CSSMediaRule && rule.conditionText==='print') return rule.cssRules;
+          }
+        }
+        return null;
+      }
+      const printCss=[...(printRules()||[])].map(r=>r.cssText).join(' ');
+      assert('print rules do NOT hide .inputs-summary (must survive into the PDF)',
+        !/\.inputs-summary[^}]*\{[^}]*display:\s*none/.test(printCss));
+    });
+
+    await tc4('Registration card citations are deduplicated (bug: "TTGREG1 §8.1" printed twice back-to-back)', async ()=>{
+      await resetM4();
+      m4Doc().querySelector('#card-registration details').open=true;
+      const citeText=m4Text('#card-registration .detail-body cite');
+      const occurrences=(citeText.match(/§8\.1(?!\d)/g)||[]).length;
+      assert('"§8.1" appears exactly once, not twice', occurrences===1, 'citeText='+citeText);
+    });
+
+    await tc4('"Start over" resets Module 4\'s entry inputs and every computed value', async ()=>{
+      await resetM4();
+      m4SetFyEnd('2026-12-31');
+      m4ClickRegPath('ddfe');
+      assert('sanity: a computed deadline exists before reset', m4ComputedValues('card-registration').length===1);
+      m4Doc().getElementById('startOverBtn').click();
+      assert('date input is cleared', m4Doc().getElementById('fyEndDate').value==='');
+      assert('DDFE tile is deselected', !m4Doc().getElementById('regPathDdfe').classList.contains('selected'));
+      assert('no computed deadline remains anywhere on the page', m4Doc().querySelectorAll('.value.computed').length===0);
+      assertIncludes('"Your details" reverts to its empty-state placeholders', m4Text('#inputsSummary'), 'Not yet entered');
+    });
+
+    await tc4('Tool nav — Home link and Start over button both present, Home points at Module 1', async ()=>{
+      await resetM4();
+      const home=m4Doc().querySelector('.tool-nav a');
+      assert('Home link present', !!home);
+      assert('Home link points at index.html', home.getAttribute('href')==='index.html');
+      assert('Start over control present', !!m4Doc().getElementById('startOverBtn'));
+    });
+
+    await tc4('Button relabeled to "Print / Save as PDF" (was "Download PDF", which opens a print dialog, not a direct download)', async ()=>{
+      await resetM4();
+      assertIncludes('main action button relabeled', m4Text('#downloadPdfBtn'), 'Print / Save as PDF');
+      assertIncludes('lead-capture modal submit button relabeled to match', m4Text('#leadSubmitBtn'), 'Print / Save as PDF');
     });
   }catch(e){
     current={name:'Module 4 test setup',cases:[{desc:'iframe load/setup threw an exception',pass:false,detail:(e&&e.stack)||String(e)}]};
