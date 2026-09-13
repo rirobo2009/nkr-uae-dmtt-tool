@@ -547,6 +547,55 @@ function renderReturnFilingCard(){
 }
 RENDERERS.push(renderReturnFilingCard);
 
+/* ==================================================================
+   Card B — Deregistration (Art 13.3, FTAD 12/2026 Art 3). Rule-text
+   only in this pass — no trigger date (cessation, or FY-end of leaving
+   scope) is collected, since this obligation is conditional on a
+   future event a first-time in-scope user has no answer for yet
+   (spec §2.B, §4.1). computeDeregistrationDeadline is still a tested
+   pure function so the math is verified even without a live input.
+   ================================================================== */
+function renderDeregistrationCard(){
+  cardEl('card-deregistration').innerHTML=`
+    <h2>Deregistration</h2>
+    <div class="summary">Applies once your entity ceases to exist, or ceases to be in scope under Article 1.1 — not something most users need to act on yet.</div>
+    <div class="deadline-box"><div class="label">General rule</div>
+      <div class="value">6 months from the earlier of cessation, or FY end</div>
+      <div class="rule-note">Within 6 months of the earlier of (a) the date your entity ceases to exist, or (b) the end of the Fiscal Year in which it leaves the MNE Group and is no longer in scope. Transitional override: if your entity ceased to exist before 30 June 2026, the deadline is a flat 31 December 2026 regardless of the 6-month calculation.</div></div>
+    <div class="warn-box red"><b>You cannot deregister until:</b> (a) all Top-up Tax and penalties due have been paid in full, and (b) all Top-up Tax Returns and Pillar Two Information Returns due have been filed. This is a common practical trap — settle first, then deregister.</div>
+    <details>
+      <summary>Learn more</summary>
+      <div class="detail-body">
+        <p>If an Entity fails to deregister on time, the FTA may deregister it on its own initiative based on available information, effective from the date the Entity was originally required to act — the same discretionary power that applies to late registration.</p>
+        <cite>${CITE_M4.deregGeneral}; ${CITE_M4.deregHardGate}; ${CITE_M4.deregDiscretionary}</cite>
+      </div>
+    </details>`;
+}
+RENDERERS.push(renderDeregistrationCard);
+
+/* ==================================================================
+   Card C — In/Out-of-Scope Notification (FTAD 12/2026 Art 4). Rule-
+   text only, same reasoning as Deregistration — worded to make clear
+   it doesn't apply to a user who has just confirmed they're in scope,
+   without hiding it from the dashboard (spec §2.C, §4.2).
+   ================================================================== */
+function renderNotificationCard(){
+  cardEl('card-notification').innerHTML=`
+    <h2>In/Out-of-Scope Notification</h2>
+    <div class="summary">Applies only if your group has fallen out of scope since a previous Fiscal Year — most users won't need this yet.</div>
+    <div class="deadline-box"><div class="label">General rule</div>
+      <div class="value">6 months from the end of the Fiscal Year you fell out of scope</div>
+      <div class="rule-note">If your MNE Group ceases to be in scope under Article 1.1 for a tested Fiscal Year, you must notify the FTA within 6 months of that Fiscal Year's end. The notification remains valid for that Fiscal Year and the following 4 consecutive Fiscal Years (5 Fiscal Years in total) — unless your group re-enters scope sooner, in which case an in-scope notification becomes required instead.</div></div>
+    <details>
+      <summary>Learn more</summary>
+      <div class="detail-body">
+        <p>This is a distinct obligation from registration and deregistration — it applies specifically when the wider MNE Group, not just this UAE Entity, falls out of scope for a given Fiscal Year.</p>
+        <cite>${CITE_M4.notification}</cite>
+      </div>
+    </details>`;
+}
+RENDERERS.push(renderNotificationCard);
+
 renderDisclaimer();
 renderAll();
 </script>
