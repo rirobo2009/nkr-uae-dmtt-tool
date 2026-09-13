@@ -23,16 +23,22 @@
 </style>
 </head>
 <body>
-<h1>UAE DMTT Applicability Gate — Automated Test Suite</h1>
+<h1>UAE DMTT Automated Test Suite — Module 1 &amp; Module 4</h1>
 <p class="lede">
-  Loads the live decision-tree logic straight out of <code>index.html</code>'s
-  &lt;script&gt; block into a hidden sandbox, drives it exactly the way a user would
-  (real clicks on the rendered DOM — same buttons, same handlers), and asserts on
-  conclusions, step counts, and Article citations against
-  <code>UAE-DMTT-Module1-Applicability-Spec.md</code>. Requires this file to be
-  served over http(s) so <code>fetch('index.html')</code> works — either locally
-  (<code>python3 -m http.server</code> from this directory) or directly against
-  the deployed site.
+  <b>Module 1 (Applicability Gate):</b> loads the live decision-tree logic straight
+  out of <code>index.html</code>'s &lt;script&gt; block into a hidden sandbox, drives
+  it exactly the way a user would (real clicks on the rendered DOM — same buttons,
+  same handlers), and asserts on conclusions, step counts, and Article citations
+  against <code>docs/UAE-DMTT-Module1-Applicability-Spec.md</code>.<br>
+  <b>Module 4 (Compliance Calendar):</b> loads <code>module4-compliance-calendar.html</code>
+  into a real hidden &lt;iframe&gt; (its own window/global scope, kept separate from
+  Module 1's eval'd sandbox above so neither file's identically-named helpers collide)
+  and asserts on deadline computation — both paths for every date-based obligation,
+  the GIR/Top-up Tax Return asymmetry, and PDF-consistency — against
+  <code>docs/UAE-DMTT-Module4-ComplianceCalendar-Spec.md</code>.<br>
+  Requires this file to be served over http(s) so <code>fetch</code>/iframe loads
+  work — either locally (<code>python3 -m http.server</code> from this directory)
+  or directly against the deployed site.
 </p>
 <button onclick="location.reload()">Re-run tests</button>
 <div id="summary">Running…</div>
@@ -44,6 +50,15 @@
   <div class="progress" id="progress"></div>
   <div id="stage"></div>
 </div>
+
+<!-- Module 4 gets its own real iframe (own window/global scope) rather than
+     the eval-into-global-scope trick above — index.html and
+     module4-compliance-calendar.html are both self-contained single-file
+     tools that reuse the same short names (CITE*, tip, requireLeadCapture,
+     getSavedLead, start, mount, ...); eval'ing both into one global scope
+     would collide on the first top-level `const` redeclaration. An iframe
+     also renders Module 4's real CSS/layout, not just its logic. -->
+<iframe id="m4Frame" style="position:absolute;left:-9999px;top:-9999px;width:900px;height:1600px;border:0"></iframe>
 
 <script>
 (async function(){
@@ -424,6 +439,263 @@
     assertCiteIncludes('1.7');
     assertSectionOrder();
   });
+
+  // =======================================================================
+  // MODULE 4 — Compliance Calendar
+  // =======================================================================
+  const m4Frame=document.getElementById('m4Frame');
+  const m4Win=()=>m4Frame.contentWindow;
+  const m4Doc=()=>m4Frame.contentDocument;
+  function loadM4(){
+    return new Promise((resolve,reject)=>{
+      m4Frame.onload=()=>resolve();
+      m4Frame.onerror=()=>reject(new Error('module4-compliance-calendar.html failed to load'));
+      m4Frame.src='module4-compliance-calendar.html';
+    });
+  }
+  function resetM4(){
+    return new Promise((resolve,reject)=>{
+      m4Frame.onload=()=>resolve();
+      m4Frame.onerror=()=>reject(new Error('module4-compliance-calendar.html failed to reload'));
+      m4Frame.contentWindow.location.reload();
+    });
+  }
+  // async sibling to tc() above, for Module 4's iframe-driven scenarios,
+  // which need to await a (re)load between tests. Left as a separate
+  // function rather than changing tc() itself, so Module 1's synchronous
+  // scenarios above are completely untouched by this addition.
+  async function tc4(name,fn){
+    current={name,cases:[]};
+    groups.push(current);
+    try{ await fn(); }
+    catch(e){ current.cases.push({desc:'scenario threw an exception',pass:false,detail:(e&&e.stack)||String(e)}); }
+  }
+  function m4SetFyEnd(dateStr){
+    const inp=m4Doc().getElementById('fyEndDate');
+    inp.value=dateStr;
+    inp.dispatchEvent(new (m4Win().Event)('input'));
+  }
+  function m4ClickRegPath(path){ m4Doc().getElementById(path==='ddfe'?'regPathDdfe':'regPathEntity').click(); }
+  function m4Text(sel){ const el=m4Doc().querySelector(sel); return el?el.textContent:null; }
+  function m4All(sel){ return [...m4Doc().querySelectorAll(sel)].map(e=>e.textContent); }
+  function m4ComputedValues(cardId){ return m4All('#'+cardId+' .value.computed'); }
+  function d(y,m,day){ return new (m4Win().Date)(Date.UTC(y,m-1,day)); }
+  function fmt(dt){ return m4Win().fmtDate(dt); }
+
+  try{
+    await loadM4();
+
+    // -----------------------------------------------------------------
+    // 1. Pure computation functions — both paths per obligation, called
+    //    directly against the iframe's window so they're verified
+    //    independent of whether a card is wired to a live UI input.
+    // -----------------------------------------------------------------
+    await tc4('Registration — general rule vs. transitional override (Art 13.1, FTAD 12/2026 Art 2)', async ()=>{
+      assert('general rule: FY end 31 Dec 2026 -> 31 Jul 2027 (+7mo)',
+        fmt(m4Win().computeRegistrationDeadline(d(2026,12,31)))==='31 July 2027');
+      assert('override: FY end 15 Jan 2026 (before 30 Apr 2026) -> flat 30 Nov 2026',
+        fmt(m4Win().computeRegistrationDeadline(d(2026,1,15)))==='30 November 2026');
+      assert('boundary: FY end exactly 30 Apr 2026 is NOT "before" -> general rule applies',
+        fmt(m4Win().computeRegistrationDeadline(d(2026,4,30)))===fmt(m4Win().addMonthsUTC(d(2026,4,30),7)));
+      assert('boundary proves strict "<": FY end 1 May 2026 -> general rule, distinctly different from the 30 Nov 2026 override',
+        fmt(m4Win().computeRegistrationDeadline(d(2026,5,1)))==='1 December 2026');
+      assert('null-safe: no FY end date -> null (general-rule template shown instead)',
+        m4Win().computeRegistrationDeadline(null)===null);
+    });
+
+    await tc4('Deregistration — general rule vs. transitional override (Art 13.3, FTAD 12/2026 Art 3)', async ()=>{
+      assert('general rule: trigger 1 Sep 2026 -> 1 Mar 2027 (+6mo)',
+        fmt(m4Win().computeDeregistrationDeadline(d(2026,9,1)))==='1 March 2027');
+      assert('override: trigger 1 Jan 2026 (before 30 Jun 2026) -> flat 31 Dec 2026',
+        fmt(m4Win().computeDeregistrationDeadline(d(2026,1,1)))==='31 December 2026');
+      assert('boundary: trigger exactly 30 Jun 2026 is NOT "before" -> general rule (30 Dec 2026), distinctly different from the 31 Dec 2026 override',
+        fmt(m4Win().computeDeregistrationDeadline(d(2026,6,30)))==='30 December 2026');
+      assert('null-safe: no trigger date -> null (general-rule text shown instead)',
+        m4Win().computeDeregistrationDeadline(null)===null);
+    });
+
+    await tc4('In/Out-of-Scope Notification — 6 months from tested FY end, no override (FTAD 12/2026 Art 4)', async ()=>{
+      assert('tested FY end 31 Dec 2026 -> 30 Jun 2027 (+6mo)',
+        fmt(m4Win().computeNotificationDeadline(d(2026,12,31)))==='30 June 2027');
+      assert('null-safe: no tested FY end -> null (general-rule text shown instead)',
+        m4Win().computeNotificationDeadline(null)===null);
+    });
+
+    await tc4('Top-up Tax Return / Payment vs. GIR — confirmed 15-vs-18-month asymmetry (Art 8.1.1-8.1.3, Art 11.1, Art 15.4, MD 133/2026)', async ()=>{
+      const fy=d(2026,12,31);
+      assert('Top-up Tax Return: FY end 31 Dec 2026 -> 30 Jun 2028 (+18mo, treated as first Transition Year)',
+        fmt(m4Win().computeTopUpTaxReturnDeadline(fy))==='30 June 2028');
+      assert('GIR: same FY end -> 31 Mar 2028 (+15mo, always — no Transition Year extension)',
+        fmt(m4Win().computeGIRDeadline(fy))==='31 March 2028');
+      assert('the two deadlines are genuinely different (the asymmetry), not coincidentally equal',
+        fmt(m4Win().computeTopUpTaxReturnDeadline(fy))!==fmt(m4Win().computeGIRDeadline(fy)));
+      assert('Payment mirrors the Top-up Tax Return deadline exactly — no separate calculation',
+        fmt(m4Win().computePaymentDeadline(fy))===fmt(m4Win().computeTopUpTaxReturnDeadline(fy)));
+      assert('null-safe: no FY end -> null for both returns and payment',
+        m4Win().computeTopUpTaxReturnDeadline(null)===null && m4Win().computeGIRDeadline(null)===null && m4Win().computePaymentDeadline(null)===null);
+    });
+
+    await tc4('Month-end overflow regression — addMonthsUTC clamps to the target month\'s actual last day', async ()=>{
+      // The bug caught before the scaffold commit: naive setUTCMonth(getUTCMonth()+n)
+      // overflows past month-end whenever the target month is shorter than the
+      // source day-of-month (31 Dec + 6 -> 1 Jul instead of 30 Jun). Locking
+      // this down so it can never silently regress.
+      assert('31 Jan 2026 + 1mo -> 28 Feb 2026 (2026 is not a leap year)',
+        fmt(m4Win().addMonthsUTC(d(2026,1,31),1))==='28 February 2026');
+      assert('31 Dec 2026 + 6mo -> 30 Jun 2027 (not 1 Jul)',
+        fmt(m4Win().addMonthsUTC(d(2026,12,31),6))==='30 June 2027');
+      assert('31 Mar 2026 + 7mo -> 31 Oct 2026 (unaffected — October has 31 days)',
+        fmt(m4Win().addMonthsUTC(d(2026,3,31),7))==='31 October 2026');
+    });
+
+    // -----------------------------------------------------------------
+    // 2. Live DOM rendering — real input events on the real rendered page.
+    // -----------------------------------------------------------------
+    await tc4('Registration card — live general-rule template before any date is entered', async ()=>{
+      await resetM4();
+      assert('no computed deadline shown yet', m4ComputedValues('card-registration').length===0);
+      assertIncludes('general-rule template visible', m4Text('#card-registration .deadline-box .value'), '7 months');
+    });
+
+    await tc4('Registration card — live computed deadline, general-rule path', async ()=>{
+      await resetM4();
+      m4SetFyEnd('2026-12-31');
+      assert('computed deadline shown', m4ComputedValues('card-registration').length===1);
+      assert('deadline is 31 July 2027', m4ComputedValues('card-registration')[0]==='31 July 2027');
+      assertIncludes('rule-note explains the general rule was applied', m4Text('#card-registration .rule-note'), 'General rule applied');
+    });
+
+    await tc4('Registration card — live computed deadline, transitional-override path', async ()=>{
+      await resetM4();
+      m4SetFyEnd('2026-01-15');
+      assert('deadline is the flat 30 November 2026 override', m4ComputedValues('card-registration')[0]==='30 November 2026');
+      assertIncludes('rule-note explains the override was applied', m4Text('#card-registration .rule-note'), 'Transitional override applied');
+    });
+
+    await tc4('Registration card — DDFE selection cross-references the Joint & Several Liability callout', async ()=>{
+      await resetM4();
+      m4ClickRegPath('ddfe');
+      assert('DDFE tile shows selected', m4Doc().getElementById('regPathDdfe').classList.contains('selected'));
+      const link=m4Doc().querySelector('#card-registration a[href="#callout-jsl"]');
+      assert('a working anchor link to the J&S Liability callout is present', !!link);
+      assert('the callout it links to actually exists in the DOM', !!m4Doc().getElementById('callout-jsl'));
+    });
+
+    await tc4('Registration card — AED 10,000 penalty is worded as distinct from the Penalty Relief Window', async ()=>{
+      await resetM4();
+      const penaltyText=m4Text('#card-registration .warn-box.red');
+      assertIncludes('states the AED 10,000 figure', penaltyText, 'AED 10,000');
+      assertIncludes('explicitly states it is NOT covered by the relief window', penaltyText, 'not');
+      assertIncludes('names the Penalty Relief Window it is distinguishing itself from', penaltyText, 'Penalty Relief Window');
+    });
+
+    await tc4('Return Filing & Payment card — live computed dates for both returns show the asymmetry', async ()=>{
+      await resetM4();
+      m4SetFyEnd('2026-12-31');
+      const vals=m4ComputedValues('card-return-filing');
+      assert('both deadlines are computed and shown', vals.length===2);
+      assert('Top-up Tax Return + Payment shows 30 June 2028 (18mo)', vals[0]==='30 June 2028');
+      assert('GIR shows 31 March 2028 (15mo) — 3 months earlier', vals[1]==='31 March 2028');
+      const warn=m4Text('#card-return-filing .warn-box.amber');
+      assertIncludes('standalone asymmetry warning is present, not just a footnote', warn, 'do not move together');
+      assertIncludes('warning explicitly names the GIR as not receiving the extension', warn, 'GIR');
+    });
+
+    await tc4('Return Filing & Payment card — general-rule templates before any date is entered', async ()=>{
+      await resetM4();
+      assert('no computed deadlines shown yet', m4ComputedValues('card-return-filing').length===0);
+      assertIncludes('Top-up Tax Return general-rule template mentions the 18-month first-Transition-Year figure', m4Text('#card-return-filing'), '18 months');
+      assertIncludes('GIR general-rule template mentions its own 15-month figure', m4Text('#card-return-filing'), '15 months');
+    });
+
+    await tc4('Deregistration card — rule-text only, never a computed date, hard gate is prominent', async ()=>{
+      await resetM4();
+      m4SetFyEnd('2026-12-31'); // even with a date entered, Deregistration has no trigger-date input to compute from
+      assert('never shows a computed deadline value (no trigger date is collected in this pass)', m4ComputedValues('card-deregistration').length===0);
+      const cardText=m4Text('#card-deregistration');
+      assertIncludes('states the 6-month general rule', cardText, '6 months');
+      assertIncludes('states the 31 December 2026 transitional override', cardText, '31 December 2026');
+      const hardGate=m4Text('#card-deregistration .warn-box.red');
+      assertIncludes('hard gate names settling Top-up Tax/penalties in full', hardGate, 'paid in full');
+      assertIncludes('hard gate names filing all returns', hardGate, 'filed');
+    });
+
+    await tc4('In/Out-of-Scope Notification card — rule-text only, 5-Fiscal-Year validity window stated', async ()=>{
+      await resetM4();
+      assert('never shows a computed deadline value (no tested-FY-end input is collected in this pass)', m4ComputedValues('card-notification').length===0);
+      const cardText=m4Text('#card-notification');
+      assertIncludes('states the 6-month deadline', cardText, '6 months');
+      assertIncludes('states the 4-subsequent-Fiscal-Year validity window', cardText, '4 consecutive Fiscal Years');
+      assertIncludes('worded so it\'s clear this doesn\'t apply to most users yet', cardText, 'won\'t need this yet');
+    });
+
+    await tc4('Callouts — Penalty Relief Window (positive) and Joint & Several Liability (cautionary) both always visible', async ()=>{
+      await resetM4();
+      assertIncludes('Penalty Relief states the FY-beginning threshold', m4Text('.callout.good'), '31 December 2026');
+      assertIncludes('Penalty Relief states the FY-ending threshold', m4Text('.callout.good'), '30 June 2028');
+      assertIncludes('Penalty Relief requires reasonable measures, scoped to filing errors', m4Text('.callout.good'), 'reasonable measures');
+      assertIncludes('J&S Liability states DDFE appointment does not reduce it', m4Text('#callout-jsl'), 'does not reduce this liability');
+      assert('GAAR/record-keeping minor note present, separate from the two prominent callouts', !!m4Doc().querySelector('.minor-note'));
+    });
+
+    // -----------------------------------------------------------------
+    // 3. PDF-consistency checks — Module 4's "PDF" is window.print() on
+    //    this exact DOM (same approach as Module 1: no separate render
+    //    path to drift out of sync). Checks that (a) the rendered card
+    //    values match independently recomputing from the same pure
+    //    functions, (b) the print stylesheet hides interactive-only
+    //    chrome without hiding the actual calendar content, and (c) the
+    //    disclaimer block that would print is present and not duplicated.
+    // -----------------------------------------------------------------
+    await tc4('PDF-consistency — rendered values match independent recomputation from the same inputs', async ()=>{
+      await resetM4();
+      m4SetFyEnd('2026-12-31');
+      const fy=d(2026,12,31);
+      assert('Registration card value matches computeRegistrationDeadline(fy) directly',
+        m4ComputedValues('card-registration')[0]===fmt(m4Win().computeRegistrationDeadline(fy)));
+      const rf=m4ComputedValues('card-return-filing');
+      assert('Return Filing card\'s Top-up Tax Return value matches computeTopUpTaxReturnDeadline(fy) directly',
+        rf[0]===fmt(m4Win().computeTopUpTaxReturnDeadline(fy)));
+      assert('Return Filing card\'s GIR value matches computeGIRDeadline(fy) directly',
+        rf[1]===fmt(m4Win().computeGIRDeadline(fy)));
+    });
+
+    await tc4('PDF-consistency — print stylesheet hides interactive chrome, not the calendar content itself', async ()=>{
+      await resetM4();
+      function printRules(){
+        for(const sheet of m4Doc().styleSheets){
+          for(const rule of sheet.cssRules){
+            if(rule instanceof m4Win().CSSMediaRule && rule.conditionText==='print') return rule.cssRules;
+          }
+        }
+        return null;
+      }
+      const rules=printRules();
+      assert('a @media print block exists', !!rules && rules.length>0);
+      const printCss=[...(rules||[])].map(r=>r.cssText).join(' ');
+      assertIncludes('print rules hide the action buttons', printCss, '.btn');
+      assertIncludes('print rules hide the entry inputs (only relevant on-screen)', printCss, '.field');
+      assert('print rules do NOT hide .m4-card (the actual calendar content must still print)',
+        !/\.m4-card[^}]*\{[^}]*display:\s*none/.test(printCss));
+      assert('print rules do NOT hide .callout (the actual calendar content must still print)',
+        !/\.callout[^{]*\{[^}]*display:\s*none/.test(printCss));
+    });
+
+    await tc4('PDF-consistency — disclaimer block present once, dated, correctly worded', async ()=>{
+      await resetM4();
+      const disclaimerNodes=m4Doc().querySelectorAll('#disclaimerBlock');
+      assert('exactly one disclaimer block in the DOM (no duplicate/drifted copy)', disclaimerNodes.length===1);
+      const text=disclaimerNodes[0].textContent;
+      assertIncludes('names the module', text, 'Module 4');
+      assertIncludes('cites CD 142/2024', text, 'Cabinet Decision No. 142 of 2024');
+      assertIncludes('cites FTA Decision No. 12 of 2026', text, 'FTA Decision No. 12 of 2026');
+      assertIncludes('cites MD 133/2026', text, 'Ministerial Decision No. 133 of 2026');
+      assertIncludes('carries the not-tax-advice disclaimer', text, 'does not constitute tax advice');
+    });
+  }catch(e){
+    current={name:'Module 4 test setup',cases:[{desc:'iframe load/setup threw an exception',pass:false,detail:(e&&e.stack)||String(e)}]};
+    groups.push(current);
+  }
 
   // ---------------------------------------------------------------------
   // Render report
