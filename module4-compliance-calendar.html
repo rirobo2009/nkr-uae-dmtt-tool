@@ -385,6 +385,27 @@ function fmtDate(date){
   if(!date) return null;
   return date.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
 }
+// Exact day subtraction, safe as plain millisecond arithmetic (unlike month
+// arithmetic — see addMonthsUTC above) because every day is exactly
+// 86,400,000ms on a UTC-midnight Date with no DST to account for.
+function addDaysUTC(date,n){ return new Date(date.getTime()+n*86400000); }
+// Standard 12-month Fiscal Year period convention for the END-date auto-
+// fill below: start + 1 year, minus 1 day (1 Jan 2025 -> 31 Dec 2025; 1 Apr
+// 2025 -> 31 Mar 2026). Deliberately built from the SAME addMonthsUTC used
+// throughout this file's deadline math (12 months, not a fixed 365/366-day
+// offset) rather than new ad hoc arithmetic, so this can't reintroduce the
+// month-end overflow class of bug already found and fixed once here.
+// Edge case, worth being explicit about: a start date of 29 February in a
+// leap year has no exact anniversary in a non-leap year, so this composes
+// exactly like the rest of the file's month math already does — addMonthsUTC
+// clamps 29 Feb to 28 Feb of the following (non-leap) year, then -1 day
+// gives 27 Feb. Not the only defensible convention, but the direct, honest
+// result of reusing the one utility that already exists here.
+function computeAutoFilledEndDate(startDate){ return addDaysUTC(addMonthsUTC(startDate,12),-1); }
+function toDateInputValue(date){
+  const y=date.getUTCFullYear(),m=String(date.getUTCMonth()+1).padStart(2,'0'),d=String(date.getUTCDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
 // De-duplicates before joining, since the same CITE_M4 value can legitimately
 // back two different facts in one card's Learn More (e.g. TTGREG1 §8.1 covers
 // both the two registration paths and the CT-interaction note) — without
@@ -463,12 +484,27 @@ function selectRegPath(path){
 }
 document.getElementById('regPathEntity').addEventListener('click',()=>selectRegPath('entity'));
 document.getElementById('regPathDdfe').addEventListener('click',()=>selectRegPath('ddfe'));
-document.getElementById('fyStartDate').addEventListener('input',renderAll);
-document.getElementById('fyEndDate').addEventListener('input',renderAll);
+
+// End-date auto-fill: a DEFAULT, not a lock. fyEndTouched tracks whether the
+// user has ever manually changed the end date directly — once true, the
+// auto-fill stops for good (until Start Over). This relies on a real
+// browser/user 'input' event only firing on genuine interaction, never on a
+// script setting .value programmatically (which is exactly how the auto-
+// fill itself writes the field below) — so the auto-fill can never
+// mistake itself for a manual edit.
+let fyEndTouched=false;
+function maybeAutoFillEndDate(){
+  if(fyEndTouched) return;
+  const start=currentFyStartDate();
+  document.getElementById('fyEndDate').value = start ? toDateInputValue(computeAutoFilledEndDate(start)) : '';
+}
+document.getElementById('fyStartDate').addEventListener('input',()=>{ maybeAutoFillEndDate(); renderAll(); });
+document.getElementById('fyEndDate').addEventListener('input',()=>{ fyEndTouched=true; renderAll(); });
 
 function resetModule4(){
   document.getElementById('fyStartDate').value='';
   document.getElementById('fyEndDate').value='';
+  fyEndTouched=false;
   regPath=null;
   document.getElementById('regPathEntity').classList.remove('selected');
   document.getElementById('regPathDdfe').classList.remove('selected');
