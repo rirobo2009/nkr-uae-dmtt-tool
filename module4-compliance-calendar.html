@@ -57,6 +57,10 @@
   .inputs-summary .row{font-size:13.5px;color:var(--nkr-navy);margin-bottom:4px}
   .inputs-summary .row b{font-weight:600}
   .inputs-summary .row .empty{color:var(--text-secondary);font-style:italic;font-weight:400}
+  /* Plain data-entry feedback, deliberately lighter-weight than the legal
+     .callout treatment below — this is "fix your input," not a legal
+     determination, so it's also excluded from print (see @media print). */
+  .field-error{color:var(--red);font-size:12.5px;margin-top:10px}
   .entry-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
   .field{display:flex;flex-direction:column;gap:5px;min-width:220px}
   .field label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);font-weight:700}
@@ -147,7 +151,7 @@
   .disclaimer strong{color:var(--nkr-navy)}
 
 @media print{
-    .btn,.explore,.lead-modal,.brand-bar,.entry-note,.field,.choice-tiles,.choice-group>label,.tool-nav{display:none!important}
+    .btn,.explore,.lead-modal,.brand-bar,.entry-note,.field,.choice-tiles,.choice-group>label,.tool-nav,.field-error{display:none!important}
     .action-row{display:none!important}
     body{background:#fff;padding:0}
     header.masthead{position:static!important;background:var(--highlight-blue)!important;border:1px solid #ccc!important;box-shadow:none!important}
@@ -219,13 +223,17 @@
   </header>
 
   <div class="legal-strip">
-    <strong>Legal basis (primary sources only):</strong> Cabinet Decision No. 142 of 2024 (Annexure), Articles 8.1, 11, 12, 13, 14 &amp; 15 · TTGREG1 (Scope &amp; Registration Guide) Sections 8–9 · FTA Decision No. 12 of 2026 (Registration and Deregistration Timelines) · Ministerial Decision No. 133 of 2026 (Pillar Two Information Return filer specification).
+    <strong>Legal basis (primary sources only):</strong> Cabinet Decision No. 142 of 2024 — the outer Decision, Article 2 (application to Fiscal Years; distinct from the Annexure's own Article 2, the Charging Provision) — and its Annexure, Articles 8.1, 11, 12, 13, 14 &amp; 15 · TTGREG1 (Scope &amp; Registration Guide) Sections 8–9 · FTA Decision No. 12 of 2026 (Registration and Deregistration Timelines) · Ministerial Decision No. 133 of 2026 (Pillar Two Information Return filer specification).
   </div>
 
   <div class="entry-card">
     <h2>Your details</h2>
-    <div class="entry-note">Enter your first in-scope Fiscal Year end date to personalize the deadlines below. Every card is shown either way — the general rule displays until you enter a date.</div>
+    <div class="entry-note">Enter your first in-scope Fiscal Year's start and end dates to personalize the deadlines below. Every card is shown either way — the general rule displays until valid dates are entered.</div>
     <div class="entry-row">
+      <div class="field">
+        <label for="fyStartDate">First in-scope Fiscal Year start date</label>
+        <input type="date" id="fyStartDate">
+      </div>
       <div class="field">
         <label for="fyEndDate">First in-scope Fiscal Year end date</label>
         <input type="date" id="fyEndDate">
@@ -244,9 +252,11 @@
         </div>
       </div>
     </div>
+    <div class="field-error" id="dateValidationError" style="display:none">The Fiscal Year end date must be after the start date.</div>
     <div class="inputs-summary" id="inputsSummary"></div>
   </div>
 
+  <div id="outOfScopeNotice"></div>
   <div id="callouts"></div>
   <div id="cards" class="m4-grid"></div>
   <div id="minorNotes"></div>
@@ -318,6 +328,13 @@ function requireLeadCapture(onDone){
    TTGREG1 §8-9, FTA Decision No. 12 of 2026, MD 133/2026)
    ================================================================== */
 const CITE_M4={
+  // NB: "Article 2" here is the OUTER Cabinet Decision No. 142 of 2024
+  // itself (a 3-article decision: 1 Imposition, 2 Application to Fiscal
+  // Years, 3 Publication) — NOT the Annexure's own separate "Article 2 —
+  // Charging Provision" (Art 2.1-2.3). Two different articles that happen
+  // to share a number in two different documents; worded explicitly below
+  // so this citation is unambiguous read on its own.
+  cd142Application:"Article 2, Cabinet Decision No. 142 of 2024 (the outer Decision — distinct from the Annexure's own Article 2, the Charging Provision)",
   regGeneral:"Art. 13.1, CD 142/2024 Annexure; Art. 2, FTA Decision No. 12 of 2026",
   regTwoPaths:"TTGREG1 §8.1",
   regCTInteraction:"TTGREG1 §8.1",
@@ -446,9 +463,11 @@ function selectRegPath(path){
 }
 document.getElementById('regPathEntity').addEventListener('click',()=>selectRegPath('entity'));
 document.getElementById('regPathDdfe').addEventListener('click',()=>selectRegPath('ddfe'));
+document.getElementById('fyStartDate').addEventListener('input',renderAll);
 document.getElementById('fyEndDate').addEventListener('input',renderAll);
 
 function resetModule4(){
+  document.getElementById('fyStartDate').value='';
   document.getElementById('fyEndDate').value='';
   regPath=null;
   document.getElementById('regPathEntity').classList.remove('selected');
@@ -457,7 +476,39 @@ function resetModule4(){
 }
 document.getElementById('startOverBtn').addEventListener('click',resetModule4);
 
+function currentFyStartDate(){ return parseDateInput(document.getElementById('fyStartDate').value); }
 function currentFyEndDate(){ return parseDateInput(document.getElementById('fyEndDate').value); }
+
+// CD 142/2024's own Article 2 (the outer Decision, not the Annexure — see
+// CITE_M4.cd142Application): applies only to Fiscal Years beginning on or
+// after 1 January 2025. Strict "<" so a start date of exactly 1 Jan 2025
+// itself is in scope, matching "beginning ON OR AFTER".
+const CD142_APPLICABILITY_START=Date.UTC(2025,0,1);
+function isOutOfScopePeriod(){
+  const start=currentFyStartDate();
+  return !!start && start.getTime()<CD142_APPLICABILITY_START;
+}
+// Basic data-entry sanity, not a legal test: if both dates are present, end
+// must be strictly after start. Absent either date, there is nothing yet to
+// contradict, so this reports valid (matching the pre-existing single-date
+// behavior when only an end date had ever been collected).
+function hasValidDateRange(){
+  const start=currentFyStartDate(), end=currentFyEndDate();
+  if(!start || !end) return true;
+  return end.getTime()>start.getTime();
+}
+// The value every obligation card should actually compute from. Deliberately
+// routes back through the SAME null-input branch every card already has for
+// "no date entered yet", rather than adding a second rendering path, for
+// both the CD142 applicability gate and a nonsensical date range.
+function effectiveFyEndDate(){
+  if(isOutOfScopePeriod()) return null;
+  if(!hasValidDateRange()) return null;
+  return currentFyEndDate();
+}
+function renderDateValidation(){
+  document.getElementById('dateValidationError').style.display=hasValidDateRange()?'none':'block';
+}
 
 /* ==================================================================
    Render orchestration — cards/callouts are appended by later sections
@@ -466,6 +517,7 @@ function currentFyEndDate(){ return parseDateInput(document.getElementById('fyEn
    ================================================================== */
 const RENDERERS=[];
 function renderAll(){ RENDERERS.forEach(fn=>fn()); }
+RENDERERS.push(renderDateValidation);
 
 /* ==================================================================
    "Your details" inputs summary — the Module 4 equivalent of Module
@@ -473,11 +525,18 @@ function renderAll(){ RENDERERS.forEach(fn=>fn()); }
    actually entered, so a user (or the PDF) doesn't have to reverse-
    engineer it from the computed deadlines further down the page.
    Registers as a renderer so it stays live-updated exactly like every
-   card below it.
+   card below it. Deliberately reads the RAW start/end values, not
+   effectiveFyEndDate() — this is a factual record of what was typed,
+   including an out-of-scope or invalid entry, not a filtered view of
+   what's currently usable.
    ================================================================== */
 function renderInputsSummary(){
+  const fyStart=currentFyStartDate();
   const fyEnd=currentFyEndDate();
-  const fyRow=fyEnd
+  const startRow=fyStart
+    ? `<b>First in-scope Fiscal Year start date:</b> ${fmtDate(fyStart)}`
+    : `<b>First in-scope Fiscal Year start date:</b> <span class="empty">Not yet entered</span>`;
+  const endRow=fyEnd
     ? `<b>First in-scope Fiscal Year end date:</b> ${fmtDate(fyEnd)}`
     : `<b>First in-scope Fiscal Year end date:</b> <span class="empty">Not yet entered</span>`;
   const pathLabel=regPath==='ddfe' ? 'Domestic Designated Filing Entity (DDFE)'
@@ -488,10 +547,33 @@ function renderInputsSummary(){
     : `<b>Registration approach:</b> <span class="empty">Not yet selected</span>`;
   document.getElementById('inputsSummary').innerHTML=
     `<div class="eyebrow-label">What you've entered</div>`+
-    `<div class="row">${fyRow}</div>`+
+    `<div class="row">${startRow}</div>`+
+    `<div class="row">${endRow}</div>`+
     `<div class="row">${pathRow}</div>`;
 }
 RENDERERS.push(renderInputsSummary);
+
+/* ==================================================================
+   Out-of-scope-period notice (CD 142/2024's own Article 2 — the outer
+   Decision, see CITE_M4.cd142Application). Same .callout visual family
+   as the Penalty Relief/J&S Liability callouts below, so it reads as
+   part of the same design language rather than a one-off alert — and,
+   being a .callout, it is already outside the print-hide rules, so it
+   survives into the PDF with no extra CSS needed.
+   ================================================================== */
+function renderOutOfScopeNotice(){
+  const el=document.getElementById('outOfScopeNotice');
+  if(!isOutOfScopePeriod()){ el.innerHTML=''; return; }
+  const fyStart=currentFyStartDate();
+  el.innerHTML=`
+    <div class="callout good">
+      <div class="tag">Out of scope</div>
+      <h3>This Fiscal Year is outside CD 142/2024's applicability window</h3>
+      <p>The Fiscal Year start date entered — <b>${fmtDate(fyStart)}</b> — is before 1 January 2025. Cabinet Decision No. 142 of 2024 applies only to Fiscal Years beginning on or after that date. Based on the period entered, UAE DMTT does not apply to this Fiscal Year, and the cards below show only the general compliance rules until a Fiscal Year beginning on or after 1 January 2025 is entered.</p>
+      <cite>${CITE_M4.cd142Application}</cite>
+    </div>`;
+}
+RENDERERS.push(renderOutOfScopeNotice);
 
 /* ==================================================================
    PDF header / disclaimer (mirrors index.html's pdfHeaderBlock pattern)
@@ -518,7 +600,7 @@ function cardEl(id){
   return el;
 }
 function renderRegistrationCard(){
-  const fyEnd=currentFyEndDate();
+  const fyEnd=effectiveFyEndDate();
   const deadline=computeRegistrationDeadline(fyEnd);
   const usedOverride=fyEnd && fyEnd.getTime()<REG_OVERRIDE_THRESHOLD;
 
@@ -567,7 +649,7 @@ RENDERERS.push(renderRegistrationCard);
    (GIR), which must render as a standalone warning, not a footnote.
    ================================================================== */
 function renderReturnFilingCard(){
-  const fyEnd=currentFyEndDate();
+  const fyEnd=effectiveFyEndDate();
   const tutDeadline=computeTopUpTaxReturnDeadline(fyEnd);
   const girDeadline=computeGIRDeadline(fyEnd);
 
