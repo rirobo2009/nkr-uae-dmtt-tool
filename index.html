@@ -332,6 +332,28 @@ const CITE={
   exclNpoOwned:"Art. 1.9, CD 142/2024 Annexure",
   fiveYearElection:"Art. 1.5.3, CD 142/2024 Annexure",
   peExcluded:"Art. 1.7, CD 142/2024 Annexure",
+  // ---- Location of the Entity (Art 18.3) ----
+  // Art 2.1 charges only Constituent Entities/JVs/JV Subsidiaries LOCATED
+  // IN THE UAE, so location is a gating fact, not a labelling detail.
+  locEntity:"Art. 18.3.1, CD 142/2024 Annexure; TTGREG1 §6.2",
+  locResident:"Art. 18.3.1(a), CD 142/2024 Annexure; Art. 11(3), Federal Decree-Law No. 47 of 2022 (Corporate Tax Law); TTGREG1 §6.2",
+  locScopeNote:"TTGREG1 §6.1",
+  locFlowThrough:"Art. 18.3.2, CD 142/2024 Annexure",
+  locDual:"Art. 18.3.4, CD 142/2024 Annexure",
+  locDualTreaty:"Art. 18.3.4(a), CD 142/2024 Annexure",
+  locDualNoTreaty:"Art. 18.3.4(b), CD 142/2024 Annexure; Art. 5.3 (Substance-based Income Exclusion), CD 142/2024 Annexure",
+  // TODO(TTGREG1 §6.4): TTGREG1 Chapter 6 is titled "Location of an Entity
+  // and PE", so §6.4 covers the PE limb and may carry interpretive detail
+  // beyond the bare article. It was not captured in
+  // docs/FTA-Guides-Extract.md (the Pass 4 extract recorded §6.2-6.6 for
+  // Entities only and read past the PE rules), and no source PDF is in the
+  // repo — so it could not be checked. Cited to the article alone rather
+  // than guessing at the guide. Revisit when the guide is to hand: if §6.4
+  // only restates Art 18.3.3, this citation is already correct as it
+  // stands and only this comment needs removing.
+  locPE:"Art. 18.3.3, CD 142/2024 Annexure",
+  locPEStateless:"Art. 18.3.3(d), CD 142/2024 Annexure; Art. 2.1, CD 142/2024 Annexure",
+  reverseHybrid:"Art. 2.1, CD 142/2024 Annexure; Art. 18.2 (Reverse Hybrid Entity), CD 142/2024 Annexure",
   investmentEntity:"Art. 18 (Investment Entity), CD 142/2024 Annexure",
   investmentEntityCharge:"Art. 2.3, CD 142/2024 Annexure",
   charging:"Art. 2.1, CD 142/2024 Annexure"
@@ -397,17 +419,33 @@ const STAGE=document.getElementById('stage'),PROG=document.getElementById('progr
 
 /* Base sequential steps on every path that reaches Step F: Revenue Threshold,
    the short-Fiscal-Year sub-step (always shown once Step A = Yes), MNE Group,
-   UPE Identification, Constituent Entity, Excluded Entity, Investment Entity.
+   UPE Identification, Constituent Entity, Location, Excluded Entity,
+   Investment Entity.
    Further steps are conditional and only counted once the user's answers
    make them definitely apply: the Art 1.6 sovereign wealth fund sub-flow (2
    steps — the direct/holding-company branch, then the (a)/(b) test applied
    to whichever entity that branch identifies), and the Art 1.5.3 Five-Year
    Election sub-step (1 step). This keeps "Step X of Y" accurate for
    whichever path is actually being walked, recomputed from current answers
-   (which are themselves correctly restored on Back). */
-const BASE_STEP_COUNT=7;
+   (which are themselves correctly restored on Back).
+
+   Location (Art 18.3) counts as ONE base step because every path takes
+   exactly one of the two location questions — the Entity question
+   (Art 18.3.1) or, for a Permanent Establishment, the PE question
+   (Art 18.3.3). They are alternatives, not a sequence, so the PE question
+   substitutes for the Entity one rather than adding to it; that is why
+   there is no tookLocPE flag below and why the PE path totals 8 rather
+   than 9. Its sub-questions are the conditional part: whether the Entity
+   is a Flow-through Entity, and then either the Art 18.3.2 UPE/IIR test
+   (plus the Reverse Hybrid follow-up, reachable only where the Entity was
+   created in the UAE) or the dual-residence question and its Art 18.3.4(a)
+   treaty limb. A plain UAE-incorporated subsidiary answering "no" to both
+   sub-questions therefore sees 10; the branches reach 11. */
+const BASE_STEP_COUNT=8;
 function totalStepsEstimate(){
-  return BASE_STEP_COUNT + (answers.tookSWF?2:0) + (answers.tookElection?1:0) + (answers.tookT9Purpose?1:0);
+  return BASE_STEP_COUNT + (answers.tookSWF?2:0) + (answers.tookElection?1:0) + (answers.tookT9Purpose?1:0)
+    + (answers.tookLocFlowThrough?1:0) + (answers.tookLocFtTest?1:0) + (answers.tookLocReverseHybrid?1:0)
+    + (answers.tookLocDual?1:0) + (answers.tookLocDualTreaty?1:0);
 }
 function stepLabel(name){
   const depth=stepStack.length;
@@ -698,14 +736,285 @@ function stepD(){
     `Is the UAE Entity included in the Group's Consolidated Financial Statements (or excluded only for size/materiality/held-for-sale reasons), or is it a Permanent Establishment of such an Entity? ${tip("This establishes whether the UAE Entity is potentially a Constituent Entity before testing Excluded Entity status. A Constituent Entity is an Entity included in the Group's Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds), or a Permanent Establishment of a Main Entity that is part of the Group.",CITE.constituent)}`,
     null,
     [
-      {key:'A',label:'Yes, included in consolidation',action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, included in consolidation","yes");push(stepE);}},
-      {key:'B',label:"Yes, it's a UAE Permanent Establishment of a Main Entity",action:()=>{answers.isPE=true;record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, UAE Permanent Establishment of a Main Entity","yes");push(stepE);}},
+      {key:'A',label:'Yes, included in consolidation',action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, included in consolidation","yes");push(stepLoc);}},
+      {key:'B',label:"Yes, it's a UAE Permanent Establishment of a Main Entity",action:()=>{answers.isPE=true;record("UAE Entity included in consolidation, or a UAE PE thereof?","Yes, UAE Permanent Establishment of a Main Entity","yes");push(stepLocPE);}},
       {key:'C',label:'No / Not sure',sub:'The Entity is not included in the Group\'s Consolidated Financial Statements and is not a Permanent Establishment of a consolidated Main Entity',action:()=>{record("UAE Entity included in consolidation, or a UAE PE thereof?","No / Not sure","no");
         outOfScope("Out of scope — not a Constituent Entity.",
           "The UAE Entity is not included in the Group's Consolidated Financial Statements (other than on size/materiality/held-for-sale grounds) and is not a Permanent Establishment of a Main Entity that is part of the Group. It does not meet the gateway definition of a Constituent Entity, so UAE DMTT does not apply to it.",
           [{t:"Only a Constituent Entity can be charged to UAE DMTT.",b:"A Constituent Entity is an Entity included in the Group's Consolidated Financial Statements (or excluded only on size/materiality/held-for-sale grounds), or a Permanent Establishment of such an Entity. An Entity that meets neither limb is not a Constituent Entity and falls outside the charge in Art 2.1.",c:CITE.constituent}]);}}
     ],'Constituent Entity Check');
   mount(node,'step');fixTooltips();
+}
+
+/* ==================================================================
+   LOCATION OF THE ENTITY (Art 18.3) — sits between the Constituent
+   Entity gateway and the Excluded Entity tiles.
+
+   Art 2.1 charges only Constituent Entities, JVs and JV Subsidiaries
+   LOCATED IN THE UAE (plus Stateless Constituent Entities that are
+   Reverse Hybrid Entities created under UAE law). Every step before
+   this one calls the subject "the UAE Entity", which asserts the
+   answer rather than testing it. That assumption holds for a
+   UAE-incorporated subsidiary — the common case — but fails for a
+   foreign-incorporated entity managed from the UAE, for a
+   dual-resident entity, and for a flow-through entity that is neither
+   the UPE nor required to apply an IIR.
+
+   Structure follows the statute's own order of application, which is
+   why the character and residence questions are separate steps rather
+   than extra options on the first one:
+     Art 18.3.1  applies to an Entity that is NOT a Flow-through Entity
+     Art 18.3.2  applies to one that IS
+     Art 18.3.4  applies only "where by reason of Article 18.3.1" an
+                 Entity is located in more than one Jurisdiction —
+                 i.e. only on the non-flow-through branch
+   So: stepLoc asks incorporation/management only (three genuinely
+   mutually exclusive options), stepLoc_flowThrough asks character, and
+   dual-residence is asked only once character is known to be
+   non-flow-through. Asking all three at one level would have implied a
+   choice between options that are not alternatives.
+
+   A Permanent Establishment takes stepLocPE instead (Art 18.3.3),
+   never this step — a PE is not incorporated anywhere, so the
+   incorporation/management question is incoherent for it.
+   ================================================================== */
+
+/* TTGREG1 §6.1 is explicit that these location rules are specific to the
+   QDMTT Legislation and do NOT apply for Corporate Tax Law or Tax Treaty
+   purposes generally. Users arrive here having often already settled a CT
+   residence position, and will assume it carries over. Attached to both
+   location steps. */
+const LOC_SCOPE_NOTE=`These location rules apply <strong>only</strong> for UAE Top-up Tax purposes. ${tip("TTGREG1 §6.1 states that the location rules in the QDMTT Legislation are specific to that legislation and do not apply for the purposes of the Corporate Tax Law or of Tax Treaties generally. An entity's residence position for UAE Corporate Tax, or under a Tax Treaty, does not automatically determine where it is located for Top-up Tax.",CITE.locScopeNote)} A residence position taken for UAE Corporate Tax or under a Tax Treaty does not decide this question.`;
+
+function stepLoc(){
+  const node=optionCard(
+    `Where is this Entity located for UAE Top-up Tax purposes? ${tip("Art 18.3.1 locates an Entity that is not a Flow-through Entity as follows: (a) if it is tax resident in a Jurisdiction based on place of management, place of creation or similar criteria, it is located in that Jurisdiction; (b) otherwise, it is located in the Jurisdiction in which it was created. TTGREG1 §6.2 elaborates that an Entity is UAE-resident for this purpose if it is a Resident Person under Corporate Tax Law Art 11(3) — incorporated, established or recognised under UAE legislation (including a Free Zone Person), or incorporated abroad but effectively managed and controlled in the UAE. The Entity need not be a legal person.",CITE.locEntity)}`,
+    `Art 2.1 charges only Constituent Entities located in the UAE, so this determines whether the charge can reach this Entity at all. ${LOC_SCOPE_NOTE}`,
+    [
+      {key:'A',label:'Incorporated, established or recognised under UAE legislation — including a Free Zone Person',
+       sub:"The Entity was created under UAE law. It need not be a legal person: an Unincorporated Partnership treated as a separate Taxable Person under Corporate Tax Law Art 16(8) is a Resident Person and so UAE-located",
+       tipHTML:tip("A Resident Person under Corporate Tax Law Art 11(3) includes an Entity incorporated, established or otherwise recognised under UAE legislation, and this expressly includes a Free Zone Person. Per Cabinet Decision No. 63 of 2025, an Unincorporated Partnership treated as a separate Taxable Person under Corporate Tax Law Art 16(8) is likewise a Resident Person, and is therefore located in the UAE.",CITE.locResident),
+       action:()=>{answers.locCreatedUae=true;answers.tookLocFlowThrough=true;
+         record("Where is the Entity located (Art 18.3.1)?","Incorporated or established under UAE legislation","yes");
+         push(stepLoc_flowThrough);}},
+      {key:'B',label:'Incorporated outside the UAE, but effectively managed and controlled in the UAE',
+       sub:"Created under foreign law, but its place of effective management and control is in the UAE — a Resident Person on that basis",
+       tipHTML:tip("Corporate Tax Law Art 11(3)(b) treats an Entity incorporated or established outside the UAE as a Resident Person where it is effectively managed and controlled in the UAE. Art 18.3.1(a) then locates it in the UAE, because it is tax resident here on a place-of-management criterion. This is the case Module 1 previously got wrong by assuming: the Entity is foreign-incorporated, but it is UAE-located.",CITE.locResident),
+       action:()=>{answers.locCreatedUae=false;answers.tookLocFlowThrough=true;
+         record("Where is the Entity located (Art 18.3.1)?","Incorporated outside the UAE, effectively managed and controlled in the UAE","yes");
+         push(stepLoc_flowThrough);}},
+      {key:'C',label:'Incorporated outside the UAE, and not effectively managed or controlled from the UAE',
+       sub:"Neither created under UAE law nor tax resident here on a place-of-management or similar criterion",
+       action:()=>{record("Where is the Entity located (Art 18.3.1)?","Incorporated outside the UAE and not managed or controlled from the UAE","no");
+         locNotUaeExit();}}
+    ],'Location of the Entity');
+  mount(node,'step');fixTooltips();
+}
+
+/* The not-UAE-located exit, shared by the Art 18.3.1 branch and by the
+   flow-through branch where Art 18.3.2 puts the Entity abroad. The PE
+   caveat is a flag, not a resolution: whether a UAE PE of this Entity is
+   itself in scope is a separate assessment against a different rule
+   (Art 18.3.3), and answering it here would require facts this flow has
+   not collected. */
+function locNotUaeExit(extra){
+  outOfScope("Out of scope — the Entity is not located in the UAE.",
+    "Article 2.1 imposes Top-up Tax only on Constituent Entities, Joint Ventures and JV Subsidiaries that are located in the UAE. On the facts entered, this Entity is located in another Jurisdiction under the Article 18.3 location rules, so the UAE charging provision does not reach it."+(extra?" "+extra:""),
+    [{t:"Only a UAE-located Entity can be charged to UAE DMTT.",b:"Art 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, together with Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. An Entity located in another Jurisdiction falls outside all of those categories.",c:CITE.charging},
+     {t:"Location is determined by Art 18.3, not by where the Group operates.",b:"Art 18.3.1 locates a non-Flow-through Entity in the Jurisdiction where it is tax resident on a place-of-management, place-of-creation or similar criterion, and otherwise in the Jurisdiction where it was created. TTGREG1 §6.1 confirms these rules apply only for the QDMTT Legislation, not for Corporate Tax Law or Tax Treaty purposes generally.",c:CITE.locEntity}],
+    "<strong>This does not close off the UAE entirely.</strong> A UAE Permanent Establishment of this Entity could still be separately within the charge, since a PE's location is determined under Art 18.3.3 by its own facts rather than by where its Main Entity sits. If the Group has a UAE place of business, assess that Permanent Establishment separately — start a new assessment and answer the Constituent Entity question as a UAE Permanent Establishment.");
+}
+
+function stepLoc_flowThrough(){
+  const node=optionCard(
+    `Is this Entity a Flow-through Entity? ${tip("Art 18.3.1 applies to an Entity that is not a Flow-through Entity; Art 18.3.2 applies to one that is. A Flow-through Entity is fiscally transparent in the Jurisdiction where it was created — its income, expenditure, profit or loss are treated as those of its owners rather than its own. Which rule locates this Entity therefore turns on its character, and that has to be settled before the residence tests can be applied.",CITE.locFlowThrough)}`,
+    `Location is determined by a different rule depending on the answer: Art 18.3.1 for an Entity that is not a Flow-through Entity, Art 18.3.2 for one that is. ${LOC_SCOPE_NOTE}`,
+    [
+      {key:'A',label:'No — it is not a Flow-through Entity',
+       sub:"The Entity is treated as fiscally opaque in the Jurisdiction where it was created",
+       action:()=>{answers.tookLocDual=true;
+         record("Is the Entity a Flow-through Entity?","No","no");
+         push(stepLoc_dual);}},
+      {key:'B',label:'Yes — it is a Flow-through Entity',
+       sub:"The Entity is fiscally transparent where created: its income and expenditure are treated as its owners'",
+       action:()=>{answers.tookLocFtTest=true;
+         record("Is the Entity a Flow-through Entity?","Yes","");
+         push(stepLoc_ft_test);}}
+    ],'Location — Entity character (Art 18.3.1 / 18.3.2)');
+  mount(node,'step');fixTooltips();
+}
+
+/* Art 18.3.2. Where the Entity was created is already known from stepLoc
+   (option A = created under UAE law, option B = created abroad), so the
+   "located where created" limb resolves without asking again — asking
+   would invite an answer that contradicts the one already given. */
+function stepLoc_ft_test(){
+  const createdUae=!!answers.locCreatedUae;
+  const node=optionCard(
+    `Is this Flow-through Entity the Ultimate Parent Entity of the Group, or required to apply an Income Inclusion Rule under a provision equivalent to Article 2.1 of the Pillar Two Model Rules? ${tip("Art 18.3.2 locates a Flow-through Entity in the Jurisdiction where it was created, but ONLY where it is the Ultimate Parent Entity of the MNE Group or is required to apply an Income Inclusion Rule under an equivalent provision to Art 2.1 of the Pillar Two Model Rules. In every other case the Flow-through Entity is treated as a STATELESS Entity. Note that the UAE has implemented a QDMTT only — no IIR and no UTPR — so an IIR obligation here would arise under another Jurisdiction's equivalent provision, not under CD 142.",CITE.locFlowThrough)}`,
+    `You indicated the Entity was created ${createdUae?'under UAE law':'outside the UAE'}. Under Art 18.3.2 that only fixes its location if one of the two conditions below is met; otherwise it is treated as stateless.`,
+    [
+      {key:'A',label:'Yes — it is the Ultimate Parent Entity, or is required to apply an IIR',
+       sub:`Art 18.3.2(a) therefore locates it where it was created — ${createdUae?'the UAE':'outside the UAE'}`,
+       action:()=>{record("Flow-through Entity that is the UPE, or required to apply an IIR (Art 18.3.2(a))?","Yes","yes");
+         if(createdUae){push(stepE);}
+         else{locNotUaeExit("The Entity is a Flow-through Entity that is the Ultimate Parent Entity, or is required to apply an Income Inclusion Rule, so Article 18.3.2(a) locates it in the Jurisdiction in which it was created — which is not the UAE.");}}},
+      {key:'B',label:'No — neither applies',
+       sub:"Art 18.3.2(b) therefore treats the Entity as a Stateless Entity",
+       action:()=>{record("Flow-through Entity that is the UPE, or required to apply an IIR (Art 18.3.2(a))?","No","no");
+         if(createdUae){answers.tookLocReverseHybrid=true;push(stepLoc_ft_reverseHybrid);}
+         else{locStatelessExit(false);}}}
+    ],'Location — Flow-through Entity (Art 18.3.2)');
+  mount(node,'step');fixTooltips();
+}
+
+/* Art 2.1 charges Stateless Constituent Entities that are Reverse Hybrid
+   Entities CREATED UNDER UAE LAW. Only reachable from stepLoc option A,
+   since an Entity created abroad cannot meet that limb however stateless
+   it is — which is why the option B branch above exits directly instead
+   of asking a question whose answer could not change the outcome. */
+function stepLoc_ft_reverseHybrid(){
+  const node=optionCard(
+    `This Entity is treated as stateless under Article 18.3.2(b). Is it a Reverse Hybrid Entity created under UAE law? ${tip("Art 2.1's charge is not limited to UAE-located Entities: it also reaches Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. A Reverse Hybrid Entity is a Flow-through Entity that is fiscally transparent in the Jurisdiction where it was created, but whose owners treat it as fiscally opaque in their own Jurisdictions — so its income is taxed in neither. This is the one route by which a stateless Entity remains within the UAE charge.",CITE.reverseHybrid)}`,
+    `A stateless Entity is normally outside Art 2.1, which charges Entities located in the UAE. Reverse Hybrid Entities created under UAE law are the express exception, so this is asked rather than assumed either way.`,
+    [
+      {key:'A',label:'Yes — it is a Reverse Hybrid Entity created under UAE law',
+       sub:"Within Art 2.1's charge despite being stateless, so the assessment continues",
+       action:()=>{answers.isStatelessReverseHybrid=true;
+         record("Stateless Entity that is a Reverse Hybrid created under UAE law (Art 2.1)?","Yes","yes");
+         push(stepE);}},
+      {key:'B',label:'No — it is not a Reverse Hybrid Entity',
+       sub:"A stateless Entity that is not a Reverse Hybrid created under UAE law falls outside Art 2.1",
+       action:()=>{record("Stateless Entity that is a Reverse Hybrid created under UAE law (Art 2.1)?","No","no");
+         locStatelessExit(true);}}
+    ],'Location — Stateless Entity / Reverse Hybrid check (Art 2.1)');
+  mount(node,'step');fixTooltips();
+}
+
+function locStatelessExit(askedReverseHybrid){
+  outOfScope("Out of scope — the Entity is treated as stateless.",
+    "The Entity is a Flow-through Entity that is neither the Ultimate Parent Entity nor required to apply an Income Inclusion Rule, so Article 18.3.2(b) treats it as a Stateless Entity. Article 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, together with Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. "+(askedReverseHybrid?"You confirmed this Entity is not a Reverse Hybrid Entity, so it falls into none of those categories.":"The Entity was created outside the UAE, so it cannot meet the Reverse Hybrid limb, which requires creation under UAE law. It falls into none of those categories."),
+    [{t:"Art 18.3.2(b) treats the Entity as stateless.",b:"A Flow-through Entity is located in the Jurisdiction where it was created only if it is the Ultimate Parent Entity or is required to apply an Income Inclusion Rule under an equivalent provision to Art 2.1 of the Pillar Two Model Rules. In every other case it is treated as a Stateless Entity.",c:CITE.locFlowThrough},
+     {t:"A stateless Entity is outside Art 2.1 unless it is a UAE-created Reverse Hybrid.",b:"Art 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, plus Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. A stateless Entity meeting neither description is not within the charge.",c:CITE.reverseHybrid}],
+    "<strong>Statelessness is a consequence of the Entity's character, not a permanent status.</strong> It follows from the Flow-through analysis and from who the Entity's owners are, both of which can change between Fiscal Years. Re-test this in any year in which the Entity's ownership, transparency treatment or Ultimate Parent Entity position changes.");
+}
+
+function stepLoc_dual(){
+  const node=optionCard(
+    `Is this Entity also tax resident in another Jurisdiction — that is, dual-located? ${tip("Art 18.3.4 applies where, by reason of Art 18.3.1, an Entity is located in more than one Jurisdiction. That happens when two Jurisdictions each treat the Entity as tax resident on a place-of-management, place-of-creation or similar criterion — for example a UAE-incorporated entity whose effective management sits abroad, or a foreign-incorporated entity managed from the UAE that remains resident where it was created. Where it applies, an ordered set of tie-breakers determines the single Jurisdiction in which the Entity is located.",CITE.locDual)}`,
+    `Art 18.3.4's tie-breakers apply only where Art 18.3.1 produces more than one Jurisdiction. ${LOC_SCOPE_NOTE}`,
+    [
+      {key:'A',label:'No — the UAE is the only Jurisdiction that treats it as tax resident',
+       sub:"Art 18.3.1 produces a single Jurisdiction, so no tie-breaker is needed",
+       action:()=>{record("Also tax resident in another Jurisdiction (dual-located)?","No","no");
+         push(stepE);}},
+      {key:'B',label:'Yes — another Jurisdiction also treats it as tax resident',
+       sub:"Art 18.3.4's ordered tie-breakers determine which single Jurisdiction it is located in",
+       action:()=>{answers.tookLocDualTreaty=true;
+         record("Also tax resident in another Jurisdiction (dual-located)?","Yes","");
+         push(stepLoc_dual_treaty);}}
+    ],'Location — dual-located check (Art 18.3.4)');
+  mount(node,'step');fixTooltips();
+}
+
+/* Art 18.3.4(a), the treaty limb, is resolvable from facts a user
+   plausibly has. Art 18.3.4(b) is not — it turns on a Covered Taxes
+   comparison and an entity-basis SBIE computation under Art 5.3, neither
+   of which this flow has collected or could reliably ask for at this
+   stage. So (a) is decided here and (b) is handed over as ordered
+   guidance under the existing judgment-flag treatment, rather than
+   computing an answer from inputs the user does not have. */
+function stepLoc_dual_treaty(){
+  const node=optionCard(
+    `Is there an applicable Tax Treaty in force between the UAE and the other Jurisdiction, and does it resolve where this Entity is resident? ${tip("Art 18.3.4(a) applies where both Jurisdictions have an applicable Tax Treaty in force: (i) the Entity is located where it is deemed resident for Tax Treaty purposes; (ii) if the treaty requires the competent authorities to reach mutual agreement on deemed residence and no such agreement exists, Art 18.3.4(b) applies instead; (iii) if the treaty gives no relief or exemption because the Entity is resident in both Contracting Parties, Art 18.3.4(b) applies instead. Where there is no applicable Tax Treaty in force, Art 18.3.4(b) applies directly.",CITE.locDualTreaty)}`,
+    `The tie-breakers run in a strict order. The treaty limb is tested first; only if it does not resolve the question do the Art 18.3.4(b) tests apply.`,
+    [
+      {key:'A',label:'Yes — a Tax Treaty applies and deems the Entity resident in the UAE',
+       sub:"Art 18.3.4(a)(i) locates the Entity in the UAE",
+       action:()=>{record("Art 18.3.4(a) treaty tie-breaker outcome?","Treaty deems the Entity resident in the UAE","yes");
+         push(stepE);}},
+      {key:'B',label:'Yes — a Tax Treaty applies and deems the Entity resident in the other Jurisdiction',
+       sub:"Art 18.3.4(a)(i) locates the Entity outside the UAE",
+       action:()=>{record("Art 18.3.4(a) treaty tie-breaker outcome?","Treaty deems the Entity resident in the other Jurisdiction","no");
+         locNotUaeExit("A Tax Treaty in force between the UAE and the other Jurisdiction deems the Entity resident there, so Article 18.3.4(a)(i) locates it in that Jurisdiction.");}},
+      {key:'C',label:'A Tax Treaty applies, but it does not resolve residence',
+       sub:"The treaty requires a competent-authority mutual agreement that does not exist, or gives no relief because the Entity is resident in both Contracting Parties — Art 18.3.4(a)(ii)/(iii)",
+       action:()=>{record("Art 18.3.4(a) treaty tie-breaker outcome?","Treaty applies but does not resolve residence","");
+         locDualUnresolvedExit("A Tax Treaty is in force, but it does not resolve the Entity's residence — either because it requires the competent authorities to reach a mutual agreement that does not exist (Art 18.3.4(a)(ii)), or because it gives no relief or exemption on the basis that the Entity is resident in both Contracting Parties (Art 18.3.4(a)(iii)). In both cases Article 18.3.4(b) applies instead.");}},
+      {key:'D',label:'No — there is no applicable Tax Treaty in force',
+       sub:"Art 18.3.4(b) applies directly",
+       action:()=>{record("Art 18.3.4(a) treaty tie-breaker outcome?","No applicable Tax Treaty in force","");
+         locDualUnresolvedExit("There is no applicable Tax Treaty in force between the UAE and the other Jurisdiction, so Article 18.3.4(b) applies directly.");}}
+    ],'Location — dual-located, treaty limb (Art 18.3.4(a))');
+  mount(node,'step');fixTooltips();
+}
+
+function locDualUnresolvedExit(narrative){
+  reviewRequired("Dual-located Entity — Article 18.3.4(b) tie-breakers require professional review.",
+    narrative+" The remaining tie-breakers turn on a comparison of Covered Taxes and, failing that, on a Substance-based Income Exclusion computed on an entity basis. Those are fact-heavy figures this assessment has not collected, and getting them wrong would change the answer — so the rules are set out below in the order they must be applied, rather than guessed at from inputs you are unlikely to have to hand at this stage. A qualified UAE tax adviser should apply them to the Entity's actual figures.",
+    [{t:"Apply these three tests in strict order (Art 18.3.4(b)).",b:"(i) The Entity is located in the Jurisdiction in which it paid the GREATER amount of Covered Taxes for the Fiscal Year, excluding any taxes paid under a Controlled Foreign Company Tax Regime. (ii) If the Covered Taxes are equal or are zero in all Jurisdictions, it is located in the Jurisdiction in which it has the greater Substance-based Income Exclusion, computed on an entity basis under Art 5.3. (iii) If the Substance-based Income Exclusion is also equal or zero, the Entity is treated as a Stateless Constituent Entity — unless it is the Ultimate Parent Entity, in which case it is located in the Jurisdiction in which it was created.",c:CITE.locDualNoTreaty},
+     {t:"Why this matters for the UAE charge.",b:"If the tests locate the Entity in the UAE, it is within Art 2.1 and the rest of this assessment — the Excluded Entity and Investment Entity tests — still has to be worked through. If they locate it elsewhere, or produce a Stateless Constituent Entity that is not a Reverse Hybrid Entity created under UAE law, Art 2.1 does not reach it.",c:CITE.charging}],
+    "<strong>This assessment stops here deliberately.</strong> Location is a gating fact: until it is settled, neither an in-scope nor an out-of-scope conclusion can be reached on the remaining tests. Once an adviser has applied the Art 18.3.4(b) order to the Entity's figures, re-run this assessment with that answer.");
+}
+
+/* ==================================================================
+   LOCATION OF A PERMANENT ESTABLISHMENT (Art 18.3.3)
+
+   Reached only from Step D option B. A PE has its own four-limb
+   location rule, mapping one-to-one onto paragraphs (a)-(d) of the PE
+   definition in Art 18.1, so the question identifies which kind of PE
+   this is rather than asking where it was incorporated — a PE is not
+   incorporated anywhere.
+
+   Limb (d) is the reason this step exists rather than trusting Step
+   D's answer: it produces a STATELESS Permanent Establishment, which
+   is not UAE-located. Treating a self-declared "UAE PE" as UAE-located
+   would silently assume that case away.
+   ================================================================== */
+function stepLocPE(){
+  const node=optionCard(
+    `Which of these describes this Permanent Establishment? ${tip("Art 18.3.3 locates a Permanent Establishment according to which paragraph of the Art 18.1 PE definition it falls within: (a) a place of business treated as a PE under an applicable Tax Treaty in force, where that Jurisdiction taxes the attributable income under a provision similar to Art 7 of the OECD Model Tax Convention — located where it is so treated and taxed; (b) where there is no applicable Tax Treaty in force, a place of business whose attributable income that Jurisdiction taxes under domestic law on a net basis similar to how it taxes its own residents — located where it is subject to that net basis taxation; (c) where a Jurisdiction has no corporate income tax system, a place of business situated there that would be treated as a PE under the OECD Model Tax Convention and whose attributable income that Jurisdiction would have had the right to tax under Art 7 — located where it is situated; (d) a place of business not described in (a) to (c), through which operations are conducted outside the Jurisdiction where the Entity is located, provided that Jurisdiction exempts the income attributable to those operations — treated as a Stateless Permanent Establishment.",CITE.locPE)}`,
+    `A Permanent Establishment has its own location rule, separate from its Main Entity's. ${LOC_SCOPE_NOTE}`,
+    [
+      {key:'A',label:'It is treated as a Permanent Establishment under a Tax Treaty in force, and the UAE taxes its attributable income',
+       sub:"Art 18.3.3(a) — the UAE taxes the attributable income under a provision similar to Article 7 of the OECD Model Tax Convention",
+       action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Art 18.3.3(a) — treated as a PE under a Tax Treaty and taxed by the UAE","yes");
+         push(stepE);}},
+      {key:'B',label:'There is no Tax Treaty in force, and the UAE taxes its attributable income on a net basis',
+       sub:"Art 18.3.3(b) — taxed under UAE domestic law on a net basis, similar to how the UAE taxes its own residents",
+       action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Art 18.3.3(b) — no treaty, taxed by the UAE on a net basis","yes");
+         push(stepE);}},
+      {key:'C',label:'It is situated in a Jurisdiction with no corporate income tax system, and would be a Permanent Establishment under the OECD Model',
+       sub:"Art 18.3.3(c) — located where situated, provided that Jurisdiction would have had the right to tax the attributable income under Article 7",
+       tipHTML:tip("This limb addresses a place of business in a Jurisdiction that has no corporate income tax system at all. The UAE has had one since Federal Decree-Law No. 47 of 2022 took effect, so this limb will rarely be the one that locates a UAE place of business — it is included because Art 18.3.3 applies to whichever Jurisdiction the place of business is situated in, not only to the UAE.",CITE.locPE),
+       action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Art 18.3.3(c) — situated in a Jurisdiction with no corporate income tax system","yes");
+         push(stepE);}},
+      {key:'D',label:'None of the above — operations are conducted outside the Jurisdiction where the Entity is located, and that Jurisdiction exempts the attributable income',
+       sub:"Art 18.3.3(d) — treated as a Stateless Permanent Establishment",
+       action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Art 18.3.3(d) — Stateless Permanent Establishment","no");
+         locPEStatelessExit();}},
+      {key:'E',label:'None of the above — this place of business is treated as a Permanent Establishment in, or taxed by, a Jurisdiction other than the UAE',
+       sub:"Limbs (a) to (c) resolve to a Jurisdiction other than the UAE",
+       action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Located in a Jurisdiction other than the UAE","no");
+         locPENotUaeExit();}}
+    ],'Location of the Permanent Establishment');
+  mount(node,'step');fixTooltips();
+}
+
+function locPENotUaeExit(){
+  outOfScope("Out of scope — this Permanent Establishment is not located in the UAE.",
+    "Article 2.1 imposes Top-up Tax only on Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE. On the facts entered, Article 18.3.3 locates this Permanent Establishment in another Jurisdiction — under limb (a) where it is treated as a Permanent Establishment under a Tax Treaty and taxed there, under limb (b) where it is subject to net basis taxation there, or under limb (c) where it is situated. The UAE charging provision does not reach it.",
+    [{t:"A Permanent Establishment is located under its own rule, not its Main Entity's.",b:"Art 18.3.3 locates a Permanent Establishment by reference to which paragraph of the Art 18.1 definition it falls within — where it is treated as a PE and taxed under a Tax Treaty, where its income is taxed on a net basis absent a treaty, or where it is situated if that Jurisdiction has no corporate income tax system. The Main Entity's own location does not determine it.",c:CITE.locPE},
+     {t:"Only a UAE-located Entity or Permanent Establishment can be charged.",b:"Art 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, together with Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law.",c:CITE.charging}],
+    "<strong>The Main Entity may still be separately in scope.</strong> If the Main Entity is itself located in the UAE under Art 18.3.1, it should be assessed in its own right — start a new assessment for that Entity rather than for this Permanent Establishment.");
+}
+
+function locPEStatelessExit(){
+  reviewRequired("Stateless Permanent Establishment — professional review required.",
+    "On the facts entered this place of business falls within Article 18.3.3(d): it is not described in limbs (a) to (c), operations are conducted through it outside the Jurisdiction where the Entity is located, and that Jurisdiction exempts the income attributable to those operations. Article 18.3.3(d) therefore treats it as a Stateless Permanent Establishment. Article 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, together with Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law — and a Stateless Permanent Establishment is within none of those categories. This is an unusual fact pattern, and the conditions in limb (d) are cumulative and easily misread, so it is flagged for review rather than resolved as a definitive out-of-scope conclusion.",
+    [{t:"Art 18.3.3(d) produces a Stateless Permanent Establishment.",b:"Limb (d) catches a place of business, or deemed place of business, not already described in limbs (a) to (c), through which operations are conducted outside the Jurisdiction in which the Entity is located — provided that Jurisdiction exempts the income attributable to those operations. All of those conditions must hold together.",c:CITE.locPE},
+     {t:"Art 2.1's categories do not include a Stateless Permanent Establishment.",b:"The charge reaches Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, plus Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. The Reverse Hybrid limb is about Entities created under UAE law, not about Permanent Establishments, so it does not bring a Stateless Permanent Establishment within the charge.",c:CITE.locPEStateless}],
+    "<strong>Confirm the limb before relying on this.</strong> Check in particular whether an applicable Tax Treaty in force would instead bring the place of business within limb (a), and whether the Jurisdiction where the Entity is located genuinely exempts the attributable income rather than taxing it with relief. Either finding would move this out of limb (d) and change the conclusion.");
 }
 
 /* ==================================================================

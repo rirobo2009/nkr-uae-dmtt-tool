@@ -140,23 +140,63 @@
   }
 
   // Reach Step E (Excluded Entity screening) via the base path: A=Yes,
-  // proration=No, B=Yes, C=No (standard UPE, no SWF sub-flow), D=Yes(included).
+  // proration=No, B=Yes, C=No (standard UPE, no SWF sub-flow), D=Yes(included),
+  // then the Art 18.3 location questions on their plainest answers —
+  // UAE-incorporated, not a Flow-through Entity, not dual-located. That is
+  // the ordinary UAE-subsidiary path, and keeping it here means the Excluded
+  // Entity and Investment Entity scenarios below still test what they are
+  // about rather than re-testing location.
   function toStepE(){
     reset();
     clickOpt(0); // A: Yes
     document.getElementById('prNo').click(); // proration: No -> B
     clickOpt(0); // B: Yes -> C
     clickOpt(0); // C: No — standard UPE -> D
-    clickOpt(0); // D: Yes, included in consolidation -> E
+    clickOpt(0); // D: Yes, included in consolidation -> Location
+    clickOpt(0); // Location: A — incorporated/established under UAE legislation
+    clickOpt(0); // Character: A — not a Flow-through Entity
+    clickOpt(0); // Dual-located: A — no, UAE only -> E
   }
-  // Same, but D answered "Yes, UAE Permanent Establishment" (isPE=true).
+  // Same, but D answered "Yes, UAE Permanent Establishment" (isPE=true), so
+  // location runs through the Art 18.3.3 PE question instead of the Art
+  // 18.3.1 Entity one. Limb (a) is the ordinary case: treated as a PE under
+  // a Tax Treaty in force, with the UAE taxing the attributable income.
   function toStepE_asPE(){
     reset();
     clickOpt(0);
     document.getElementById('prNo').click();
     clickOpt(0);
     clickOpt(0);
-    clickOpt(1); // D: Yes, it's a UAE PE of a Main Entity
+    clickOpt(1); // D: Yes, it's a UAE PE of a Main Entity -> PE location
+    clickOpt(0); // PE location: A — Art 18.3.3(a), treaty PE taxed by the UAE -> E
+  }
+  // Walk the three Art 18.3 location questions on the ordinary UAE-subsidiary
+  // answers, from the location step through to Step E. Used by scenarios whose
+  // subject is something else (the SWF sub-flow, the UPE branch) and which
+  // simply have to get past location to reach the test they are about.
+  function clickLocPlainUae(){
+    clickOpt(0); // Location: A — incorporated/established under UAE legislation
+    clickOpt(0); // Character: A — not a Flow-through Entity
+    clickOpt(0); // Dual-located: A — no, UAE only -> E
+  }
+  // Reach the Art 18.3.1 Entity location step itself (the step under test in
+  // the location scenarios, rather than a step to be walked past).
+  function toStepLoc(){
+    reset();
+    clickOpt(0);
+    document.getElementById('prNo').click();
+    clickOpt(0);
+    clickOpt(0);
+    clickOpt(0); // D: Yes, included in consolidation -> Location
+  }
+  // Reach the Art 18.3.3 PE location step.
+  function toStepLocPE(){
+    reset();
+    clickOpt(0);
+    document.getElementById('prNo').click();
+    clickOpt(0);
+    clickOpt(0);
+    clickOpt(1); // D: Yes, UAE Permanent Establishment -> PE location
   }
   // Reach Step C (UPE identification).
   function toStepC(){
@@ -221,10 +261,10 @@
     assertSectionOrder();
   });
 
-  tc('Step C=Yes → SWF branch (Step 5 of 9) → Direct → No (Art 1.6.2 not satisfied)', ()=>{
+  tc('Step C=Yes → SWF branch (Step 5 of 10) → Direct → No (Art 1.6.2 not satisfied)', ()=>{
     toStepC();
     clickOpt(1); // C: Yes — UPE is/owned by SWF Governmental Entity
-    assertIncludes('lands on "Step 5 of 9" for the SWF direct/holding-company branch', stepNum(), 'Step 5 of 9');
+    assertIncludes('lands on "Step 5 of 10" for the SWF direct/holding-company branch', stepNum(), 'Step 5 of 10');
     clickOpt(0); // branch: Directly
     clickOpt(1); // direct (a)/(b) sub-step: No — neither (a) nor (b) is met
     assertVerdict('REVIEW REQUIRED','Article 1.6.2 conditions not satisfied');
@@ -343,25 +383,27 @@
   //    Full permutation check: direct x{Yes,No}, holding-company x{Yes,No}
   //    = 4 paths through the Art 1.6.2 substitution sub-flow (TTGREG1 §4.2.3.1).
   // =======================================================================
-  tc('Step C — No (standard UPE identification, no SWF sub-flow; total 7 steps)', ()=>{
+  tc('Step C — No (standard UPE identification, no SWF sub-flow; total 8 steps at this point)', ()=>{
     toStepC();
     clickOpt(0); // C: No — standard UPE
-    assertIncludes('does not insert the SWF branch steps', stepNum(), 'of 7');
+    assertIncludes('does not insert the SWF branch steps', stepNum(), 'of 8');
     clickOpt(0); // D: Yes, included
+    clickLocPlainUae();
     clickContinueTiles(); // E: no tiles -> F
     clickOpt(0); // F: No -> IN SCOPE
     assertVerdict('IN SCOPE','IN SCOPE');
     assertSectionOrder();
   });
-  tc('SWF sub-flow — Direct → Yes ((a)/(b) met, proceeds to Step D, total 9 steps)', ()=>{
+  tc('SWF sub-flow — Direct → Yes ((a)/(b) met, proceeds to Step D, total 10 steps)', ()=>{
     toStepC();
     clickOpt(1); // C: Yes — SWF Governmental Entity
-    assertIncludes('lands on "Step 5 of 9" for the direct/holding-company branch', stepNum(), 'Step 5 of 9');
+    assertIncludes('lands on "Step 5 of 10" for the direct/holding-company branch', stepNum(), 'Step 5 of 10');
     clickOpt(0); // branch: Directly
-    assertIncludes('lands on "Step 6 of 9" for the direct (a)/(b) test', stepNum(), 'Step 6 of 9');
+    assertIncludes('lands on "Step 6 of 10" for the direct (a)/(b) test', stepNum(), 'Step 6 of 10');
     clickOpt(0); // direct (a)/(b): Yes — (a) or (b) is met
-    assertIncludes('proceeds to Step D as "Step 7 of 9"', stepNum(), 'Step 7 of 9');
+    assertIncludes('proceeds to Step D as "Step 7 of 10"', stepNum(), 'Step 7 of 10');
     clickOpt(0); // D: Yes, included
+    clickLocPlainUae();
     clickContinueTiles();
     clickOpt(0); // F: No -> IN SCOPE
     assertVerdict('IN SCOPE','IN SCOPE');
@@ -377,14 +419,15 @@
     assertCiteIncludes('1.6.2');
     assertSectionOrder();
   });
-  tc('SWF sub-flow — Through a wholly-owned holding company → Yes ((a)/(b) met against entity held via the holding company, total 9 steps)', ()=>{
+  tc('SWF sub-flow — Through a wholly-owned holding company → Yes ((a)/(b) met against entity held via the holding company, total 10 steps)', ()=>{
     toStepC();
     clickOpt(1); // C: Yes — SWF Governmental Entity
     clickOpt(1); // branch: Through a wholly-owned holding company
-    assertIncludes('lands on "Step 6 of 9" for the holding-company (a)/(b) test', stepNum(), 'Step 6 of 9');
+    assertIncludes('lands on "Step 6 of 10" for the holding-company (a)/(b) test', stepNum(), 'Step 6 of 10');
     clickOpt(0); // holdco (a)/(b): Yes — (a) or (b) is met
-    assertIncludes('proceeds to Step D as "Step 7 of 9"', stepNum(), 'Step 7 of 9');
+    assertIncludes('proceeds to Step D as "Step 7 of 10"', stepNum(), 'Step 7 of 10');
     clickOpt(0); // D: Yes, included
+    clickLocPlainUae();
     clickContinueTiles();
     clickOpt(0); // F: No -> IN SCOPE
     assertVerdict('IN SCOPE','IN SCOPE');
@@ -447,6 +490,277 @@
   });
 
   // =======================================================================
+  // LOCATION OF THE ENTITY (Art 18.3) — the gap this step closes is that
+  // Art 2.1 charges only Entities LOCATED IN THE UAE, and every earlier
+  // step called the subject "the UAE Entity" without ever testing it. The
+  // scenarios below drive each branch to a conclusion rather than only
+  // checking that the questions render, because the failure mode being
+  // guarded against is a silently wrong conclusion, not a missing screen.
+  // =======================================================================
+  const verdictNote=()=>{ const el=stage().querySelector('.verdict p'); return el?el.textContent:''; };
+
+  tc('Location — the step sits between Step D and Step E, and is scoped to Top-up Tax only', ()=>{
+    toStepLoc();
+    assertIncludes('location is asked after the Constituent Entity gateway', stepNum(), 'Location of the Entity');
+    assertIncludes('counter reads 6 of 8 before any sub-branch is known to apply', stepNum(), 'Step 6 of 8');
+    const q=stage().querySelector('.q').textContent;
+    assertIncludes('asks where the Entity is located for UAE Top-up Tax purposes', q, 'located for UAE Top-up Tax purposes');
+    const note=stage().querySelector('.q-note').textContent;
+    assertIncludes('states these rules apply only for Top-up Tax (TTGREG1 §6.1)', note, 'only');
+    assertIncludes('warns a CT / Tax Treaty residence position does not decide it', note, 'Corporate Tax');
+    assert('offers exactly three mutually exclusive incorporation/management options', opts().length===3, 'options='+opts().length);
+  });
+
+  tc('Location — A: UAE-incorporated, not flow-through, not dual-located (the common path, 10 steps)', ()=>{
+    toStepLoc();
+    clickOpt(0); // A: incorporated/established under UAE legislation
+    assertIncludes('character question follows, counter now 7 of 9', stepNum(), 'Step 7 of 9');
+    assertIncludes('asks whether the Entity is a Flow-through Entity', stage().querySelector('.q').textContent, 'Flow-through Entity');
+    clickOpt(0); // not a Flow-through Entity
+    assertIncludes('dual-residence question follows, counter now 8 of 10', stepNum(), 'Step 8 of 10');
+    assertIncludes('asks whether it is also tax resident elsewhere', stage().querySelector('.q').textContent, 'dual-located');
+    clickOpt(0); // not dual-located
+    assertIncludes('reaches Step E as step 9 of 10', stepNum(), 'Step 9 of 10');
+    assertIncludes('Step E is the Excluded Entity screening', stepNum(), 'Excluded Entity Screening');
+    driveEmptyEtoScope();
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertIncludes('Inputs Entered records the location answer', pathRowText(), 'Incorporated or established under UAE legislation');
+    assertIncludes('Inputs Entered records the flow-through answer', pathRowText(), 'Is the Entity a Flow-through Entity?');
+    assertIncludes('Inputs Entered records the dual-residence answer', pathRowText(), 'dual-located');
+  });
+
+  // The case the whole fix exists for: foreign-incorporated, but effectively
+  // managed and controlled in the UAE, so UAE-located under Art 18.3.1(a)
+  // read with CT Law Art 11(3)(b). Previously assumed rather than tested.
+  tc('Location — B: incorporated abroad but managed and controlled in the UAE is UAE-located', ()=>{
+    toStepLoc();
+    clickOpt(1); // B
+    assertIncludes('proceeds to the character question rather than exiting', stepNum(), 'Entity character');
+    clickOpt(0); // not flow-through
+    clickOpt(0); // not dual-located
+    assertIncludes('reaches Step E — the Entity is UAE-located', stepNum(), 'Excluded Entity Screening');
+    driveEmptyEtoScope();
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertIncludes('Inputs Entered records the managed-and-controlled basis', pathRowText(), 'effectively managed and controlled in the UAE');
+  });
+
+  tc('Location — C: incorporated abroad and not UAE-managed exits out of scope, flagging the PE question', ()=>{
+    toStepLoc();
+    clickOpt(2); // C
+    assertVerdict('OUT OF SCOPE','not located in the UAE');
+    assertCiteIncludes('2.1');
+    assertCiteIncludes('18.3.1');
+    assertIncludes('explains Art 2.1 reaches only UAE-located Entities', stage().querySelector('.rate-line').textContent, 'located in the UAE');
+    assertIncludes('flags that a UAE PE of this Entity could still be in scope', verdictNote(), 'Permanent Establishment');
+    assert('flags rather than resolves the PE question', verdictNote().includes('separately'), verdictNote());
+    assertSectionOrder();
+  });
+
+  // Art 18.3.2 — the flow-through branch. Where the Entity was created is
+  // already known from the previous step, so "located where created" must
+  // resolve without asking again.
+  tc('Location — flow-through, is the UPE, created in the UAE → UAE-located', ()=>{
+    toStepLoc();
+    clickOpt(0); // A: created under UAE law
+    clickOpt(1); // Yes — it is a Flow-through Entity
+    assertIncludes('asks the Art 18.3.2 UPE / IIR test', stage().querySelector('.q').textContent, 'Income Inclusion Rule');
+    assertIncludes('counter reflects the flow-through branch', stepNum(), 'Step 8 of 10');
+    assertIncludes('states the creation jurisdiction already established, not re-asked', stage().querySelector('.q-note').textContent, 'created under UAE law');
+    clickOpt(0); // Yes — UPE or required to apply an IIR
+    assertIncludes('located where created (the UAE), so reaches Step E', stepNum(), 'Excluded Entity Screening');
+    driveEmptyEtoScope();
+    assertVerdict('IN SCOPE','IN SCOPE');
+  });
+
+  tc('Location — flow-through, is the UPE, created abroad → out of scope without re-asking where created', ()=>{
+    toStepLoc();
+    clickOpt(1); // B: created abroad, managed in the UAE
+    clickOpt(1); // Yes — Flow-through Entity
+    assertIncludes('states the creation jurisdiction as outside the UAE', stage().querySelector('.q-note').textContent, 'outside the UAE');
+    clickOpt(0); // Yes — UPE or IIR
+    assertVerdict('OUT OF SCOPE','not located in the UAE');
+    assertIncludes('reasons from Art 18.3.2(a) located-where-created', stage().querySelector('.rate-line').textContent, '18.3.2(a)');
+    assertSectionOrder();
+  });
+
+  tc('Location — flow-through, not UPE/IIR, created in the UAE → Reverse Hybrid follow-up is asked', ()=>{
+    toStepLoc();
+    clickOpt(0); // A: created under UAE law
+    clickOpt(1); // Yes — Flow-through Entity
+    clickOpt(1); // No — neither UPE nor IIR -> stateless
+    assertIncludes('asks the Reverse Hybrid question rather than assuming', stage().querySelector('.q').textContent, 'Reverse Hybrid Entity created under UAE law');
+    assertIncludes('counter reflects the extra follow-up', stepNum(), 'Step 9 of 11');
+  });
+
+  tc('Location — stateless Reverse Hybrid created under UAE law stays within Art 2.1', ()=>{
+    toStepLoc();
+    clickOpt(0); clickOpt(1); clickOpt(1); // UAE-created flow-through, not UPE/IIR
+    clickOpt(0); // Yes — Reverse Hybrid created under UAE law
+    assertIncludes('continues to Step E despite being stateless', stepNum(), 'Excluded Entity Screening');
+    assertIncludes('counter totals 11 on this branch', stepNum(), 'Step 10 of 11');
+    driveEmptyEtoScope();
+    assertVerdict('IN SCOPE','IN SCOPE');
+  });
+
+  tc('Location — stateless and not a Reverse Hybrid exits out of scope', ()=>{
+    toStepLoc();
+    clickOpt(0); clickOpt(1); clickOpt(1);
+    clickOpt(1); // No — not a Reverse Hybrid
+    assertVerdict('OUT OF SCOPE','stateless');
+    assertCiteIncludes('18.3.2');
+    assertIncludes('reasons from the confirmed answer, not from creation jurisdiction', stage().querySelector('.rate-line').textContent, 'not a Reverse Hybrid Entity');
+    assertSectionOrder();
+  });
+
+  // The derivation that removes a question: an Entity created abroad cannot
+  // be a Reverse Hybrid "created under UAE law", so that follow-up must not
+  // be asked on the option-B branch — it could not change the outcome.
+  tc('Location — stateless but created abroad exits directly, without the unanswerable Reverse Hybrid question', ()=>{
+    toStepLoc();
+    clickOpt(1); // B: created abroad
+    clickOpt(1); // Yes — Flow-through Entity
+    clickOpt(1); // No — neither UPE nor IIR -> stateless
+    assertVerdict('OUT OF SCOPE','stateless');
+    assert('does not ask the Reverse Hybrid question on this branch', !pathRowText().includes('Reverse Hybrid'), pathRowText());
+    assertIncludes('explains why that limb cannot be met', stage().querySelector('.rate-line').textContent, 'created outside the UAE');
+  });
+
+  // Art 18.3.4 — dual-located tie-breakers. The treaty limb resolves here;
+  // 18.3.4(b) is handed over as ordered guidance rather than computed.
+  tc('Location — dual-located, treaty deems the Entity UAE-resident → UAE-located', ()=>{
+    toStepLoc();
+    clickOpt(0); clickOpt(0); // UAE-incorporated, not flow-through
+    clickOpt(1); // Yes — also resident elsewhere
+    assertIncludes('asks the Art 18.3.4(a) treaty limb', stage().querySelector('.q').textContent, 'Tax Treaty in force');
+    assertIncludes('counter reflects the dual branch', stepNum(), 'Step 9 of 11');
+    assert('offers all four treaty outcomes', opts().length===4, 'options='+opts().length);
+    clickOpt(0); // treaty deems resident in the UAE
+    assertIncludes('reaches Step E', stepNum(), 'Excluded Entity Screening');
+    driveEmptyEtoScope();
+    assertVerdict('IN SCOPE','IN SCOPE');
+  });
+
+  tc('Location — dual-located, treaty deems the Entity resident elsewhere → out of scope', ()=>{
+    toStepLoc();
+    clickOpt(0); clickOpt(0); clickOpt(1);
+    clickOpt(1); // treaty deems resident in the other jurisdiction
+    assertVerdict('OUT OF SCOPE','not located in the UAE');
+    assertIncludes('reasons from Art 18.3.4(a)(i)', stage().querySelector('.rate-line').textContent, '18.3.4(a)(i)');
+    assertSectionOrder();
+  });
+
+  tc('Location — dual-located, treaty does not resolve → Art 18.3.4(b) as ordered guidance, flagged for review', ()=>{
+    toStepLoc();
+    clickOpt(0); clickOpt(0); clickOpt(1);
+    clickOpt(2); // treaty applies but does not resolve — (a)(ii)/(a)(iii)
+    assertVerdict('REVIEW REQUIRED','Article 18.3.4(b)');
+    const line=stage().querySelector('.rate-line').textContent;
+    assertIncludes('names the (a)(ii) competent-authority route', line, '18.3.4(a)(ii)');
+    assertIncludes('names the (a)(iii) no-relief route', line, '18.3.4(a)(iii)');
+    assert('does not attempt to compute an answer from figures not collected', line.includes('not collected'), line);
+    const facts=[...stage().querySelectorAll('.facts .fact .fb')].map(e=>e.textContent).join(' ');
+    assertIncludes('tie-breaker (i) — greater Covered Taxes', facts, 'GREATER amount of Covered Taxes');
+    assertIncludes('tie-breaker (i) — excludes CFC regime taxes', facts, 'Controlled Foreign Company Tax Regime');
+    assertIncludes('tie-breaker (ii) — entity-basis SBIE', facts, 'Substance-based Income Exclusion');
+    assertIncludes('tie-breaker (ii) — computed under Art 5.3', facts, 'entity basis');
+    assertIncludes('tie-breaker (iii) — stateless unless it is the UPE', facts, 'unless it is the Ultimate Parent Entity');
+    assertSectionOrder();
+  });
+
+  tc('Location — dual-located with no applicable Tax Treaty goes straight to Art 18.3.4(b)', ()=>{
+    toStepLoc();
+    clickOpt(0); clickOpt(0); clickOpt(1);
+    clickOpt(3); // no applicable Tax Treaty in force
+    assertVerdict('REVIEW REQUIRED','Article 18.3.4(b)');
+    assertIncludes('states there is no treaty in force', stage().querySelector('.rate-line').textContent, 'no applicable Tax Treaty in force');
+    assertCiteIncludes('18.3.4(b)');
+  });
+
+  tc('Location — Back navigation rewinds the conditional step counters', ()=>{
+    toStepLoc();
+    clickOpt(0); // A
+    clickOpt(1); // Yes — flow-through (sets tookLocFtTest)
+    assertIncludes('flow-through branch counts 10', stepNum(), 'Step 8 of 10');
+    stage().querySelector('.back').click();
+    assertIncludes('back to the character question, counter back to 9', stepNum(), 'Step 7 of 9');
+    clickOpt(0); // No — not flow-through (sets tookLocDual instead)
+    assertIncludes('the other branch counts 10 from its own flag', stepNum(), 'Step 8 of 10');
+    assert('the flow-through flag did not persist across Back', !stepNum().includes('of 11'), stepNum());
+  });
+
+  // =======================================================================
+  // LOCATION OF A PERMANENT ESTABLISHMENT (Art 18.3.3) — a PE is not
+  // incorporated anywhere, so it takes its own four-limb question instead
+  // of the Art 18.3.1 one. Limb (d) is why this exists: it produces a
+  // STATELESS PE, so treating a self-declared "UAE PE" as UAE-located
+  // would assume that case away.
+  // =======================================================================
+  tc('PE location — a PE takes the Art 18.3.3 question, never the Art 18.3.1 Entity one', ()=>{
+    toStepLocPE();
+    assertIncludes('lands on the PE location step', stepNum(), 'Location of the Permanent Establishment');
+    const q=stage().querySelector('.q').textContent;
+    assert('does not ask where the PE was incorporated', !q.includes('Incorporated'), q);
+    assertIncludes('asks which description fits the PE', q, 'Permanent Establishment');
+    assert('offers the four statutory limbs plus the other-jurisdiction option', opts().length===5, 'options='+opts().length);
+    assertIncludes('PE path totals 8 — the PE question substitutes for the Entity one', stepNum(), 'Step 6 of 8');
+    const labels=opts().map(o=>o.textContent).join(' | ');
+    assert('no Flow-through Entity question is offered to a PE', !labels.includes('Flow-through'), labels);
+  });
+
+  tc('PE location — limb (a): treaty PE taxed by the UAE is UAE-located', ()=>{
+    toStepLocPE();
+    clickOpt(0);
+    assertIncludes('proceeds to Step E', stepNum(), 'Excluded Entity Screening');
+    assertIncludes('PE path reaches Step E as 7 of 8', stepNum(), 'Step 7 of 8');
+    driveEmptyEtoScope();
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertIncludes('Inputs Entered records which limb applied', pathRowText(), '18.3.3(a)');
+  });
+
+  tc('PE location — limb (b): no treaty, net basis taxation by the UAE is UAE-located', ()=>{
+    toStepLocPE();
+    clickOpt(1);
+    assertIncludes('proceeds to Step E', stepNum(), 'Excluded Entity Screening');
+    driveEmptyEtoScope();
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertIncludes('Inputs Entered records limb (b)', pathRowText(), '18.3.3(b)');
+  });
+
+  tc('PE location — limb (c): no corporate income tax system, situated where it is', ()=>{
+    toStepLocPE();
+    clickOpt(2);
+    assertIncludes('proceeds to Step E', stepNum(), 'Excluded Entity Screening');
+    driveEmptyEtoScope();
+    assertVerdict('IN SCOPE','IN SCOPE');
+    assertIncludes('Inputs Entered records limb (c)', pathRowText(), '18.3.3(c)');
+  });
+
+  tc('PE location — limb (d): Stateless Permanent Establishment is flagged, not asserted out of scope', ()=>{
+    toStepLocPE();
+    clickOpt(3);
+    assertVerdict('REVIEW REQUIRED','Stateless Permanent Establishment');
+    const line=stage().querySelector('.rate-line').textContent;
+    assertIncludes('states the cumulative limb (d) conditions', line, 'exempts the income attributable');
+    assertIncludes('explains Art 2.1 does not reach a stateless PE', line, 'none of those categories');
+    assert('flags for review rather than asserting a definitive conclusion', line.includes('flagged for review'), line);
+    const facts=[...stage().querySelectorAll('.facts .fact .fb')].map(e=>e.textContent).join(' ');
+    assertIncludes('explains the Reverse Hybrid limb is about Entities, not PEs', facts, 'not about Permanent Establishments');
+    assertCiteIncludes('18.3.3');
+    assertSectionOrder();
+  });
+
+  tc('PE location — a PE located in another jurisdiction exits out of scope, flagging the Main Entity', ()=>{
+    toStepLocPE();
+    clickOpt(4);
+    assertVerdict('OUT OF SCOPE','not located in the UAE');
+    assertCiteIncludes('18.3.3');
+    assertCiteIncludes('2.1');
+    assertIncludes('flags that the Main Entity may still be in scope', verdictNote(), 'Main Entity');
+    assertIncludes("explains a PE's location is its own, not its Main Entity's", [...stage().querySelectorAll('.facts .fact .fb')].map(e=>e.textContent).join(' '), 'Main Entity\'s own location does not determine it');
+    assertSectionOrder();
+  });
+
+  // =======================================================================
   // Bonus: tool nav (Home/Start over) and the PDF button relabel — both
   // post-review fixes, applied consistently across Module 1 and Module 4.
   // =======================================================================
@@ -457,7 +771,7 @@
     assert('Home link present', !!home);
     assert('Home link points at index.html (a same-page link here, but the same markup Module 4 uses to point back)', home.getAttribute('href')==='index.html');
     document.getElementById('startOverBtn').click();
-    assertIncludes('Start over resets the wizard back to Step 1', stepNum(), 'Step 1 of 7');
+    assertIncludes('Start over resets the wizard back to Step 1', stepNum(), 'Step 1 of 8');
   });
   tc('PDF button relabeled to "Print / Save as PDF" (was "Download PDF", which opens a print dialog, not a direct download)', ()=>{
     reset();
