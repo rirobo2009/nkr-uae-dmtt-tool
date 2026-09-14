@@ -89,6 +89,12 @@
      below compare the two independently rather than trivially comparing
      one object with itself. -->
 <iframe id="m2Frame" style="position:absolute;left:-9999px;top:-9999px;width:900px;height:2400px;border:0"></iframe>
+<!-- Module 3 gets its own iframe on the same basis as Modules 2 and 4.
+     It also loads assets/dmtt-dates.js, and it declares its own
+     MINIMUM_RATE / EUR_10M / EUR_1M / S — all of which collide by name
+     with Module 2's, which is precisely why each module is evaluated in
+     its own global scope rather than shared. -->
+<iframe id="m3Frame" style="position:absolute;left:-9999px;top:-9999px;width:900px;height:2400px;border:0"></iframe>
 
 <script>
 (async function(){
@@ -2152,6 +2158,463 @@
 
   }catch(e){
     current={name:'Module 2 test setup',cases:[{desc:'iframe load/setup threw an exception',pass:false,detail:(e&&e.stack)||String(e)}]};
+    groups.push(current);
+  }
+
+  // =======================================================================
+  // MODULE 3 — ETR & Top-up Tax Calculation (CD 142 Art 5)
+  //
+  // The rules are pure functions in the module, so most assertions call
+  // them directly — a wrong rate or a reversed comparison lives there, not
+  // in the rendering. A second layer drives the DOM, because the short-
+  // circuit wording and the flags are themselves part of what the spec
+  // requires.
+  // =======================================================================
+  const m3Frame=document.getElementById('m3Frame');
+  const m3Win=()=>m3Frame.contentWindow;
+  const m3Doc=()=>m3Frame.contentDocument;
+  function loadM3(){
+    return new Promise((resolve,reject)=>{
+      m3Frame.onload=()=>resolve();
+      m3Frame.onerror=()=>reject(new Error('module3-etr-topup-tax.html failed to load'));
+      m3Frame.src='module3-etr-topup-tax.html';
+    });
+  }
+  function resetM3(){
+    return new Promise((resolve,reject)=>{
+      m3Frame.onload=()=>resolve();
+      m3Frame.onerror=()=>reject(new Error('module3-etr-topup-tax.html failed to reload'));
+      m3Frame.contentWindow.location.reload();
+    });
+  }
+  async function tc3(name,fn){
+    current={name,cases:[]};
+    groups.push(current);
+    try{ await fn(); }
+    catch(e){ current.cases.push({desc:'scenario threw an exception',pass:false,detail:(e&&e.stack)||String(e)}); }
+  }
+  function m3Set(id,val){
+    const inp=m3Doc().getElementById(id);
+    if(!inp) throw new Error('input not found: '+id);
+    inp.value=val;
+    inp.dispatchEvent(new (m3Win().Event)('input',{bubbles:true}));
+  }
+  function m3Text(sel){ const el=m3Doc().querySelector(sel); return el?el.textContent:null; }
+  function m3Work(){ return m3Text('#working')||''; }
+
+  try{
+    await loadM3();
+
+    // -----------------------------------------------------------------
+    // Deliberate-break checks on every hard-coded figure, per §7.
+    // -----------------------------------------------------------------
+    await tc3('Constants — the 15% Minimum Rate and the EUR thresholds', async ()=>{
+      const w=m3Win();
+      assert('Minimum Rate is 15%', w.MINIMUM_RATE===0.15);
+      assert('De Minimis revenue threshold is EUR 10m', w.EUR_10M===10000000);
+      assert('De Minimis income threshold is EUR 1m', w.EUR_1M===1000000);
+      assert('Initial Phase tangible asset threshold is EUR 50m', w.EUR_50M===50000000);
+      assert('Initial Phase jurisdiction limit is 6', w.INITIAL_PHASE_MAX_JURISDICTIONS===6);
+    });
+
+    await tc3('Constants — all nine Art 9.2 transitional SBIE rate rows, plus the 2033 fallback', async ()=>{
+      const w=m3Win();
+      const expected={2025:[0.096,0.076],2026:[0.094,0.074],2027:[0.092,0.072],2028:[0.090,0.070],
+                      2029:[0.082,0.066],2030:[0.074,0.062],2031:[0.066,0.058],2032:[0.058,0.054]};
+      Object.entries(expected).forEach(([y,[p,t]])=>{
+        const r=w.sbieRatesFor(Number(y));
+        assert(`FY${y} payroll rate is ${(p*100).toFixed(1)}%`, Math.abs(r.payroll-p)<1e-12, String(r.payroll));
+        assert(`FY${y} tangible rate is ${(t*100).toFixed(1)}%`, Math.abs(r.tangible-t)<1e-12, String(r.tangible));
+        assert(`FY${y} is marked transitional`, r.transitional===true);
+      });
+      const r33=w.sbieRatesFor(2033);
+      assert('FY2033 falls back to the 5% base rate for payroll', r33.payroll===0.05);
+      assert('FY2033 falls back to the 5% base rate for tangible assets', r33.tangible===0.05);
+      assert('and is NOT marked transitional', r33.transitional===false);
+      assert('FY2040 also uses the base rate', w.sbieRatesFor(2040).payroll===0.05);
+      // The whole point of Art 9.2: 5% is wrong for every year in the table.
+      Object.keys(expected).forEach(y=>{
+        const r=w.sbieRatesFor(Number(y));
+        assert(`FY${y} does NOT use the 5% base rate`, r.payroll!==0.05&&r.tangible!==0.05);
+      });
+      assert('a Fiscal Year before the Decision applies has no rate', w.sbieRatesFor(2024)===null);
+    });
+
+    // The negative assertion, mirroring Module 2's Art 7.3 one. The OECD
+    // Model Rules subtract QDMTT from the Top-up Tax; CD 142 does not,
+    // because the UAE is the QDMTT jurisdiction.
+    await tc3('Constants — no QDMTT term exists anywhere in the Top-up Tax formula', async ()=>{
+      const w=m3Win();
+      const src=w.topUpTax.toString();
+      assert('topUpTax takes exactly three arguments (percentage, excess, additional)', w.topUpTax.length===3, 'arity '+w.topUpTax.length);
+      assert('its source mentions no QDMTT term', !/qdmtt/i.test(src), src);
+      // And behaviourally: the result is exactly percentage x excess + additional.
+      assert('7% of 9,428,000 with no additional is 659,960',
+        Math.round(w.topUpTax(7,9428000,null))===659960, String(w.topUpTax(7,9428000,null)));
+      assert('adding Additional Current Top-up Tax adds exactly that amount',
+        Math.round(w.topUpTax(7,9428000,40000))===699960, String(w.topUpTax(7,9428000,40000)));
+      const cites=Object.values(w.CITE_M3).join(' ');
+      assert('no citation claims a QDMTT deduction', !/qdmtt/i.test(cites), cites);
+    });
+
+    // -----------------------------------------------------------------
+    // ETR rounding — four decimal places, not two.
+    // -----------------------------------------------------------------
+    await tc3('ETR — rounds to four decimal places of the percentage', async ()=>{
+      const w=m3Win();
+      // Commentary's own worked example: 14.12346% -> 14.1235%.
+      const e=w.effectiveTaxRate(1412346,10000000);
+      assert('14.12346% rounds to 14.1235%', e.percent===14.1235, String(e.percent));
+      assert('no ETR where there is no positive Net Pillar Two Income', w.effectiveTaxRate(100,0)===null);
+      assert('no ETR on a loss', w.effectiveTaxRate(100,-5000)===null);
+    });
+
+    await tc3('ETR — a value that reads as 15% at two decimals but is below it at four', async ()=>{
+      const w=m3Win();
+      // 14.99994% : at 2dp this reads 15.00% and would look like no Top-up
+      // Tax; at 4dp it is 14.9999% and a Top-up Tax Percentage does arise.
+      // NB 14.99996 would NOT do — its fifth decimal rounds the fourth up
+      // to 15.0000, so it is genuinely at the Minimum Rate.
+      const e=w.effectiveTaxRate(1499994,10000000);
+      assert('rounds to 14.9999%, not 15.0000%', e.percent===14.9999, String(e.percent));
+      assert('rounded to 2dp it would read 15.00%', e.percent.toFixed(2)==='15.00');
+      const pct=w.topUpTaxPercentage(e.percent);
+      assert('so a Top-up Tax Percentage of 0.0001% does arise', pct===0.0001, String(pct));
+      assert('and it is not treated as nil', pct>0);
+      // The other side of the boundary.
+      const at15=w.effectiveTaxRate(1500000,10000000);
+      assert('exactly 15% yields no Top-up Tax Percentage', w.topUpTaxPercentage(at15.percent)===0);
+      const above=w.effectiveTaxRate(1600000,10000000);
+      assert('above 15% yields no Top-up Tax Percentage', w.topUpTaxPercentage(above.percent)===0);
+    });
+
+    // -----------------------------------------------------------------
+    // The full computation, hand-verified.
+    // -----------------------------------------------------------------
+    await tc3('Full path — hand-verified worked example, FY2025', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','10000000'); m3Set('p2Losses','0'); m3Set('act','800000');
+      m3Set('payroll','2000000'); m3Set('tangible','5000000');
+      // By hand: net 10,000,000 · ETR 8.0000% · TUT% 7.0000%
+      //          SBIE 9.6%x2m + 7.6%x5m = 192,000 + 380,000 = 572,000
+      //          Excess 9,428,000 · Top-up Tax 7% x 9,428,000 = 659,960
+      const work=m3Work();
+      assertIncludes('Net Pillar Two Income 10,000,000', work, '10,000,000');
+      assertIncludes('ETR 8.0000%', work, '8.0000%');
+      assertIncludes('Top-up Tax Percentage 7.0000%', work, '7.0000%');
+      assertIncludes('payroll carve-out 192,000', work, '192,000');
+      assertIncludes('tangible carve-out 380,000', work, '380,000');
+      assertIncludes('SBIE 572,000', work, '572,000');
+      assertIncludes('Excess Profit 9,428,000', work, '9,428,000');
+      assertIncludes('Top-up Tax 659,960', work, '659,960');
+      assertIncludes('the outcome carries the headline figure', m3Text('#outcome'), '659,960');
+      assertIncludes('and states the 9.6% rate came from Art 9.2, not the 5% base', work, '9.6%');
+      assertIncludes('explicitly says there is no QDMTT term', work, 'no QDMTT term');
+      assertIncludes('labels the result an estimate', m3Text('#outcome'), 'estimate');
+    });
+
+    // -----------------------------------------------------------------
+    // Each short-circuit path.
+    // -----------------------------------------------------------------
+    await tc3('Short-circuit — Net Pillar Two Loss: no ETR computed', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','1000000'); m3Set('p2Losses','3000000'); m3Set('act','100000');
+      const work=m3Work();
+      assertIncludes('states no ETR is computed', work, 'Not computed');
+      assertIncludes('explains why', work, 'Net Pillar Two Loss');
+      assertIncludes('explains that no Top-up Tax Percentage arises', work, 'no Top-up Tax Percentage');
+      assert('and no ETR percentage figure is computed', !/\d\.\d{4}%/.test(work), work);
+      assertIncludes('outcome states no Top-up Tax from current-year profit', m3Text('#outcome'), 'No UAE Top-up Tax');
+    });
+
+    await tc3('Short-circuit — ETR at or above 15%', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','10000000'); m3Set('p2Losses','0'); m3Set('act','1600000');
+      const work=m3Work();
+      assertIncludes('ETR is 16.0000%', work, '16.0000%');
+      assertIncludes('Top-up Tax Percentage is nil', work, '0.0000%');
+      assertIncludes('explains no entity is low-taxed', work, 'no Constituent Entity is low-taxed');
+      assertIncludes('outcome is nil', m3Text('#outcome'), 'No UAE Top-up Tax');
+    });
+
+    await tc3('Short-circuit — SBIE equals or exceeds Net Pillar Two Income', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','500000'); m3Set('p2Losses','0'); m3Set('act','10000');
+      m3Set('payroll','3000000'); m3Set('tangible','3000000');  // SBIE 288,000 + 228,000 = 516,000 > 500,000
+      const work=m3Work();
+      assertIncludes('SBIE is 516,000', work, '516,000');
+      assertIncludes('no Excess Profit', work, 'no Excess Profit');
+      assertIncludes('and the outcome says so plainly', m3Text('#outcome'), 'no Excess Profit');
+      assertIncludes('framed as a favourable substance outcome', work, 'favourable');
+    });
+
+    await tc3('Art 5.3.1 — electing not to apply the SBIE makes Excess Profit the whole of Net Income', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','10000000'); m3Set('p2Losses','0'); m3Set('act','800000');
+      m3Set('payroll','2000000'); m3Set('tangible','5000000');
+      assertIncludes('with SBIE applied, Excess Profit is 9,428,000', m3Work(), '9,428,000');
+      m3Doc().querySelector('[data-sbie="elect-out"]').click();
+      const work=m3Work();
+      assertIncludes('elected out is stated', work, 'elected out');
+      assertIncludes('Excess Profit becomes the whole 10,000,000', work, '10,000,000');
+      assertIncludes('Top-up Tax rises to 700,000', work, '700,000');
+    });
+
+    // -----------------------------------------------------------------
+    // Art 4.1.5 / 4.1.6 — computed, not flagged.
+    // -----------------------------------------------------------------
+    await tc3('Art 4.1.5 — the verbatim worked example: loss 2,000,000 and taxes −500,000 give 200,000', async ()=>{
+      const w=m3Win();
+      assert('Expected Adjusted Covered Taxes Amount is the loss times 15%',
+        w.expectedAdjustedCoveredTaxes(-2000000)===-300000, String(w.expectedAdjustedCoveredTaxes(-2000000)));
+      const r=w.art415AdditionalCurrentTopUpTax(-2000000,-500000);
+      assert('all three conditions hold', r.applies===true);
+      assert('Additional Current Top-up Tax is 200,000', r.amount===200000, String(r.amount));
+    });
+
+    await tc3('Art 4.1.5 — all three conditions are required, and equality does not trigger', async ()=>{
+      const w=m3Win();
+      assert('taxes exactly equal to the Expected amount do NOT trigger it',
+        w.art415AdditionalCurrentTopUpTax(-2000000,-300000).applies===false);
+      assert('and the reason is that they are not below it',
+        w.art415AdditionalCurrentTopUpTax(-2000000,-300000).reason==='notBelowExpected');
+      assert('negative taxes above the Expected amount do not trigger it',
+        w.art415AdditionalCurrentTopUpTax(-2000000,-100000).applies===false);
+      assert('positive taxes in a loss year do not trigger it',
+        w.art415AdditionalCurrentTopUpTax(-2000000,50000).applies===false);
+      assert('and the reason is that they are not negative',
+        w.art415AdditionalCurrentTopUpTax(-2000000,50000).reason==='taxesNotNegative');
+      assert('it cannot apply where there IS Net Pillar Two Income',
+        w.art415AdditionalCurrentTopUpTax(2000000,-500000).applies===false);
+      assert('and the reason names that', w.art415AdditionalCurrentTopUpTax(2000000,-500000).reason==='hasNetIncome');
+      assert('nil income with negative taxes does trigger it',
+        w.art415AdditionalCurrentTopUpTax(0,-500000).applies===true);
+      assert('with the whole negative amount clawed back',
+        w.art415AdditionalCurrentTopUpTax(0,-500000).amount===500000);
+    });
+
+    await tc3('Art 4.1.5 — rendered in the loss branch with its working', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','0'); m3Set('p2Losses','2000000'); m3Set('act','-500000');
+      const work=m3Work();
+      assertIncludes('shows the Expected Adjusted Covered Taxes Amount', work, 'Expected Adjusted Covered Taxes Amount');
+      assertIncludes('as a negative 300,000', work, '−EUR 300,000');
+      assertIncludes('and the resulting 200,000', work, '200,000');
+      assertIncludes('explains the claw-back in substance', work, 'clawed back');
+      assertIncludes('outcome carries the figure', m3Text('#outcome'), '200,000');
+    });
+
+    await tc3('Art 4.1.6 — the election is offered, states the carry-forward and the carry-back carve-out', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','0'); m3Set('p2Losses','2000000'); m3Set('act','-500000');
+      const flags=m3Text('#flags')||'';
+      assertIncludes('the Art 4.1.6 election is offered', flags, 'Art 4.1.6');
+      assertIncludes('names the amount that would become the carry-forward', flags, '200,000');
+      assertIncludes('states it must be used in all subsequent ETR computations', flags, 'all subsequent');
+      assertIncludes('states the reduction is not below zero', flags, 'not below zero');
+      assertIncludes('carries the carried-back-loss carve-out', flags, 'carried back');
+      assertIncludes('and says that part cannot go into the balance', flags, 'cannot be added to the balance');
+      assertIncludes('states the tool does not track the balance', flags, 'does not track the balance');
+      // Electing removes it from this year's payable amount.
+      m3Doc().querySelector('[data-416="yes"]').click();
+      assertIncludes('electing substitutes the carry-forward', m3Work(), 'substitutes the Art 4.1.5 amount');
+      assertIncludes('and the result becomes nil', m3Text('#outcome'), 'No UAE Top-up Tax');
+    });
+
+    await tc3('Art 5.2.1 — negative taxes WITH income is flagged, not computed, and distinguished from Art 4.1.5', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','10000000'); m3Set('p2Losses','0'); m3Set('act','-400000');
+      const flags=m3Text('#flags')||'';
+      assertIncludes('the mandatory procedure is flagged', flags, 'Negative Adjusted Covered Taxes');
+      assertIncludes('states the Top-up Tax Percentage exceeds 15%', flags, 'above');
+      assertIncludes('names the Excess Negative Tax Expense Carry-forward', flags, 'Excess Negative Tax Expense Carry-forward');
+      assertIncludes('says the figure shown does not reflect the procedure', flags, 'does not reflect that procedure');
+      assertIncludes('says it is mandatory, not elective', flags, 'mandatory, not elective');
+      // The two mechanisms must be presented as distinct.
+      assertIncludes('distinguishes it from the Art 4.1.5 case', flags, 'mutually exclusive');
+      assertIncludes('and explains why one is computed and the other is not', flags, 'formula is in the Decision');
+      const w=m3Win();
+      assert('the two triggers cannot both fire', w.negativeTaxesWithIncome(10000000,-400000)===true&&
+        w.art415AdditionalCurrentTopUpTax(10000000,-400000).applies===false);
+    });
+
+    // -----------------------------------------------------------------
+    // De Minimis and Initial Phase.
+    // -----------------------------------------------------------------
+    await tc3('De Minimis — averaging excludes a preceding year left blank', async ()=>{
+      const w=m3Win();
+      const a=w.averageOverYears([9000000,null,null]);
+      assert('one year present averages to itself', a.average===9000000&&a.yearsUsed===1);
+      const b=w.averageOverYears([9000000,6000000,null]);
+      assert('two years present average over two', b.average===7500000&&b.yearsUsed===2, String(b.average));
+      const c=w.averageOverYears([9000000,6000000,3000000]);
+      assert('three years present average over three', c.average===6000000&&c.yearsUsed===3);
+      assert('no years present gives null', w.averageOverYears([null,null,null])===null);
+    });
+
+    await tc3('De Minimis — both limbs required, and a loss satisfies the income limb', async ()=>{
+      const w=m3Win();
+      assert('both under → passes', w.deMinimisTest(9000000,500000).pass===true);
+      assert('revenue at the threshold → fails', w.deMinimisTest(10000000,500000).pass===false);
+      assert('income at the threshold → fails', w.deMinimisTest(9000000,1000000).pass===false);
+      assert('an average loss satisfies the income limb', w.deMinimisTest(9000000,-500000).pass===true);
+    });
+
+    await tc3('De Minimis — passing supersedes the calculation, and Art 5.5.4 is stated as two rules', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','10000000'); m3Set('p2Losses','0'); m3Set('act','800000');
+      m3Set('dmRev0','5000000'); m3Set('dmRev1','4000000');
+      m3Set('dmInc0','200000'); m3Set('dmInc1','100000');
+      assertIncludes('outcome is deemed zero', m3Text('#outcome'), 'deemed zero');
+      assertIncludes('names the De Minimis Exclusion', m3Text('#outcome'), 'De Minimis');
+      assertIncludes('flags it as an Annual Election', m3Text('#outcome'), 'Annual Election');
+      assertIncludes('the working shows only two years were averaged', m3Text('#dmWorking'), '2 Fiscal Years');
+      assertIncludes('and says blank years are excluded', m3Text('#dmWorking'), 'excluded from the average');
+      const card=m3Text('#routeDeMinimis');
+      assertIncludes('rule 1 — election unavailable to a Stateless CE', card, 'election is unavailable');
+      assertIncludes('rule 2 — exclude both entity types from the figures', card, 'Stateless Constituent Entities');
+      assertIncludes('rule 2 names Investment Entities too', card, 'Investment Entities');
+      assertIncludes('and distinguishes it from the Art 5.1.3 exclusion', card, 'different exclusion from Art 5.1.3');
+      assertIncludes('cites Art 5.5.4 for both', card, '5.5.4');
+    });
+
+    await tc3('Initial Phase — all three conditions required', async ()=>{
+      const w=m3Win();
+      assert('all three met → passes', w.initialPhaseTest(4,40000000,false).pass===true);
+      assert('seven jurisdictions → fails', w.initialPhaseTest(7,40000000,false).pass===false);
+      assert('exactly six jurisdictions → passes', w.initialPhaseTest(6,40000000,false).pass===true);
+      assert('assets above EUR 50m → fails', w.initialPhaseTest(4,50000001,false).pass===false);
+      assert('assets exactly EUR 50m → passes', w.initialPhaseTest(4,50000000,false).pass===true);
+      assert('a Qualified IIR parent → fails', w.initialPhaseTest(4,40000000,true).pass===false);
+      const r=w.initialPhaseTest(7,60000000,true);
+      assert('each failing condition is reported separately', r.okJurisdictions===false&&r.okAssets===false&&r.okIir===false);
+    });
+
+    await tc3('Initial Phase — passing supersedes the calculation', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','10000000'); m3Set('p2Losses','0'); m3Set('act','800000');
+      m3Set('ipJurisdictions','4'); m3Set('ipAssets','30000000');
+      m3Doc().querySelector('[data-iir="no"]').click();
+      assertIncludes('outcome is reduced to zero', m3Text('#outcome'), 'reduced to zero');
+      assertIncludes('names the relief', m3Text('#outcome'), 'Initial Phase');
+      assertIncludes('and says to re-test every Fiscal Year', m3Text('#outcome'), 're-tested every Fiscal Year');
+    });
+
+    // -----------------------------------------------------------------
+    // Entity-character flags.
+    // -----------------------------------------------------------------
+    await tc3('Flags — Investment Entities, Stateless CEs and a Minority-Owned Subgroup', async ()=>{
+      await resetM3();
+      m3Doc().querySelector('[data-tile="hasInvestmentEntities"]').click();
+      let notes=m3Text('#characterNotes')||'';
+      assertIncludes('instructs exclusion from the ETR computation', notes, 'Art 5.1.3');
+      assertIncludes('and from the SBIE entirely', notes, 'Art 5.3.2');
+      m3Doc().querySelector('[data-tile="hasStatelessCEs"]').click();
+      notes=m3Text('#characterNotes')||'';
+      assertIncludes('Stateless CEs are treated as a single UAE Constituent Entity', notes, 'single Constituent Entity');
+      assertIncludes('but are excluded from the De Minimis averages', notes, 'De Minimis');
+      m3Doc().querySelector('[data-tile="hasMinorityOwnedSubgroup"]').click();
+      const flags=m3Text('#flags')||'';
+      assertIncludes('a separate computation is required', flags, 'Separate computation required');
+      assertIncludes('says to run the tool again for the subgroup', flags, 'Run this tool a second time');
+      assertIncludes('and warns against simply adding the results', flags, 'Do not add the two results together');
+    });
+
+    // -----------------------------------------------------------------
+    // PDF consistency and reset.
+    // -----------------------------------------------------------------
+    await tc3('PDF-consistency — working, outcome and flags all survive the print stylesheet', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','10000000'); m3Set('p2Losses','0'); m3Set('act','800000');
+      assertIncludes('the inputs summary records the Fiscal Year', m3Text('#inputsSummary'), '1 January 2025');
+      assertIncludes('and whether the SBIE was applied', m3Text('#inputsSummary'), 'Applied');
+      function printRules(){
+        for(const sheet of m3Doc().styleSheets){
+          for(const rule of sheet.cssRules){
+            if(rule instanceof m3Win().CSSMediaRule && rule.conditionText==='print') return rule.cssRules;
+          }
+        }
+        return null;
+      }
+      const css=[...(printRules()||[])].map(r=>r.cssText).join(' ');
+      assertIncludes('print rules hide the raw entry fields', css, '.field');
+      assertIncludes('print rules hide the prep panel', css, '.prep-panel');
+      assert('print rules do NOT hide .work', !/\.work[^-][^}]*\{[^}]*display:\s*none/.test(css));
+      assert('print rules do NOT hide .outcome', !/\.outcome[^}]*\{[^}]*display:\s*none/.test(css));
+      assert('print rules do NOT hide .callout', !/\.callout[^}]*\{[^}]*display:\s*none/.test(css));
+      assert('print rules do NOT hide .inputs-summary', !/\.inputs-summary[^}]*\{[^}]*display:\s*none/.test(css));
+      assert('print rules do NOT hide .estimate-band — the caveat must reach the PDF',
+        !/\.estimate-band[^}]*\{[^}]*display:\s*none/.test(css));
+    });
+
+    await tc3('Module 3 — END date auto-fills from START through the shared helper', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      assert('auto-fills 31 Dec 2025', m3Doc().getElementById('fyEnd').value==='2025-12-31',
+        m3Doc().getElementById('fyEnd').value);
+      m3Set('fyStart','2028-02-29');
+      assert('29 Feb 2028 clamps to 27 Feb 2029', m3Doc().getElementById('fyEnd').value==='2029-02-27',
+        m3Doc().getElementById('fyEnd').value);
+      m3Set('fyEnd','2029-06-30');
+      m3Set('fyStart','2025-01-01');
+      assert('a manually edited END survives a later START change', m3Doc().getElementById('fyEnd').value==='2029-06-30',
+        m3Doc().getElementById('fyEnd').value);
+      // Same one implementation as Modules 2 and 4.
+      assert('uses the shared computeAutoFilledEndDate',
+        m3Win().computeAutoFilledEndDate.toString()===m2Win().computeAutoFilledEndDate.toString());
+    });
+
+    await tc3('Module 3 — Start over clears every input and restores the SBIE default', async ()=>{
+      await resetM3();
+      m3Set('fyStart','2025-01-01');
+      m3Set('p2Income','10000000'); m3Set('act','800000');
+      m3Doc().querySelector('[data-sbie="elect-out"]').click();
+      m3Doc().querySelector('[data-tile="hasInvestmentEntities"]').click();
+      m3Doc().getElementById('startOverBtn').click();
+      assert('dates cleared', m3Doc().getElementById('fyStart').value===''&&m3Doc().getElementById('fyEnd').value==='');
+      assert('figures cleared', m3Doc().getElementById('p2Income').value===''&&m3Doc().getElementById('act').value==='');
+      assert('the SBIE default (apply) is restored',
+        m3Doc().querySelector('[data-sbie="apply"]').classList.contains('selected'));
+      assert('no character tile remains selected',
+        !m3Doc().querySelector('[data-tile="hasInvestmentEntities"]').classList.contains('selected'));
+      assertIncludes('outcome back to in-progress', m3Text('#outcome'), 'Calculation in progress');
+    });
+
+    await tc3('Module 3 — reachable from Module 2\'s no-safe-harbour conclusion and Module 1\'s IN SCOPE', async ()=>{
+      // Module 2: drive to all-tests-failed.
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2Set('g2Revenue','50000000'); m2Set('g2Pbt','20000000');
+      m2Set('g2Sct','1000000'); m2Set('g2Sbie','1000000');
+      m2Set('g3Income','20000000'); m2Set('g3Sbie','1000000');
+      m2Set('g3AvgRev','50000000'); m2Set('g3AvgInc','20000000'); m2Set('g3Tax','1000000');
+      const link=m2Doc().querySelector('#outcome a[href="module3-etr-topup-tax.html"]');
+      assert('Module 2 links to the ETR calculation when nothing is available', !!link, m2Text('#outcome'));
+      assertIncludes('and notes it does not perform Arts 3 and 4', m2Text('#outcome'), 'does not perform the Article 3 or Article 4');
+      // Module 1: IN SCOPE offers it behind Safe Harbour Screening.
+      toStepE();
+      driveEmptyEtoScope();
+      const hrefs=[...stage().querySelectorAll('a.btn')].map(a=>a.getAttribute('href'));
+      assert('Module 1 links to it', hrefs.includes('module3-etr-topup-tax.html'), JSON.stringify(hrefs));
+      assert('behind Safe Harbour Screening',
+        hrefs.indexOf('module2-safe-harbour.html')<hrefs.indexOf('module3-etr-topup-tax.html'), JSON.stringify(hrefs));
+      assert('and not as the primary action',
+        !stage().querySelector('a[href="module3-etr-topup-tax.html"]').classList.contains('primary'));
+    });
+
+  }catch(e){
+    current={name:'Module 3 test setup',cases:[{desc:'iframe load/setup threw an exception',pass:false,detail:(e&&e.stack)||String(e)}]};
     groups.push(current);
   }
 
