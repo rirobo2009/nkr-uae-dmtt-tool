@@ -79,7 +79,15 @@
   .choice-tile small{color:var(--text-secondary)}
 
   /* ---- callouts ---- */
-  .callout-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  /* align-items:flex-start so each callout sizes to its own content.
+     Penalty Relief is now substantially taller than Joint & Several
+     Liability (it carries Annex C's guidance and limits), and under the
+     default `stretch` the shorter amber box was padded out with half a
+     screen of empty space, which reads as a rendering failure rather
+     than a design. Re-stretched in the mobile query below, where the
+     row becomes a column and flex-start would instead shrink both
+     callouts horizontally to their content width. */
+  .callout-row{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
   .callout{flex:1 1 320px;border-radius:10px;padding:18px 20px;border:1px solid;box-shadow:var(--shadow)}
   .callout.good{background:var(--green-bg);border-color:#B8E0CE}
   .callout.caution{background:var(--warning-bg);border-color:#EAD4A8}
@@ -89,10 +97,27 @@
   .callout h3{font-size:15.5px;color:var(--nkr-navy);font-weight:700;margin-bottom:8px}
   .callout p{font-size:13.5px;color:var(--text-primary);line-height:1.55}
   .callout cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:10px;letter-spacing:.02em}
+  /* Sub-blocks inside a callout. The Penalty Relief callout carries two:
+     what "reasonable measures" means, and the limits of the relief. The
+     limits block is deliberately given the red treatment rather than a
+     muted/fine-print one — it materially qualifies the green headline
+     above it, so it has to read as a peer of that statement, not as a
+     footnote to it. Both are plain blocks, never <details>, so they
+     survive into the PDF open (see the print rules and the matching
+     PDF-consistency tests). */
+  .callout .relief-block{margin-top:14px;border-radius:8px;padding:12px 14px;border:1px solid}
+  .callout .relief-block h4{font-size:12.5px;font-weight:700;letter-spacing:.02em;margin-bottom:6px;color:var(--nkr-navy)}
+  .callout .relief-block p{font-size:12.5px;line-height:1.5;color:var(--text-primary)}
+  .callout .relief-block ul{margin:8px 0 0;padding-left:18px}
+  .callout .relief-block li{font-size:12.5px;line-height:1.5;color:var(--text-primary);margin-bottom:5px}
+  .callout .relief-block li:last-child{margin-bottom:0}
+  .callout .relief-means{background:var(--bg-page);border-color:#B8E0CE}
+  .callout .relief-limits{background:var(--red-bg);border-color:#E8C2BE}
+  .callout .relief-limits h4{color:var(--red)}
 
   /* ---- cards grid ---- */
   .m4-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-bottom:22px}
-  @media (max-width:760px){ .m4-grid{grid-template-columns:1fr} .entry-row{flex-direction:column} .callout-row{flex-direction:column} }
+  @media (max-width:760px){ .m4-grid{grid-template-columns:1fr} .entry-row{flex-direction:column} .callout-row{flex-direction:column;align-items:stretch} }
   .m4-card{background:#fff;border:1.5px solid var(--nkr-teal);border-radius:10px;box-shadow:var(--shadow);padding:22px 22px 20px;display:flex;flex-direction:column;gap:12px}
   .m4-card h2{font-size:17px;color:var(--nkr-navy);font-weight:700}
   .m4-card .summary{font-size:13.5px;color:var(--text-secondary);line-height:1.5}
@@ -352,6 +377,13 @@ const CITE_M4={
   payment:"Art. 11.1, CD 142/2024 Annexure",
   jointSeveral:"Art. 12, CD 142/2024 Annexure",
   penaltyRelief:"Art. 14.3, CD 142/2024 Annexure",
+  // Annex C is the OECD GloBE Information Return's Transitional Penalty
+  // Relief annex. It is operative UAE material because MD 96 of 2026
+  // adopts the OECD Commentary/Guidance, and Annex C expressly states it
+  // applies to "QDMTT-only Jurisdictions" — which is what the UAE is.
+  // Art 14.3 gives the relief; Annex C is what defines its shape, so the
+  // two are cited together wherever the relief is described.
+  penaltyReliefAnnexC:"GloBE Information Return (January 2025, revised January 2026), Annex C — Transitional Penalty Relief, adopted by Ministerial Decision No. 96 of 2026",
   gaar:"Art. 14.1(a)–(c), CD 142/2024 Annexure; Federal Decree-Law No. 47 of 2022, Art. 50, 56 & 59"
 };
 
@@ -777,10 +809,26 @@ RENDERERS.push(renderNotificationCard);
    Cross-cutting callouts — informational/static, no user input (spec
    §3): Penalty Relief Window (positive framing) and Joint & Several
    Liability (cautionary framing). Rendered once above the card grid,
-   not nested inside any single card. Penalty Relief's eligibility
-   test depends on Fiscal Year START date, which this module never
-   collects (only FY end) — so this stays a static rule statement, not
-   a computed "does this apply to you" verdict.
+   not nested inside any single card.
+
+   Penalty Relief stays a static rule statement rather than a computed
+   "does this apply to you" verdict. NB the original reason for that —
+   that the module collected only FY end, not FY start — no longer
+   holds: #fyStartDate is now collected for the CD 142 applicability
+   gate, so both limbs of the eligibility test (FY begins on or before
+   31 Dec 2026, and does not end after 30 Jun 2028) are computable from
+   what the user has already entered. Left static deliberately, as
+   turning it into a verdict is a scope change, not a side effect of
+   adding Annex C's content below.
+
+   The relief's substance comes from two sources read together: Art
+   14.3 grants it, and GIR Annex C (adopted by MD 96 of 2026, and
+   expressly applicable to QDMTT-only Jurisdictions like the UAE)
+   defines what "reasonable measures" means and sets the two limits on
+   it. The limits are rendered as a peer block, not fine print — they
+   materially qualify the headline, and a user who reads only the green
+   statement would be misled about both the fraud/abuse carve-out and
+   the still-must-pay-the-tax-plus-interest point.
    ================================================================== */
 function renderCallouts(){
   document.getElementById('callouts').innerHTML=`
@@ -789,7 +837,26 @@ function renderCallouts(){
         <div class="tag">Good news</div>
         <h3>Penalty Relief Window</h3>
         <p>For Fiscal Years beginning on or before 31 December 2026, and not ending after 30 June 2028, <b>no penalties apply</b> for Top-up Tax Return or Pillar Two Information Return filing errors — provided the FTA considers your MNE Group took reasonable measures to correctly apply the Decision.</p>
-        <cite>${CITE_M4.penaltyRelief}</cite>
+        <div class="relief-block relief-means">
+          <h4>What "reasonable measures" means</h4>
+          <p>The term is <b>deliberately not defined</b>. It is understood in light of the jurisdiction's own rules and practice, and is assessed by the tax administration on the facts and circumstances of each case. An MNE Group demonstrates it by showing that it has, <b>in good faith, put in place appropriate systems</b> to understand and comply with the rules.</p>
+          <p style="margin-top:8px">Examples where penalties may be waived:</p>
+          <ul>
+            <li>a mistake of fact that is reasonable in the circumstances;</li>
+            <li>errors reasonably attributable to unfamiliarity with the rules in the initial implementation years — for example, isolated mathematical or transposition errors;</li>
+            <li>the requirements of the rule being unclear, and the MNE Group acting on a reasonable interpretation of them;</li>
+            <li>the MNE Group's actions not reducing its Top-up Tax liability in the current or a future Fiscal Year;</li>
+            <li>full disclosure of the computation in question to the tax administration.</li>
+          </ul>
+        </div>
+        <div class="relief-block relief-limits" id="relief-limits">
+          <h4>Limits of this relief</h4>
+          <ul>
+            <li>The relief <b>does not apply</b> to cases of <b>avoidance, fraud or abuse</b>.</li>
+            <li>The relief <b>does not remove the obligation</b> to correct any errors and to pay any unpaid or underpaid Top-up Tax — <b>including interest</b> — for previous Fiscal Years, in accordance with domestic law. Relief is from <i>penalties</i>, not from the tax itself.</li>
+          </ul>
+        </div>
+        <cite>${CITE_M4.penaltyRelief}<br>${CITE_M4.penaltyReliefAnnexC}</cite>
       </div>
       <div class="callout caution" id="callout-jsl">
         <div class="tag">Cautionary</div>

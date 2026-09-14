@@ -669,6 +669,117 @@
       assert('GAAR/record-keeping minor note present, separate from the two prominent callouts', !!m4Doc().querySelector('.minor-note'));
     });
 
+    // GIR Annex C (adopted by MD 96 of 2026) is what gives Art 14.3's
+    // "reasonable measures" any content, and it is also what limits the
+    // relief. The callout previously stated the relief unqualified, which
+    // materially overstated it: a reader would not learn that fraud/abuse
+    // is carved out, nor that the tax and interest remain payable. These
+    // assert the substance is present, not merely that a block exists.
+    await tc4('Penalty Relief — Annex C\'s "reasonable measures" guidance is present and specific', async ()=>{
+      await resetM4();
+      const means=m4Text('.callout.good .relief-means');
+      assert('a distinct "reasonable measures" block exists inside the Penalty Relief callout', !!means);
+      assertIncludes('states the term is deliberately not defined', means, 'not defined');
+      assertIncludes('states it is assessed on the facts and circumstances of each case', means, 'facts and circumstances');
+      assertIncludes('states the good-faith appropriate-systems test', means, 'good faith');
+      assertIncludes('gives the reasonable-mistake-of-fact example', means, 'mistake of fact');
+      assertIncludes('gives the initial-implementation-years unfamiliarity example', means, 'unfamiliarity');
+      assertIncludes('names transposition errors as the worked instance of that example', means, 'transposition');
+      assertIncludes('gives the unclear-requirements / reasonable-interpretation example', means, 'reasonable interpretation');
+      assertIncludes('gives the no-reduction-in-liability example', means, 'not reducing');
+      assertIncludes('gives the full-disclosure example', means, 'full disclosure');
+    });
+
+    await tc4('Penalty Relief — both Annex C limits are stated, and stated as limits', async ()=>{
+      await resetM4();
+      const limits=m4Text('.callout.good .relief-limits');
+      assert('a distinct "limits" block exists inside the Penalty Relief callout', !!limits);
+      assertIncludes('limit 1 — no relief for avoidance, fraud or abuse', limits, 'avoidance, fraud or abuse');
+      assertIncludes('limit 2 — obligation to correct errors is not removed', limits, 'correct any errors');
+      assertIncludes('limit 2 — unpaid/underpaid Top-up Tax remains payable', limits, 'unpaid or underpaid');
+      assertIncludes('limit 2 — INTEREST is explicitly included, not left implied', limits, 'including interest');
+      assertIncludes('limit 2 — applies to previous Fiscal Years', limits, 'previous Fiscal Years');
+      assertIncludes('the relief is framed as from penalties, not from the tax', limits, 'not from the tax itself');
+    });
+
+    await tc4('Penalty Relief — Annex C is cited alongside Art 14.3, and the limits are not fine print', async ()=>{
+      await resetM4();
+      const cite=m4Text('.callout.good cite');
+      assertIncludes('the Art 14.3 citation is retained', cite, 'Art. 14.3');
+      assertIncludes('Annex C is cited', cite, 'Annex C');
+      assertIncludes('the January 2026 revision of the GIR is identified', cite, 'revised January 2026');
+      assertIncludes('the MD 96 of 2026 adoption route is stated', cite, 'Ministerial Decision No. 96 of 2026');
+      // "Not fine print" is a structural claim, so test it structurally:
+      // the limits must be a sibling block in the callout body, never
+      // tucked inside a collapsed <details> the user must open, and never
+      // rendered at a smaller size than the "reasonable measures" block
+      // it qualifies.
+      const limitsEl=m4Doc().querySelector('.callout.good .relief-limits');
+      assert('limits block is not nested inside a <details>', !!limitsEl && !limitsEl.closest('details'));
+      assert('limits block sits in the callout body alongside the headline statement',
+        !!limitsEl && limitsEl.parentElement.classList.contains('good'));
+      const meansSize=m4Win().getComputedStyle(m4Doc().querySelector('.callout.good .relief-means li')).fontSize;
+      const limitsSize=m4Win().getComputedStyle(limitsEl.querySelector('li')).fontSize;
+      assert('limits are not set smaller than the guidance they qualify',
+        parseFloat(limitsSize)>=parseFloat(meansSize), `means=${meansSize} limits=${limitsSize}`);
+    });
+
+    // The Penalty Relief callout is now much taller than the J&S one, so
+    // .callout-row sets align-items:flex-start to stop the shorter box
+    // being padded out with empty space. In the mobile query the row
+    // becomes a column, where that same value would shrink both callouts
+    // to their content width instead — so the query must re-stretch them.
+    // Guard at the CSS level, not by measuring today's rendered widths.
+    await tc4('Callout row — flex-start on desktop is re-stretched in the mobile column layout', async ()=>{
+      await resetM4();
+      let rowRule='',mobileRule='';
+      for(const sheet of m4Doc().styleSheets){
+        for(const rule of sheet.cssRules){
+          if(rule.selectorText==='.callout-row') rowRule=rule.cssText;
+          if(rule instanceof m4Win().CSSMediaRule && /max-width:\s*760px/.test(rule.conditionText)){
+            for(const inner of rule.cssRules){ if(inner.selectorText==='.callout-row') mobileRule=inner.cssText; }
+          }
+        }
+      }
+      assertIncludes('desktop .callout-row sizes each callout to its own content', rowRule, 'flex-start');
+      assertIncludes('mobile .callout-row stacks into a column', mobileRule, 'column');
+      assertIncludes('mobile .callout-row re-stretches, so stacked callouts stay full width', mobileRule, 'stretch');
+    });
+
+    await tc4('PDF-consistency — the Annex C limits survive the print stylesheet unhidden', async ()=>{
+      await resetM4();
+      function printRules(){
+        for(const sheet of m4Doc().styleSheets){
+          for(const rule of sheet.cssRules){
+            if(rule instanceof m4Win().CSSMediaRule && rule.conditionText==='print') return rule.cssRules;
+          }
+        }
+        return null;
+      }
+      const printCss=[...(printRules()||[])].map(r=>r.cssText).join(' ');
+      assert('print rules do NOT hide .relief-limits (the carve-outs must reach the PDF)',
+        !/\.relief-limits[^}]*\{[^}]*display:\s*none/.test(printCss));
+      assert('print rules do NOT hide .relief-means',
+        !/\.relief-means[^}]*\{[^}]*display:\s*none/.test(printCss));
+      assert('print rules do NOT hide .relief-block generally',
+        !/\.relief-block[^}]*\{[^}]*display:\s*none/.test(printCss));
+    });
+
+    // The AED 10,000 registration penalty is outside this relief for a
+    // different reason than the two Annex C limits — it is a scope point
+    // (the relief covers Return filing errors, not registration
+    // timeliness). Adding the limits block must not make that box's
+    // cross-reference read as redundant or contradictory.
+    await tc4('Penalty Relief — the AED 10,000 registration-penalty carve-out stays distinct from the Annex C limits', async ()=>{
+      await resetM4();
+      const penaltyBox=m4All('.warn-box.red').find(t=>t.includes('AED 10,000'))||'';
+      assertIncludes('the registration penalty box still states it is not covered by this relief', penaltyBox, 'not');
+      assertIncludes('and still gives the scope reason for that', penaltyBox, 'registration timeliness');
+      const limits=m4Text('.callout.good .relief-limits')||'';
+      assert('the scope point is not duplicated into the Annex C limits block',
+        !limits.includes('registration timeliness'), limits);
+    });
+
     // -----------------------------------------------------------------
     // 3. PDF-consistency checks — Module 4's "PDF" is window.print() on
     //    this exact DOM (same approach as Module 1: no separate render
