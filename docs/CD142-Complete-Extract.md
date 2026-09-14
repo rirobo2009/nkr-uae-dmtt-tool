@@ -169,12 +169,19 @@ Separate ETR/Top-up Tax computation for Minority-Owned Subgroups.
 - 6.5 Multi-Parented MNE Groups
 
 ## Article 7 — Tax Neutrality and Distribution Regimes
-- 7.1 Flow-through UPE
-- 7.2 UPE subject to Deductible Dividend Regime
-- 7.3 Eligible Distribution Tax Systems
-- 7.4 ETR computation for Investment Entities
-- 7.5 Investment Entity Tax Transparency Election
-- 7.6 Taxable Distribution Method Election
+**⚠️ CORRECTED 2026-09-14 — an earlier version of this file listed the OECD Model Rules'/Commentary's Article 7 numbering here, not CD 142's. The list below is verified verbatim against the Decision's own text. CD 142 has FIVE sub-articles under Article 7; there is no 7.6.**
+
+- **7.1** Ultimate Parent Entity that is a Flow-through Entity
+- **7.2** Ultimate Parent Entity subject to Deductible Dividend Regime
+- **7.3** **Investment Entity Tax Transparency Election** ← *not* "Eligible Distribution Tax Systems"
+- **7.4** **Taxable Distribution Method Election** ← *not* "ETR computation for Investment Entities"
+- **7.5** Equity Investment Inclusion Election and Qualified Flow-through Tax Benefits
+
+**Why this trips people up:** the OECD Model Rules / 2026 Commentary number Article 7 differently — their 7.3 is *Eligible Distribution Tax Systems* and their 7.4 is *ETR Computation for Investment Entities*, pushing the two elections to 7.5 and 7.6. **The UAE omits both of those provisions entirely** (neither fits a QDMTT-only regime), so everything below 7.2 shifts up by two. When citing either election, always cite CD 142's numbering (7.3 / 7.4) and name the election in full, so the citation stays findable regardless of which numbering a reader has in mind.
+
+Verbatim confirmation from the Decision:
+> "7.3.1 A Filing Constituent Entity may elect to treat a Constituent Entity that is an Investment Entity as a Tax Transparent Entity if…"
+> "7.4.1 At the election of the Filing Constituent Entity, a Constituent Entity-owner located in the UAE that is not an Investment Entity may apply the Taxable Distribution Method…"
 
 ---
 
@@ -187,7 +194,7 @@ Separate ETR/Top-up Tax computation for Minority-Owned Subgroups.
 - **8.2.2 Simplified Calculations Safe Harbour** — **permanent**, separate machinery. Three tests (Routine Profits / De Minimis / ETR), uses Simplified Income/Revenue/Tax Calculations and Non-material Constituent Entity concept
 - **8.2.3 Disapplication** — FTA clawback, 36-month window
 
-⚠️ **BLOCKED: TTGSHO1 (dedicated FTA Safe Harbour guide) not yet published.** Do not build from Art 8.2 alone.
+⚠️ **SUPERSEDED — this pause was lifted.** An earlier version of this file carried: *"BLOCKED: TTGSHO1 (dedicated FTA Safe Harbour guide) not yet published. Do not build from Art 8.2 alone."* That rested on the assumption that Art 8.2's bare text was the only grounding available. It is not: **MD 96 of 2026 adopts the 2026 Consolidated Commentary, whose Annex A (~120 pages) covers exactly these three mechanisms** in operative detail. See `Commentary-2026-Extract.md` (headline finding) and `Master-Build-Roadmap.md` §C, which record the reversal. **TTGSHO1, when published, is a refinement layer** — UAE-specific worked examples and FTA administrative positions — not the foundation. Module 2 (Safe Harbour Screening) was built on CD 142 Art 8.2 + Commentary Annex A on that basis; re-check Art 8.2 against TTGSHO1 when it appears.
 
 ---
 
