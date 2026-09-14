@@ -313,6 +313,7 @@ function requireLeadCapture(onDone){
 const CITE={
   revThreshold:"Art. 1.1.1, CD 142/2024 Annexure",
   revProration:"Art. 1.1.2, CD 142/2024 Annexure",
+  revIncludesExcluded:"TTGEIE1 §10; Art. 1.1.1, CD 142/2024 Annexure",
   group:"Art. 1.2.1–1.2.3, CD 142/2024 Annexure",
   upe:"Art. 1.4.1, CD 142/2024 Annexure; Art. 18 (Controlling Interest)",
   swf:"Art. 1.6.1–1.6.2, CD 142/2024 Annexure",
@@ -642,7 +643,16 @@ function stepA(){
   const currencyTip=tip("If your Consolidated Financial Statements are prepared in a currency other than EUR, you must convert revenue using the average daily reference rate for December prior to the relevant Fiscal Year — as quoted by the European Central Bank, or by the Central Bank of the UAE if the European Central Bank does not quote one, or another FTA-acceptable source reflecting that month's average rate if neither does — before comparing against the EUR 750 million threshold.",CITE.currencyConversion);
   const node=optionCard(
     `In at least 2 of the 4 Fiscal Years immediately preceding the tested Fiscal Year, did the MNE Group's Ultimate Parent Entity report annual consolidated revenue of EUR 750 million or more${currencyTip} in its Consolidated Financial Statements? ${revTip}`,
-    null,
+    /* TTGEIE1 §10: Excluded Entity and Investment Entity revenue still
+       counts toward this threshold. Stated explicitly because it is
+       counterintuitive — an Entity can be fully outside the charge while
+       its revenue is what brings the Group into scope — and because the
+       tool itself states a DIFFERENT EUR 750m test further on: the Art 1.9
+       tile in Step E expressly strips Excluded Entity revenue out. Both are
+       correct, but a user who meets the Art 1.9 wording first and reasons
+       backwards to here would get this one wrong. Each of the two now says
+       which it is. */
+    `<strong>Count the revenue of every Entity consolidated in those statements</strong>, including any Excluded Entity or Investment Entity. ${tip("TTGEIE1 §10 states that the revenue of an Excluded Entity and of an Investment Entity must still be taken into account when applying the EUR 750 million consolidated revenue threshold, to the extent it is consolidated in the Ultimate Parent Entity's Consolidated Financial Statements. This is deliberately counterintuitive: an Entity can be fully Excluded — no charge, no administrative obligations — while its revenue is what brings the Group over the threshold. Note that the separate EUR 750m test in the Art 1.9 Excluded Entity tile later in this assessment works the other way and does strip that revenue out; it is a different test, not this one.",CITE.revIncludesExcluded)} Being an Excluded Entity does not take that Entity's revenue out of this threshold.`,
     [
       {key:'A',label:'Yes',action:()=>{record("Revenue ≥ EUR 750m in 2 of preceding 4 FYs?","Yes","yes");push(stepA_proration);}},
       {key:'B',label:'No',action:()=>{record("Revenue ≥ EUR 750m in 2 of preceding 4 FYs?","No","no");
@@ -1112,7 +1122,7 @@ const E_TILES=[
   {key:'t9',label:'Held by an external Investment Fund or REIV — ownership limb only',cite:CITE.exclHeldByExternal,
    tip:"Where the Entity is held by an Investment Fund or Real Estate Investment Vehicle that is not itself a Group Entity, Art 1.8 deems only the ≥95% ownership limb of the test above satisfied — it does not by itself make the Entity Excluded. The purpose limb (exists to hold/invest assets for the benefit of tiles 1–6, or carries out only ancillary activities to them) must still be met. Selecting this tile will ask you to confirm that limb separately, unless you have also selected the tile above."},
   {key:'t10',label:'≥100% owned by Non-profit Organisation(s)',cite:CITE.exclNpoOwned,
-   tip:"The Entity is 100% owned by one or more Non-profit Organisations, AND the Group's revenue (excluding revenue of Non-profit Organisations and other Excluded Entities) is under EUR 750 million, AND the revenue of non-Excluded-Entities is under 25% of the MNE Group's total revenue."}
+   tip:"The Entity is 100% owned by one or more Non-profit Organisations, AND the Group's revenue (excluding revenue of Non-profit Organisations and other Excluded Entities) is under EUR 750 million, AND the revenue of non-Excluded-Entities is under 25% of the MNE Group's total revenue. Note that this EUR 750 million test is specific to Art 1.9 and is NOT the general revenue threshold asked about in Step A. This one strips Excluded Entity revenue out; the Step A threshold counts it in, per TTGEIE1 §10. The two tests use the same figure for different purposes — do not read either as restating the other."}
 ];
 const E_ELECTABLE=['t7','t9','t10'];
 

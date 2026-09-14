@@ -490,6 +490,40 @@
   });
 
   // =======================================================================
+  // Step A vs the Art 1.9 tile — two different EUR 750m tests (Part 3).
+  // Excluded Entity revenue COUNTS toward Step A's general threshold
+  // (TTGEIE1 §10) but is STRIPPED OUT of the Art 1.9 tile's test. Both are
+  // correct; the risk is a user meeting the Art 1.9 wording and reasoning
+  // backwards to Step A. Each now says which test it is, so the guard is
+  // that neither drifts back into silence.
+  // =======================================================================
+  tc('Revenue threshold — Step A states that Excluded and Investment Entity revenue still counts', ()=>{
+    reset();
+    const note=stage().querySelector('.q-note').textContent;
+    assertIncludes('tells the user to count every consolidated Entity', note, 'every Entity consolidated');
+    assertIncludes('names Excluded Entities explicitly', note, 'Excluded Entity');
+    assertIncludes('names Investment Entities explicitly', note, 'Investment Entity');
+    assertIncludes('states the counterintuitive point directly', note, 'does not take that Entity’s revenue out of this threshold'.replace('’',"'"));
+    const tipText=[...stage().querySelectorAll('.q-note .tip')].map(t=>t.textContent).join(' ');
+    assertIncludes('tooltip cites TTGEIE1 §10', tipText, 'TTGEIE1 §10');
+    assertIncludes('tooltip cites CD 142 Art 1.1.1', tipText, 'Art. 1.1.1');
+    assertIncludes('tooltip explains an Excluded Entity can still pull the Group into scope', tipText, 'brings the Group over the threshold');
+    assertIncludes('tooltip warns the Art 1.9 test is a different one', tipText, 'different test');
+  });
+
+  tc('Revenue threshold — the Art 1.9 tile marks its EUR 750m test as the distinct one', ()=>{
+    toStepE();
+    const t=tiles().find(x=>x.querySelector('b').textContent==='≥100% owned by Non-profit Organisation(s)');
+    assert('the Art 1.9 tile is present', !!t, 'tile not found');
+    const tipText=t.querySelector('.tip').textContent;
+    assertIncludes('still states its own exclusionary test', tipText, 'excluding revenue of Non-profit Organisations and other Excluded Entities');
+    assertIncludes('flags that it is NOT the Step A threshold', tipText, 'NOT the general revenue threshold');
+    assertIncludes('states Step A counts that revenue in', tipText, 'Step A threshold counts it in');
+    assertIncludes('cross-cites TTGEIE1 §10 for that', tipText, 'TTGEIE1 §10');
+    assert('warns against reading one as restating the other', tipText.includes('do not read either as restating the other'), tipText);
+  });
+
+  // =======================================================================
   // TTGEIE1 §10's three practical effects (Part 4). A conclusion that only
   // says "out of scope" leaves the user not knowing what follows from it.
   // These assert the effects are present, correctly DIFFERENTIATED between
