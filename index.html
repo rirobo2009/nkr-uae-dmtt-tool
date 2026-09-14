@@ -343,17 +343,23 @@ const CITE={
   locDual:"Art. 18.3.4, CD 142/2024 Annexure",
   locDualTreaty:"Art. 18.3.4(a), CD 142/2024 Annexure",
   locDualNoTreaty:"Art. 18.3.4(b), CD 142/2024 Annexure; Art. 5.3 (Substance-based Income Exclusion), CD 142/2024 Annexure",
-  // TODO(TTGREG1 §6.4): TTGREG1 Chapter 6 is titled "Location of an Entity
-  // and PE", so §6.4 covers the PE limb and may carry interpretive detail
-  // beyond the bare article. It was not captured in
-  // docs/FTA-Guides-Extract.md (the Pass 4 extract recorded §6.2-6.6 for
-  // Entities only and read past the PE rules), and no source PDF is in the
-  // repo — so it could not be checked. Cited to the article alone rather
-  // than guessing at the guide. Revisit when the guide is to hand: if §6.4
-  // only restates Art 18.3.3, this citation is already correct as it
-  // stands and only this comment needs removing.
-  locPE:"Art. 18.3.3, CD 142/2024 Annexure",
-  locPEStateless:"Art. 18.3.3(d), CD 142/2024 Annexure; Art. 2.1, CD 142/2024 Annexure",
+  // TTGREG1 §6.4 checked against the guide: it restates Art 18.3.3's four
+  // limbs as a table, each footnoted to (a)-(d) respectively, and adds no
+  // interpretive detail beyond the article. Cited as a secondary reference
+  // only. The four option labels below are taken from §6.4's own type
+  // names so a user cross-checking against the guide meets the same
+  // vocabulary; the operative test stays on each option's sub-line.
+  locPE:"Art. 18.3.3, CD 142/2024 Annexure; TTGREG1 §6.4",
+  // TTGREG1 §7.4 resolves the stateless outcomes directly and expressly:
+  // "The charging provision under the QDMTT Legislation covers only a
+  // Stateless Constituent Entity that is a Reverse Hybrid Entity provided
+  // that Entity was created under the laws of the UAE. Accordingly, a
+  // stateless Permanent Establishment or a stateless Tax Transparent
+  // Entity or a stateless dual-located Entity is not subject to the Top-up
+  // Tax." That is a definitive answer, not a judgment call, so these
+  // conclusions state it rather than flagging for review.
+  locPEStateless:"Art. 18.3.3(d), CD 142/2024 Annexure; Art. 2.1(c), CD 142/2024 Annexure; TTGREG1 §7.4",
+  statelessNotCharged:"Art. 2.1(c), CD 142/2024 Annexure; TTGREG1 §7.4",
   reverseHybrid:"Art. 2.1, CD 142/2024 Annexure; Art. 18.2 (Reverse Hybrid Entity), CD 142/2024 Annexure",
   investmentEntity:"Art. 18 (Investment Entity), CD 142/2024 Annexure",
   // ---- Practical effects of an Excluded / Investment Entity conclusion ----
@@ -977,7 +983,8 @@ function locStatelessExit(askedReverseHybrid){
   outOfScope("Out of scope — the Entity is treated as stateless.",
     "The Entity is a Flow-through Entity that is neither the Ultimate Parent Entity nor required to apply an Income Inclusion Rule, so Article 18.3.2(b) treats it as a Stateless Entity. Article 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, together with Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. "+(askedReverseHybrid?"You confirmed this Entity is not a Reverse Hybrid Entity, so it falls into none of those categories.":"The Entity was created outside the UAE, so it cannot meet the Reverse Hybrid limb, which requires creation under UAE law. It falls into none of those categories."),
     [{t:"Art 18.3.2(b) treats the Entity as stateless.",b:"A Flow-through Entity is located in the Jurisdiction where it was created only if it is the Ultimate Parent Entity or is required to apply an Income Inclusion Rule under an equivalent provision to Art 2.1 of the Pillar Two Model Rules. In every other case it is treated as a Stateless Entity.",c:CITE.locFlowThrough},
-     {t:"A stateless Entity is outside Art 2.1 unless it is a UAE-created Reverse Hybrid.",b:"Art 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, plus Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. A stateless Entity meeting neither description is not within the charge.",c:CITE.reverseHybrid}],
+     {t:"A stateless Entity is outside Art 2.1 unless it is a UAE-created Reverse Hybrid.",b:"Art 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, plus Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. A stateless Entity meeting neither description is not within the charge.",c:CITE.reverseHybrid},
+     {t:"The guide states this outcome directly.",b:"TTGREG1 §7.4 confirms that the charging provision covers only a Stateless Constituent Entity that is a Reverse Hybrid Entity created under the laws of the UAE, and that accordingly a stateless Permanent Establishment, a stateless Tax Transparent Entity and a stateless dual-located Entity are each not subject to the Top-up Tax. A Flow-through Entity treated as stateless under Art 18.3.2(b) falls within that statement.",c:CITE.statelessNotCharged}],
     "<strong>Statelessness is a consequence of the Entity's character, not a permanent status.</strong> It follows from the Flow-through analysis and from who the Entity's owners are, both of which can change between Fiscal Years. Re-test this in any year in which the Entity's ownership, transparency treatment or Ultimate Parent Entity position changes.");
 }
 
@@ -1035,7 +1042,8 @@ function locDualUnresolvedExit(narrative){
   reviewRequired("Dual-located Entity — Article 18.3.4(b) tie-breakers require professional review.",
     narrative+" The remaining tie-breakers turn on a comparison of Covered Taxes and, failing that, on a Substance-based Income Exclusion computed on an entity basis. Those are fact-heavy figures this assessment has not collected, and getting them wrong would change the answer — so the rules are set out below in the order they must be applied, rather than guessed at from inputs you are unlikely to have to hand at this stage. A qualified UAE tax adviser should apply them to the Entity's actual figures.",
     [{t:"Apply these three tests in strict order (Art 18.3.4(b)).",b:"(i) The Entity is located in the Jurisdiction in which it paid the GREATER amount of Covered Taxes for the Fiscal Year, excluding any taxes paid under a Controlled Foreign Company Tax Regime. (ii) If the Covered Taxes are equal or are zero in all Jurisdictions, it is located in the Jurisdiction in which it has the greater Substance-based Income Exclusion, computed on an entity basis under Art 5.3. (iii) If the Substance-based Income Exclusion is also equal or zero, the Entity is treated as a Stateless Constituent Entity — unless it is the Ultimate Parent Entity, in which case it is located in the Jurisdiction in which it was created.",c:CITE.locDualNoTreaty},
-     {t:"Why this matters for the UAE charge.",b:"If the tests locate the Entity in the UAE, it is within Art 2.1 and the rest of this assessment — the Excluded Entity and Investment Entity tests — still has to be worked through. If they locate it elsewhere, or produce a Stateless Constituent Entity that is not a Reverse Hybrid Entity created under UAE law, Art 2.1 does not reach it.",c:CITE.charging}],
+     {t:"Why this matters for the UAE charge.",b:"If the tests locate the Entity in the UAE, it is within Art 2.1 and the rest of this assessment — the Excluded Entity and Investment Entity tests — still has to be worked through. If they locate it elsewhere, Art 2.1 does not reach it.",c:CITE.charging},
+     {t:"If tie-breaker (iii) is reached, the outcome is already settled.",b:"Where the Substance-based Income Exclusion is also equal or zero and the Entity is not the Ultimate Parent Entity, Art 18.3.4(b)(iii) treats it as a Stateless Constituent Entity. TTGREG1 §7.4 states expressly that a stateless dual-located Entity is not subject to the Top-up Tax, since the charging provision's stateless limb covers only a Reverse Hybrid Entity created under the laws of the UAE. So only tie-breakers (i) and (ii) need working through — the consequence of reaching (iii) does not itself require a judgment.",c:CITE.statelessNotCharged}],
     "<strong>This assessment stops here deliberately.</strong> Location is a gating fact: until it is settled, neither an in-scope nor an out-of-scope conclusion can be reached on the remaining tests. Once an adviser has applied the Art 18.3.4(b) order to the Entity's figures, re-run this assessment with that answer.");
 }
 
@@ -1058,21 +1066,21 @@ function stepLocPE(){
     `Which of these describes this Permanent Establishment? ${tip("Art 18.3.3 locates a Permanent Establishment according to which paragraph of the Art 18.1 PE definition it falls within: (a) a place of business treated as a PE under an applicable Tax Treaty in force, where that Jurisdiction taxes the attributable income under a provision similar to Art 7 of the OECD Model Tax Convention — located where it is so treated and taxed; (b) where there is no applicable Tax Treaty in force, a place of business whose attributable income that Jurisdiction taxes under domestic law on a net basis similar to how it taxes its own residents — located where it is subject to that net basis taxation; (c) where a Jurisdiction has no corporate income tax system, a place of business situated there that would be treated as a PE under the OECD Model Tax Convention and whose attributable income that Jurisdiction would have had the right to tax under Art 7 — located where it is situated; (d) a place of business not described in (a) to (c), through which operations are conducted outside the Jurisdiction where the Entity is located, provided that Jurisdiction exempts the income attributable to those operations — treated as a Stateless Permanent Establishment.",CITE.locPE)}`,
     `A Permanent Establishment has its own location rule, separate from its Main Entity's. ${LOC_SCOPE_NOTE}`,
     [
-      {key:'A',label:'It is treated as a Permanent Establishment under a Tax Treaty in force, and the UAE taxes its attributable income',
-       sub:"Art 18.3.3(a) — the UAE taxes the attributable income under a provision similar to Article 7 of the OECD Model Tax Convention",
+      {key:'A',label:'Permanent Establishment in accordance with an applicable Tax Treaty',
+       sub:"Art 18.3.3(a) — treated as a Permanent Establishment under a Tax Treaty in force, and the UAE taxes the attributable income under a provision similar to Article 7 of the OECD Model Tax Convention",
        action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Art 18.3.3(a) — treated as a PE under a Tax Treaty and taxed by the UAE","yes");
          push(stepE);}},
-      {key:'B',label:'There is no Tax Treaty in force, and the UAE taxes its attributable income on a net basis',
-       sub:"Art 18.3.3(b) — taxed under UAE domestic law on a net basis, similar to how the UAE taxes its own residents",
+      {key:'B',label:'Permanent Establishment under domestic law',
+       sub:"Art 18.3.3(b) — no Tax Treaty in force, and the UAE taxes the attributable income under its domestic law on a net basis, similar to how it taxes its own residents",
        action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Art 18.3.3(b) — no treaty, taxed by the UAE on a net basis","yes");
          push(stepE);}},
-      {key:'C',label:'It is situated in a Jurisdiction with no corporate income tax system, and would be a Permanent Establishment under the OECD Model',
-       sub:"Art 18.3.3(c) — located where situated, provided that Jurisdiction would have had the right to tax the attributable income under Article 7",
+      {key:'C',label:'Permanent Establishment in the absence of a corporate tax system',
+       sub:"Art 18.3.3(c) — situated in a Jurisdiction with no corporate income tax system, would be a Permanent Establishment under the OECD Model Tax Convention, and that Jurisdiction would have had the right to tax the attributable income under Article 7",
        tipHTML:tip("This limb addresses a place of business in a Jurisdiction that has no corporate income tax system at all. The UAE has had one since Federal Decree-Law No. 47 of 2022 took effect, so this limb will rarely be the one that locates a UAE place of business — it is included because Art 18.3.3 applies to whichever Jurisdiction the place of business is situated in, not only to the UAE.",CITE.locPE),
        action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Art 18.3.3(c) — situated in a Jurisdiction with no corporate income tax system","yes");
          push(stepE);}},
-      {key:'D',label:'None of the above — operations are conducted outside the Jurisdiction where the Entity is located, and that Jurisdiction exempts the attributable income',
-       sub:"Art 18.3.3(d) — treated as a Stateless Permanent Establishment",
+      {key:'D',label:'Permanent Establishment where a Jurisdiction exempts income attributable to operations conducted in the Jurisdiction',
+       sub:"Art 18.3.3(d) — none of the above applies, operations are conducted outside the Jurisdiction where the Entity is located, and that Jurisdiction exempts the income attributable to them. Treated as a Stateless Permanent Establishment",
        action:()=>{record("Which limb of Art 18.3.3 locates this Permanent Establishment?","Art 18.3.3(d) — Stateless Permanent Establishment","no");
          locPEStatelessExit();}},
       {key:'E',label:'None of the above — this place of business is treated as a Permanent Establishment in, or taxed by, a Jurisdiction other than the UAE',
@@ -1091,12 +1099,19 @@ function locPENotUaeExit(){
     "<strong>The Main Entity may still be separately in scope.</strong> If the Main Entity is itself located in the UAE under Art 18.3.1, it should be assessed in its own right — start a new assessment for that Entity rather than for this Permanent Establishment.");
 }
 
+/* Definitive, not a judgment flag. TTGREG1 §7.4 states expressly that "a
+   stateless Permanent Establishment or a stateless Tax Transparent Entity
+   or a stateless dual-located Entity is not subject to the Top-up Tax",
+   because Art 2.1(c)'s stateless limb reaches only a Reverse Hybrid Entity
+   created under UAE law. The guide answers the consequence outright, so
+   hedging it would understate what can be told the user. What remains a
+   question of fact is which limb applies — that stays in the note. */
 function locPEStatelessExit(){
-  reviewRequired("Stateless Permanent Establishment — professional review required.",
-    "On the facts entered this place of business falls within Article 18.3.3(d): it is not described in limbs (a) to (c), operations are conducted through it outside the Jurisdiction where the Entity is located, and that Jurisdiction exempts the income attributable to those operations. Article 18.3.3(d) therefore treats it as a Stateless Permanent Establishment. Article 2.1 charges Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, together with Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law — and a Stateless Permanent Establishment is within none of those categories. This is an unusual fact pattern, and the conditions in limb (d) are cumulative and easily misread, so it is flagged for review rather than resolved as a definitive out-of-scope conclusion.",
+  outOfScope("Out of scope — Stateless Permanent Establishment.",
+    "On the facts entered this place of business falls within Article 18.3.3(d): it is not described in limbs (a) to (c), operations are conducted through it outside the Jurisdiction where the Entity is located, and that Jurisdiction exempts the income attributable to those operations. Article 18.3.3(d) therefore treats it as a Stateless Permanent Establishment. TTGREG1 §7.4 states expressly that a stateless Permanent Establishment is not subject to the Top-up Tax: Article 2.1's stateless limb reaches only a Stateless Constituent Entity that is a Reverse Hybrid Entity created under UAE law, which a Permanent Establishment is not.",
     [{t:"Art 18.3.3(d) produces a Stateless Permanent Establishment.",b:"Limb (d) catches a place of business, or deemed place of business, not already described in limbs (a) to (c), through which operations are conducted outside the Jurisdiction in which the Entity is located — provided that Jurisdiction exempts the income attributable to those operations. All of those conditions must hold together.",c:CITE.locPE},
-     {t:"Art 2.1's categories do not include a Stateless Permanent Establishment.",b:"The charge reaches Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE, plus Stateless Constituent Entities that are Reverse Hybrid Entities created under UAE law. The Reverse Hybrid limb is about Entities created under UAE law, not about Permanent Establishments, so it does not bring a Stateless Permanent Establishment within the charge.",c:CITE.locPEStateless}],
-    "<strong>Confirm the limb before relying on this.</strong> Check in particular whether an applicable Tax Treaty in force would instead bring the place of business within limb (a), and whether the Jurisdiction where the Entity is located genuinely exempts the attributable income rather than taxing it with relief. Either finding would move this out of limb (d) and change the conclusion.");
+     {t:"A Stateless Permanent Establishment is not subject to Top-up Tax.",b:"The charging provision covers only a Stateless Constituent Entity that is a Reverse Hybrid Entity created under the laws of the UAE. TTGREG1 §7.4 confirms the consequence directly: a stateless Permanent Establishment, a stateless Tax Transparent Entity and a stateless dual-located Entity are each not subject to the Top-up Tax. The Reverse Hybrid limb is about Entities created under UAE law, not about Permanent Establishments.",c:CITE.locPEStateless}],
+    "<strong>The conclusion is settled; which limb applies is the question of fact.</strong> Limb (d)'s conditions are cumulative, so check in particular whether an applicable Tax Treaty in force would instead bring the place of business within limb (a), and whether the Jurisdiction where the Entity is located genuinely exempts the attributable income rather than taxing it with relief. Either finding would move this out of limb (d) — and, if it resolves to the UAE, back into the charge.");
 }
 
 /* ==================================================================

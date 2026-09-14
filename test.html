@@ -641,6 +641,10 @@
   // checking that the questions render, because the failure mode being
   // guarded against is a silently wrong conclusion, not a missing screen.
   // =======================================================================
+  const assertCiteIncludesInTip=(sub)=>{
+    const t=[...stage().querySelectorAll('.tip cite')].map(c=>c.textContent).join(' | ');
+    assert('a tooltip cites "'+sub+'"', t.includes(sub), 'tooltip citations='+t);
+  };
   const verdictNote=()=>{ const el=stage().querySelector('.verdict p'); return el?el.textContent:''; };
 
   tc('Location — the step sits between Step D and Step E, and is scoped to Top-up Tax only', ()=>{
@@ -753,6 +757,12 @@
     assertVerdict('OUT OF SCOPE','stateless');
     assertCiteIncludes('18.3.2');
     assertIncludes('reasons from the confirmed answer, not from creation jurisdiction', stage().querySelector('.rate-line').textContent, 'not a Reverse Hybrid Entity');
+    // TTGREG1 §7.4 covers a stateless Tax Transparent Entity by name, so
+    // the conclusion carries the guide's express statement, not just the
+    // article-level inference.
+    assertCiteIncludes('TTGREG1 §7.4');
+    assertIncludes('cites the guide on the stateless outcomes',
+      [...stage().querySelectorAll('.facts .fact .fb')].map(e=>e.textContent).join(' '), 'stateless Tax Transparent Entity');
     assertSectionOrder();
   });
 
@@ -808,6 +818,8 @@
     assertIncludes('tie-breaker (ii) — entity-basis SBIE', facts, 'Substance-based Income Exclusion');
     assertIncludes('tie-breaker (ii) — computed under Art 5.3', facts, 'entity basis');
     assertIncludes('tie-breaker (iii) — stateless unless it is the UPE', facts, 'unless it is the Ultimate Parent Entity');
+    assertIncludes('states that reaching (iii) has a settled consequence', facts, 'stateless dual-located Entity is not subject to the Top-up Tax');
+    assertIncludes('so only (i) and (ii) need working through', facts, 'only tie-breakers (i) and (ii)');
     assertSectionOrder();
   });
 
@@ -879,18 +891,39 @@
     assertIncludes('Inputs Entered records limb (c)', pathRowText(), '18.3.3(c)');
   });
 
-  tc('PE location — limb (d): Stateless Permanent Establishment is flagged, not asserted out of scope', ()=>{
+  // TTGREG1 §7.4 resolves this outright ("a stateless Permanent
+  // Establishment ... is not subject to the Top-up Tax"), so the
+  // conclusion is definitive rather than a judgment flag. What stays a
+  // question of fact is which limb applies, and the note says so.
+  tc('PE location — limb (d): Stateless Permanent Establishment is definitively out of scope, per TTGREG1 §7.4', ()=>{
     toStepLocPE();
     clickOpt(3);
-    assertVerdict('REVIEW REQUIRED','Stateless Permanent Establishment');
+    assertVerdict('OUT OF SCOPE','Stateless Permanent Establishment');
     const line=stage().querySelector('.rate-line').textContent;
     assertIncludes('states the cumulative limb (d) conditions', line, 'exempts the income attributable');
-    assertIncludes('explains Art 2.1 does not reach a stateless PE', line, 'none of those categories');
-    assert('flags for review rather than asserting a definitive conclusion', line.includes('flagged for review'), line);
+    assertIncludes('states the guide resolves it expressly', line, 'not subject to the Top-up Tax');
+    assert('no longer hedges the consequence as needing review', !line.includes('flagged for review'), line);
     const facts=[...stage().querySelectorAll('.facts .fact .fb')].map(e=>e.textContent).join(' ');
     assertIncludes('explains the Reverse Hybrid limb is about Entities, not PEs', facts, 'not about Permanent Establishments');
+    assertIncludes('quotes the guide on all three stateless outcomes', facts, 'stateless Tax Transparent Entity');
     assertCiteIncludes('18.3.3');
+    assertCiteIncludes('2.1(c)');
+    assertCiteIncludes('TTGREG1 §7.4');
+    assertIncludes('keeps the limb identification as the open question of fact', verdictNote(), 'which limb applies is the question of fact');
     assertSectionOrder();
+  });
+
+  tc('PE location — the four limbs use TTGREG1 §6.4\'s own type labels', ()=>{
+    toStepLocPE();
+    const labels=opts().map(o=>o.querySelector('.lbl').childNodes[0].textContent.trim());
+    assertIncludes('limb (a) label matches the guide', labels[0], 'Permanent Establishment in accordance with an applicable Tax Treaty');
+    assertIncludes('limb (b) label matches the guide', labels[1], 'Permanent Establishment under domestic law');
+    assertIncludes('limb (c) label matches the guide', labels[2], 'Permanent Establishment in the absence of a corporate tax system');
+    assertIncludes('limb (d) label matches the guide', labels[3], 'Permanent Establishment where a Jurisdiction exempts income attributable to operations conducted in the Jurisdiction');
+    const subs=opts().map(o=>{const s=o.querySelector('small');return s?s.textContent:'';});
+    assertIncludes('the operative test stays on the sub-line for (a)', subs[0], '18.3.3(a)');
+    assertIncludes('the operative test stays on the sub-line for (d)', subs[3], '18.3.3(d)');
+    assertCiteIncludesInTip('TTGREG1 §6.4');
   });
 
   tc('PE location — a PE located in another jurisdiction exits out of scope, flagging the Main Entity', ()=>{
