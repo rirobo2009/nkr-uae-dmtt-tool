@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAE DMTT — Safe Harbour Screening</title>
+<style>
+  :root{
+    color-scheme: light;
+    --nkr-navy:#14283F;--nkr-teal:#2A6F77;--nkr-green:#1D9E75;--nkr-green-dark:#115F46;--nkr-offwhite:#F5F7FA;
+    --bg-page:#FFFFFF;--bg-surface:#F5F7FA;--text-primary:#14283F;--text-secondary:#2A6F77;
+    --accent-primary:#1D9E75;--accent-warning:#D97706;--warning-bg:#FBF1E4;--border:#E2E8F0;
+    --red:#B3261E;--red-bg:#FBEAEA;--green-bg:#E4F5EE;
+    --text-primary-ondark:#F5F7FA;--text-secondary-ondark:#7FA8AD;
+    --nkr-navy-soft:#4A5F7A;--highlight-blue:#94DCF8;
+    --shadow:0 2px 10px rgba(20,40,63,.06);--shadow-lg:0 8px 30px rgba(20,40,63,.16);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--bg-surface);color:var(--text-primary);line-height:1.6;padding:28px 16px 80px}
+  .wrap{max-width:1100px;margin:0 auto}
+
+  .brand-bar{position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--nkr-navy),var(--nkr-teal),var(--nkr-green));z-index:101}
+
+  header.masthead{border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);margin-bottom:20px;position:sticky;top:4px;background:var(--highlight-blue);z-index:100;padding:16px 22px}
+  .head-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+  .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+  .logo-mark img{width:135px;height:auto;display:block}
+  .logo-mark .logo-light{display:block}
+  .logo-mark .logo-dark{display:none}
+  .eyebrow{font-size:11px;letter-spacing:normal;text-transform:uppercase;color:var(--nkr-green-dark);font-weight:700;margin-bottom:6px}
+  h1{font-size:24px;line-height:1.2;color:var(--nkr-navy);font-weight:700;letter-spacing:-.01em}
+  .sub{margin-top:6px;color:var(--nkr-navy-soft);font-weight:400;font-size:13.5px;max-width:680px}
+  .explore{flex-shrink:0;font-weight:700;font-size:12.5px;letter-spacing:.02em;color:#fff;background:var(--nkr-navy);border:1.5px solid var(--nkr-navy);border-radius:8px;padding:7px 14px;text-decoration:none;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .explore:hover{background:#1c3a5c}
+  .explore svg{width:12px;height:12px}
+
+  .legal-strip{font-size:11.5px;color:var(--text-secondary);background:#fff;border:1px solid var(--border);border-left:4px solid var(--nkr-teal);border-radius:6px;padding:10px 14px;margin:16px 0 26px;letter-spacing:.01em;line-height:1.5;box-shadow:var(--shadow)}
+  .legal-strip strong{color:var(--nkr-navy)}
+
+  /* ---- tool nav (reusable pattern — same markup/classes in index.html) ---- */
+  .tool-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12.5px}
+  .tool-nav a,.tool-nav .reset-link{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--nkr-navy-soft);background:none;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;padding:2px}
+  .tool-nav a:hover,.tool-nav .reset-link:hover{color:var(--nkr-navy);text-decoration:underline}
+
+  /* ---- entry inputs ---- */
+  .entry-card{background:#fff;border:1.5px solid var(--nkr-teal);border-radius:10px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:22px}
+  .entry-card h2{font-size:16px;color:var(--nkr-navy);font-weight:700;margin-bottom:4px}
+  .entry-card .entry-note{font-size:13px;color:var(--text-secondary);margin-bottom:16px;max-width:760px}
+  /* Deliberately NOT in the print-hide list — the readable record of what
+     was entered, the counterpart of Module 1's "Inputs Entered" section.
+     Screen and PDF share this DOM, so it must survive print. */
+  .inputs-summary{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+  .inputs-summary .eyebrow-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);font-weight:700;margin-bottom:8px}
+  .inputs-summary .row{font-size:13.5px;color:var(--nkr-navy);margin-bottom:4px}
+  .inputs-summary .row b{font-weight:600}
+  .inputs-summary .row .empty{color:var(--text-secondary);font-style:italic;font-weight:400}
+  .field-error{color:var(--red);font-size:12.5px;margin-top:10px}
+  .entry-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:220px}
+  .field label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);font-weight:700}
+  .field input{font-family:inherit;font-size:15px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-surface);color:var(--text-primary)}
+  .field input:focus{outline:none;border-color:var(--nkr-navy);background:#fff}
+  .field .hint{font-size:11.5px;color:var(--text-secondary);line-height:1.4;max-width:260px}
+
+  .choice-group{display:flex;flex-direction:column;gap:5px}
+  .choice-group>label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);font-weight:700}
+  .choice-tiles{display:flex;gap:10px;flex-wrap:wrap}
+  .choice-tile{text-align:left;font-family:inherit;font-size:13.5px;color:var(--text-primary);background:#fff;border:1.5px solid var(--nkr-teal);border-radius:8px;padding:11px 13px;cursor:pointer;transition:.15s;line-height:1.4;display:flex;align-items:flex-start;gap:9px;flex:1 1 260px;min-width:240px}
+  .choice-tile:hover{border-color:var(--nkr-navy);background:var(--highlight-blue)}
+  .choice-tile.selected{border-color:var(--accent-primary);background:var(--green-bg)}
+  .choice-tile.selected.danger{border-color:var(--red);background:var(--red-bg)}
+  .choice-tile .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border);background:#fff;flex-shrink:0;display:grid;place-items:center;margin-top:1px;transition:.15s;font-size:11px;font-weight:700;color:#fff}
+  .choice-tile.selected .box{background:var(--accent-primary);border-color:var(--accent-primary)}
+  .choice-tile.selected.danger .box{background:var(--red);border-color:var(--red)}
+  .choice-tile b{display:block;font-weight:600;color:var(--nkr-navy);margin-bottom:2px}
+  .choice-tile small{color:var(--text-secondary);display:block}
+
+  /* ---- "what you'll need" panel ---- */
+  .prep-panel{background:#fff;border:1.5px solid var(--nkr-navy);border-radius:10px;box-shadow:var(--shadow);padding:20px 24px;margin-bottom:22px}
+  .prep-panel h2{font-size:16px;color:var(--nkr-navy);font-weight:700;margin-bottom:6px}
+  .prep-panel p{font-size:13px;color:var(--text-secondary);line-height:1.55;margin-bottom:12px;max-width:800px}
+  .prep-cols{display:flex;gap:24px;flex-wrap:wrap}
+  .prep-col{flex:1 1 300px}
+  .prep-col h4{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--nkr-green-dark);font-weight:700;margin-bottom:7px}
+  .prep-col ul{margin:0;padding-left:18px}
+  .prep-col li{font-size:12.5px;color:var(--text-primary);line-height:1.5;margin-bottom:5px}
+
+  /* ---- gates ---- */
+  .gate{background:#fff;border:1.5px solid var(--nkr-teal);border-radius:10px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:22px}
+  .gate.inactive{border-color:var(--border);background:var(--bg-surface);opacity:.75}
+  .gate-head{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+  .gate-head h2{font-size:17px;color:var(--nkr-navy);font-weight:700}
+  .gate-num{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--nkr-green-dark);font-weight:700;margin-bottom:3px}
+  .gate-status{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:5px 11px;border-radius:99px;border:1px solid;white-space:nowrap}
+  .gate-status.open{background:var(--green-bg);border-color:#B8E0CE;color:var(--nkr-green-dark)}
+  .gate-status.closed{background:var(--warning-bg);border-color:#EAD4A8;color:var(--accent-warning)}
+  .gate-status.blocked{background:var(--red-bg);border-color:#E8C2BE;color:var(--red)}
+  .gate-status.pending{background:var(--bg-surface);border-color:var(--border);color:var(--text-secondary)}
+  .gate-intro{font-size:13.5px;color:var(--text-secondary);line-height:1.55;margin-bottom:14px;max-width:820px}
+  .gate cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:10px;letter-spacing:.02em}
+  .gate-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+  .gate-section:first-of-type{border-top:none;padding-top:0;margin-top:14px}
+  .gate-section h3{font-size:13.5px;color:var(--nkr-navy);font-weight:700;margin-bottom:4px}
+  .gate-section .sec-note{font-size:12.5px;color:var(--text-secondary);line-height:1.5;margin-bottom:12px;max-width:820px}
+
+  /* ---- test cards (the three parallel tests in each gate) ---- */
+  .test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .test-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:15px 16px;display:flex;flex-direction:column;gap:9px}
+  .test-card.pass{background:var(--green-bg);border-color:#B8E0CE}
+  .test-card.fail{background:var(--red-bg);border-color:#E8C2BE}
+  .test-card h4{font-size:13.5px;color:var(--nkr-navy);font-weight:700}
+  .test-card .rule{font-size:12px;color:var(--text-secondary);line-height:1.45}
+  .test-card .verdict{font-size:12.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .test-card.pass .verdict{color:var(--nkr-green-dark)}
+  .test-card.fail .verdict{color:var(--red)}
+  .test-card .verdict.untested{color:var(--text-secondary)}
+  .test-card .working{font-size:12px;color:var(--text-primary);background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;line-height:1.5}
+  .test-card cite{font-size:10.5px}
+  .test-inputs{display:flex;flex-direction:column;gap:9px}
+  .test-inputs .field{min-width:0}
+  .test-inputs .field input{font-size:14px;padding:8px 10px}
+
+  /* ---- callouts ---- */
+  .callout-row{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .callout{flex:1 1 320px;border-radius:10px;padding:18px 20px;border:1px solid;box-shadow:var(--shadow)}
+  .callout.good{background:var(--green-bg);border-color:#B8E0CE}
+  .callout.caution{background:var(--warning-bg);border-color:#EAD4A8}
+  .callout.danger{background:var(--red-bg);border-color:#E8C2BE}
+  .callout .tag{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .callout.good .tag{color:var(--accent-primary)}
+  .callout.caution .tag{color:var(--accent-warning)}
+  .callout.danger .tag{color:var(--red)}
+  .callout h3{font-size:15.5px;color:var(--nkr-navy);font-weight:700;margin-bottom:8px}
+  .callout p{font-size:13.5px;color:var(--text-primary);line-height:1.55}
+  .callout p+p{margin-top:8px}
+  .callout ol,.callout ul{margin:8px 0 0;padding-left:18px}
+  .callout li{font-size:13px;color:var(--text-primary);line-height:1.5;margin-bottom:5px}
+  .callout cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:10px;letter-spacing:.02em}
+
+  .warn-box{border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;border:1px solid;margin-top:12px}
+  .warn-box.amber{background:var(--warning-bg);border-color:#EAD4A8;color:var(--text-primary)}
+  .warn-box.red{background:var(--red-bg);border-color:#E8C2BE;color:var(--text-primary)}
+  .warn-box.info{background:var(--bg-surface);border-color:var(--border);color:var(--text-primary)}
+  .warn-box b{color:var(--nkr-navy)}
+  .warn-box cite{display:block;font-style:normal;font-size:10.5px;color:var(--text-secondary);margin-top:6px}
+
+  /* ---- outcome banner ---- */
+  .outcome{border-radius:10px;padding:22px 24px;margin-bottom:22px;border:1.5px solid;box-shadow:var(--shadow)}
+  .outcome.zero{background:var(--green-bg);border-color:#B8E0CE}
+  .outcome.none{background:var(--warning-bg);border-color:#EAD4A8}
+  .outcome.pending{background:var(--bg-surface);border-color:var(--border)}
+  .outcome .tag{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px}
+  .outcome.zero .tag{color:var(--nkr-green-dark)}
+  .outcome.none .tag{color:var(--accent-warning)}
+  .outcome.pending .tag{color:var(--text-secondary)}
+  .outcome h2{font-size:19px;color:var(--nkr-navy);font-weight:700;margin-bottom:8px;line-height:1.3}
+  .outcome p{font-size:13.5px;color:var(--text-primary);line-height:1.55;max-width:860px}
+  .outcome p+p{margin-top:8px}
+  .outcome cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:10px}
+
+  .minor-note{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:22px;font-size:13px}
+  .minor-note summary{cursor:pointer;font-weight:700;color:var(--nkr-navy);list-style:none}
+  .minor-note summary::-webkit-details-marker{display:none}
+  .minor-note summary::before{content:"+ ";color:var(--accent-primary)}
+  .minor-note[open] summary::before{content:"– ";}
+  .minor-note .detail-body{margin-top:10px;color:var(--text-secondary);line-height:1.6}
+  .minor-note .detail-body p+p{margin-top:8px}
+  .minor-note cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:6px}
+
+  .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .btn{font-family:inherit;font-weight:700;font-size:14px;letter-spacing:.02em;color:#fff;background:var(--nkr-navy);border:none;border-radius:8px;padding:13px 22px;cursor:pointer;transition:.15s;text-decoration:none;display:inline-flex;align-items:center}
+  .btn:hover{background:#1c3a5c}
+  .btn:focus-visible{outline:3px solid var(--accent-primary);outline-offset:2px}
+  .btn.primary{background:var(--accent-primary)}
+  .btn.primary:hover{background:#178a63}
+
+  .lead-modal{position:fixed;inset:0;background:rgba(20,40,63,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
+  .lead-modal.show{display:flex}
+  .lead-box{width:100%;max-width:460px;background:#fff;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-lg);padding:26px}
+  .lead-box h2{margin:0 0 8px;font-weight:700;color:var(--nkr-navy);font-size:20px}
+  .lead-box p{margin:0 0 18px;color:var(--text-secondary);font-size:13px;line-height:1.55}
+  .lead-box .form-row{margin-bottom:13px;display:block}
+  .lead-box label{display:block;margin-bottom:5px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary)}
+  .lead-box input{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:15px;background:var(--bg-surface);color:var(--text-primary)}
+  .lead-box input:focus{outline:none;border-color:var(--nkr-navy);background:#fff}
+  .lead-error{color:var(--red);font-size:12px;display:none;margin-bottom:12px}
+  .lead-box .btn{width:100%;justify-content:center;margin-top:4px}
+
+  footer{text-align:center;font-size:11px;color:var(--text-secondary);margin-top:30px;letter-spacing:.02em;line-height:1.7}
+  footer .verified{color:var(--nkr-navy);font-weight:700}
+  footer a{color:var(--nkr-navy);text-decoration:none;border-bottom:1px solid var(--accent-primary)}
+  .disclaimer{font-size:11.5px;color:var(--text-secondary);background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;line-height:1.55;margin:0 0 20px}
+  .disclaimer strong{color:var(--nkr-navy)}
+
+  @media (max-width:860px){ .test-grid{grid-template-columns:1fr} }
+  @media (max-width:760px){ .entry-row{flex-direction:column} .callout-row{flex-direction:column;align-items:stretch} .prep-cols{flex-direction:column} }
+
+  @media print{
+    .btn,.explore,.lead-modal,.brand-bar,.entry-note,.field,.choice-tiles,.choice-group>label,.tool-nav,.field-error,.prep-panel{display:none!important}
+    .action-row{display:none!important}
+    body{background:#fff;padding:0}
+    header.masthead{position:static!important;background:var(--highlight-blue)!important;border:1px solid #ccc!important;box-shadow:none!important}
+    header.masthead .head-top{align-items:flex-start!important}
+    header.masthead .head-right{align-self:flex-start!important}
+    header.masthead .eyebrow{color:var(--nkr-green-dark)!important}
+    header.masthead h1{color:var(--nkr-navy)!important}
+    header.masthead .sub{color:var(--nkr-navy)!important}
+    .logo-mark .logo-light{display:block!important}
+    .logo-mark .logo-dark{display:none!important}
+    .logo-mark img{width:155px!important;height:auto!important}
+    .head-right{gap:0!important}
+    .wrap{max-width:100%}
+    .entry-card{box-shadow:none;border:1px solid #ccc}
+    .gate,.callout,.outcome,.test-card{box-shadow:none;break-inside:avoid;border:1px solid #ccc}
+    .test-grid{grid-template-columns:1fr 1fr 1fr}
+    .minor-note{break-inside:avoid}
+    .legal-strip{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="brand-bar"></div>
+
+<div class="lead-modal" id="leadModal">
+  <div class="lead-box">
+    <h2>Your details</h2>
+    <p>Enter your details to print or save the safe harbour assessment as a PDF. Your details may be recorded by this tool provider. The figures you entered above are not transmitted.</p>
+    <div class="lead-error" id="leadError">Please complete name, company name and a valid email address.</div>
+    <div class="form-row">
+      <label for="leadName">Name</label>
+      <input type="text" id="leadName" placeholder="Your name">
+    </div>
+    <div class="form-row">
+      <label for="leadCompany">Company name</label>
+      <input type="text" id="leadCompany" placeholder="Company name">
+    </div>
+    <div class="form-row">
+      <label for="leadEmail">Email</label>
+      <input type="text" id="leadEmail" placeholder="name@company.com">
+    </div>
+    <button class="btn" id="leadSubmitBtn">Print / Save as PDF</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="tool-nav">
+    <a href="index.html">🏠 Home</a>
+    <button type="button" class="reset-link" id="startOverBtn">↺ Start over</button>
+  </div>
+  <header class="masthead">
+    <div class="head-top">
+      <div class="head-title">
+        <div class="eyebrow">UAE Domestic Minimum Top-up Tax · Module 2</div>
+        <h1>Safe Harbour Screening</h1>
+        <div class="sub">Whether UAE Top-up Tax is deemed zero for the Fiscal Year under the Transitional CbCR Safe Harbour or the Simplified Calculations Safe Harbour — for an entity already confirmed in scope.</div>
+      </div>
+      <div class="head-right">
+        <div class="logo-mark">
+          <img class="logo-light" src="assets/nkr-logo-light.png" alt="NKR Auditing LLC">
+          <img class="logo-dark" src="assets/nkr-logo-dark.png" alt="NKR Auditing LLC">
+        </div>
+        <a class="explore" href="https://nkr.ae/automations" target="_blank" rel="noopener">Explore more
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="legal-strip" id="legalStrip"></div>
+
+  <div id="prepPanel"></div>
+  <div id="entry"></div>
+  <div id="outcome"></div>
+  <div id="gates"></div>
+  <div id="callouts"></div>
+  <div id="minorNotes"></div>
+
+  <div class="action-row">
+    <button class="btn primary" id="pdfBtn">Print / Save as PDF</button>
+    <a class="btn" href="index.html">← Back to Applicability Gate</a>
+    <a class="btn" href="module4-compliance-calendar.html">Compliance Calendar →</a>
+  </div>
+
+  <div id="disclaimer"></div>
+
+  <footer>
+    Not tax advice. Confirm any position against the primary legislation and a qualified UAE tax adviser before filing.<br>
+    <span class="verified">Designed and verified by <a href="https://nkr.ae" target="_blank" rel="noopener">NKR Auditing LLC</a></span>
+  </footer>
+</div>
+<script>
+/* ==================================================================
+   UAE DMTT — Module 2: Safe Harbour Screening
+   Legal basis: CD 142/2024 Annexure Art 8.2 (8.2.1 Transitional CbCR
+   Safe Harbour · 8.2.2 Simplified Calculations Safe Harbour · 8.2.3
+   Disapplication), read with the 2026 OECD Consolidated Commentary
+   Annex A, adopted by MD 96 of 2026.
+
+   ⚠️ CD 142 GOVERNS WHERE IT STATES ITS OWN FIGURES OR CONDITIONS.
+   The Commentary is adopted interpretive material, but three things
+   would be wrong if built from the Commentary alone — see
+   TRANSITION_PERIOD / TRANSITION_RATE and DISQUALIFIERS below, and
+   the two separate de minimis implementations.
+   ================================================================== */
+
+const CITE_M2={
+  art82:"Art. 8.2, CD 142/2024 Annexure",
+  transitional:"Art. 8.2.1.1, CD 142/2024 Annexure",
+  transitionPeriod:"Art. 8.2.1, CD 142/2024 Annexure (Transition Period definition)",
+  transitionRate:"Art. 8.2.1, CD 142/2024 Annexure (Transition Rate definition)",
+  disqualifiers:"Art. 8.2.1.4, CD 142/2024 Annexure",
+  onceOut:"Art. 8.2.1.4(d), CD 142/2024 Annexure",
+  qfs:"Art. 8.2.1, CD 142/2024 Annexure (Qualified Financial Statements); Commentary Annex A Ch.1, adopted by Ministerial Decision No. 96 of 2026",
+  ppa:"Commentary Annex A Ch.1 ¶9.2–9.5, adopted by Ministerial Decision No. 96 of 2026",
+  noCbcRequired:"Art. 8.2.1.8, CD 142/2024 Annexure",
+  deMinimisT:"Art. 8.2.1.1(a), CD 142/2024 Annexure; Commentary Annex A Ch.1 ¶17",
+  heldForSale:"Art. 8.2.1.6, CD 142/2024 Annexure",
+  simplifiedEtr:"Art. 8.2.1.1(b), CD 142/2024 Annexure",
+  etrDisregarded:"Commentary Annex A Ch.1 ¶20, adopted by Ministerial Decision No. 96 of 2026",
+  routineProfits:"Art. 8.2.1.1(c), CD 142/2024 Annexure; Arts. 5.3 and 9.2, CD 142/2024 Annexure",
+  routineAutoPass:"Commentary Annex A Ch.1 ¶22, adopted by Ministerial Decision No. 96 of 2026",
+  sbieExclusions:"Art. 8.2.1.7, CD 142/2024 Annexure",
+  jv:"Art. 8.2.1.2, CD 142/2024 Annexure; Commentary Annex A Ch.1 ¶35",
+  investmentEntityReported:"Art. 8.2.1.5, CD 142/2024 Annexure",
+  simplified:"Art. 8.2.2.1, CD 142/2024 Annexure",
+  simplifiedCombined:"Art. 8.2.2.2, CD 142/2024 Annexure",
+  simplifiedTests:"Art. 8.2.2.3, CD 142/2024 Annexure",
+  simplifiedCalcs:"Arts. 8.2.2.4–8.2.2.6, CD 142/2024 Annexure",
+  deMinimisS:"Art. 8.2.2.3(b), CD 142/2024 Annexure; Art. 5.5, CD 142/2024 Annexure (three-year averages)",
+  etrS:"Art. 8.2.2.3(c), CD 142/2024 Annexure; Art. 5.1.1, CD 142/2024 Annexure (15% Minimum Rate)",
+  nmce:"Art. 8.2.2.7(a), CD 142/2024 Annexure",
+  nmceCommentary:"Commentary Annex A Ch.2 ¶21–23, adopted by Ministerial Decision No. 96 of 2026",
+  relevantCbc:"Art. 8.2.2.7(b), CD 142/2024 Annexure",
+  disapplication:"Art. 8.2.3, CD 142/2024 Annexure",
+  disapplicationSome:"Art. 8.2.3.2, CD 142/2024 Annexure",
+  // Art 10.6 is the general threshold-conversion rule: it applies to "a
+  // threshold in this Decision", so it reaches Art 8.2's EUR 10m / 1m /
+  // 50m figures on its own terms. TTGREG1 §4.3 is the FTA restating the
+  // same hierarchy in the Art 1.1.1 context — a secondary illustration,
+  // not the operative source and not a rule confined to that threshold.
+  currency:"Art. 10.6, CD 142/2024 Annexure; TTGREG1 §4.3 (same hierarchy, stated for the Art 1.1.1 threshold)",
+  functionalCurrency:"Arts. 10.1–10.2, CD 142/2024 Annexure",
+  consolidationCurrency:"Art. 10.4, CD 142/2024 Annexure; Art. 3.1.3, CD 142/2024 Annexure",
+  qdmttSafeHarbour:"Commentary Annex A Ch.3, adopted by Ministerial Decision No. 96 of 2026"
+};
+
+/* ==================================================================
+   ⚠️ UAE-SPECIFIC FIGURES — NOT the OECD Commentary's generic ones.
+
+   The Commentary covers jurisdictions that began in 2023/2024, so its
+   generic Transition Period runs to FYs beginning on or before 31 Dec
+   2027 and not ending after 30 June 2029, with a 15% rate tier for
+   2023–24. The UAE regime begins 1 January 2025: CD 142 omits the 15%
+   tier entirely and runs a shorter window. A tool built on the OECD
+   figures would tell UAE users the window is open when it is closed,
+   and would apply a rate that does not exist here.
+
+   Consistency check worth keeping in mind: CD 142 applies only to
+   Fiscal Years beginning on or after 1 Jan 2025. Combined with "begins
+   before 1 Jan 2027", the window is exactly FYs beginning in 2025 or
+   2026 — which is why two rate tiers cover it with no gap and no third
+   tier is needed.
+   ================================================================== */
+const TRANSITION_PERIOD={
+  beginsBefore:Date.UTC(2027,0,1),   // FY must begin BEFORE 1 Jan 2027
+  endsBefore:Date.UTC(2028,6,1)      // FY must end BEFORE 1 July 2028
+};
+const TRANSITION_RATE={2025:0.16,2026:0.17};
+
+/* Thresholds. All EUR, per Art 10.6's conversion rule (see CITE_M2.currency). */
+const EUR_10M=10_000_000;
+const EUR_1M=1_000_000;
+const EUR_50M=50_000_000;
+const MINIMUM_RATE=0.15;   // Art 5.1.1 — Gate 3's ETR test, NOT the Transition Rate
+
+/* ---- small helpers ---- */
+function parseDateInput(v){ if(!v)return null; const p=v.split('-').map(Number); if(p.length!==3||p.some(isNaN))return null; return new Date(Date.UTC(p[0],p[1]-1,p[2])); }
+function fmtDate(d){ return d?d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}):''; }
+function fmtEur(n){ return n===null||n===undefined||isNaN(n)?'—':'EUR '+Number(n).toLocaleString('en-GB',{maximumFractionDigits:0}); }
+function fmtPct(n){ return n===null||n===undefined||isNaN(n)||!isFinite(n)?'—':(n*100).toFixed(2)+'%'; }
+function num(id){ const el=document.getElementById(id); if(!el||el.value==='')return null; const v=Number(el.value); return isNaN(v)?null:v; }
+
+/* ==================================================================
+   PURE TEST FUNCTIONS — every operative rule lives here, separately
+   from rendering, so test.html can assert on them directly as well as
+   through the rendered DOM.
+   ================================================================== */
+
+/* Gate 1. Both conditions are conjunctive and are tested independently:
+   a long or short Fiscal Year can satisfy one and fail the other. */
+function isTransitionPeriodOpen(start,end){
+  if(!start||!end)return null;
+  return start.getTime()<TRANSITION_PERIOD.beginsBefore && end.getTime()<TRANSITION_PERIOD.endsBefore;
+}
+function transitionRateFor(start){
+  if(!start)return null;
+  const y=start.getUTCFullYear();
+  return Object.prototype.hasOwnProperty.call(TRANSITION_RATE,y)?TRANSITION_RATE[y]:null;
+}
+
+/* Art 8.2.1.1(a) — CURRENT YEAR ONLY. Figures as reported in the
+   Qualified CbC Report. Commentary ¶17: the current-year basis is
+   deliberate, so that a transitional simplification does not itself
+   require a multi-year computation. Do not confuse with Art 8.2.2.3(b),
+   which is a three-year average — see deMinimisSimplified below. */
+function deMinimisTransitional(totalRevenue,pbt,heldForSaleRevenue){
+  if(totalRevenue===null||pbt===null)return null;
+  // Art 8.2.1.6: cannot rely on this test where the UPE controls UAE
+  // entities not consolidated line-by-line because held for sale, and
+  // their revenue plus UAE Total Revenue reaches EUR 10m.
+  if(heldForSaleRevenue!==null&&heldForSaleRevenue!==undefined&&
+     (totalRevenue+heldForSaleRevenue)>=EUR_10M){
+    return {pass:false,blockedByHeldForSale:true,combined:totalRevenue+heldForSaleRevenue};
+  }
+  return {pass:totalRevenue<EUR_10M && pbt<EUR_1M,blockedByHeldForSale:false};
+}
+
+/* Art 8.2.1.1(b). Simplified ETR = Simplified Covered Taxes ÷ PBT. */
+function simplifiedEtr(simplifiedCoveredTaxes,pbt){
+  if(simplifiedCoveredTaxes===null||pbt===null||pbt===0)return null;
+  return simplifiedCoveredTaxes/pbt;
+}
+function simplifiedEtrTest(simplifiedCoveredTaxes,pbt,rate){
+  const etr=simplifiedEtr(simplifiedCoveredTaxes,pbt);
+  if(etr===null||rate===null)return null;
+  return {pass:etr>=rate,etr};
+}
+
+/* Art 8.2.1.1(c), read with Arts 5.3 and 9.2 (transitional SBIE rates).
+   Commentary ¶22: a jurisdiction with a loss or zero profits always
+   meets this test, so short-circuit before requiring an SBIE figure —
+   asking for one there would be asking for a number that cannot change
+   the answer. */
+function routineProfitsTest(pbt,sbie){
+  if(pbt===null)return null;
+  if(pbt<=0)return {pass:true,autoPass:true};
+  if(sbie===null)return null;
+  return {pass:pbt<=sbie,autoPass:false};
+}
+
+/* Art 8.2.2.3(b) — THREE-YEAR AVERAGE (Art 5.5: current + 2 preceding
+   Fiscal Years), computed on the Simplified Revenue / Income
+   Calculations. Same two thresholds as the transitional test above, on a
+   different basis and from different inputs. Kept as a separate function
+   rather than a flag on deMinimisTransitional precisely so the two can
+   never be called for each other by accident. */
+function deMinimisSimplified(avgRevenue,avgIncome){
+  if(avgRevenue===null||avgIncome===null)return null;
+  return {pass:avgRevenue<EUR_10M && (avgIncome<EUR_1M)};
+}
+
+/* Art 8.2.2.3(c) — 15% Minimum Rate under Art 5.1.1, NOT the
+   Transition Rate. */
+function etrTestSimplified(simplifiedTaxes,simplifiedIncome){
+  if(simplifiedTaxes===null||simplifiedIncome===null||simplifiedIncome===0)return null;
+  const etr=simplifiedTaxes/simplifiedIncome;
+  return {pass:etr>=MINIMUM_RATE,etr};
+}
+
+/* Art 8.2.2.3(a). */
+function routineProfitsSimplified(simplifiedIncome,sbie){
+  if(simplifiedIncome===null)return null;
+  if(simplifiedIncome<=0)return {pass:true,autoPass:true};
+  if(sbie===null)return null;
+  return {pass:simplifiedIncome<=sbie,autoPass:false};
+}
+
+/* Non-material Constituent Entity — Art 8.2.2.7(a)'s four conditions,
+   plus the three restrictions the Commentary adds at Annex A Ch.2
+   ¶21–23. The Commentary ones are disqualifying in a way the article's
+   own list is not: a group whose Consolidated Financial Statements fall
+   under paragraph (b) of the Art 18.1 definition (a Main Entity with its
+   foreign Permanent Establishments) has NO Non-material Constituent
+   Entities at all and cannot use these calculations. */
+function isNmce(c){
+  if(!c)return null;
+  const required=['excludedOnSizeOnly','cfsParagraphAOrC','externallyAudited','revenueUnder50mOrAcceptableStandard'];
+  if(required.some(k=>c[k]===null||c[k]===undefined))return null;
+  if(c.cfsParagraphBMainEntityPEs===true)return {isNmce:false,reason:'paragraphB'};
+  if(c.cfsParagraphDDeemed===true)return {isNmce:false,reason:'paragraphD'};
+  if(c.auditQualifiedOnPerimeter===true)return {isNmce:false,reason:'auditQualified'};
+  return {isNmce:required.every(k=>c[k]===true),reason:null};
+}
+
+/* ==================================================================
+   ⚠️ CD 142 Art 8.2.1.4 — the FIVE disqualifying conditions.
+
+   This list is UAE-specific in BOTH directions and is not a copy of
+   OECD Annex A ¶10. (a) and (e) have no OECD counterpart; the OECD's
+   own ¶10(c) — jurisdictions with Constituent Entities electing
+   Eligible Distribution Tax Systems — is deliberately ABSENT here,
+   and must stay absent.
+
+   Why it must not be added: CD 142 has no Eligible Distribution Tax
+   Systems provision at all. The UAE omits both the OECD Model Rules'
+   Art 7.3 (Eligible Distribution Tax Systems) and 7.4 (ETR Computation
+   for Investment Entities), neither of which fits a QDMTT-only regime,
+   which is why CD 142's Article 7 has only five sub-articles. The
+   exclusion therefore has no referent in UAE law — and worse, anyone
+   mapping "Art 7.3" across from the OECD text would land on CD 142's
+   Art 7.3, the Investment Entity Tax Transparency Election, and
+   disqualify entities that made an entirely unrelated and legitimate
+   election from a safe harbour they are entitled to.
+   ================================================================== */
+const DISQUALIFIERS=[
+  {id:'d1',cd:'8.2.1.4(a)',
+   label:'The UAE is the UPE Jurisdiction and the Ultimate Parent Entity is a Flow-through Entity',
+   sub:'Unless all Ownership Interests in the Ultimate Parent Entity are held by Qualified Persons — asked below if selected',
+   subQuestion:{key:'qualifiedPersonsAll',
+     q:'Are all Ownership Interests in the Ultimate Parent Entity held by Qualified Persons?',
+     yes:'Yes — all Ownership Interests are held by Qualified Persons',
+     yesSub:'Art 8.2.1.4(a)\'s exception applies, so this is not disqualifying',
+     no:'No — not all Ownership Interests are held by Qualified Persons',
+     noSub:'The exception does not apply, so this condition disqualifies',
+     clearsWhen:true}},
+  {id:'d2',cd:'8.2.1.4(b)',
+   label:'The Top-up Tax in question arises from a Stateless Reverse Hybrid Entity',
+   sub:'Note this is narrower than the OECD list, which excludes Stateless Constituent Entities generally'},
+  {id:'d3',cd:'8.2.1.4(c)',
+   label:'Multi-parented MNE Group where a single Qualified CbC Report does not include the combined groups\' information',
+   sub:'Both groups\' information must appear in one Qualified CbC Report'},
+  {id:'d4',cd:'8.2.1.4(d)',
+   label:'The UAE Constituent Entities did NOT benefit from the Transitional CbCR Safe Harbour in a previous Fiscal Year in which the MNE Group was subject to Pillar Two',
+   sub:'"Once out, always out" — unless the MNE Group had no UAE Constituent Entities in that year. Asked below if selected',
+   subQuestion:{key:'noUaeCEsPrevYear',
+     q:'Did the MNE Group have any UAE Constituent Entities in that previous Fiscal Year?',
+     yes:'No — the MNE Group had no UAE Constituent Entities that year',
+     yesSub:'There was nothing to claim, so the once-out rule is not triggered',
+     no:'Yes — there were UAE Constituent Entities that year',
+     noSub:'The safe harbour was available and not claimed, so it cannot be claimed now',
+     clearsWhen:true}},
+  {id:'d5',cd:'8.2.1.4(e)',
+   label:'The MNE Group uses data from different sources of Qualified Financial Statements for the same Entity or Permanent Establishment',
+   sub:'No OECD counterpart — this condition is specific to CD 142'}
+];
+
+/* ---- mutable selection state (numbers are read straight from inputs) ---- */
+const S={
+  disq:new Set(),
+  qualifiedPersonsAll:null,
+  noUaeCEsPrevYear:null,
+  qfsSource:null,
+  ppaPushedDown:null,
+  ppaConsistent:null,
+  ppaGoodwill:null,
+  nmce:{excludedOnSizeOnly:null,cfsParagraphAOrC:null,externallyAudited:null,
+        revenueUnder50mOrAcceptableStandard:null,cfsParagraphBMainEntityPEs:null,
+        cfsParagraphDDeemed:null,auditQualifiedOnPerimeter:null}
+};
+
+/* A disqualifier counts only once its sub-question, if any, resolves
+   against the taxpayer. Selecting the tile alone is not the answer. */
+function activeDisqualifiers(){
+  return DISQUALIFIERS.filter(d=>{
+    if(!S.disq.has(d.id))return false;
+    if(!d.subQuestion)return true;
+    const v=S[d.subQuestion.key];
+    if(v===null)return true;                 // unresolved — treat as still blocking
+    return v!==d.subQuestion.clearsWhen;
+  });
+}
+function unresolvedSubQuestions(){
+  return DISQUALIFIERS.filter(d=>S.disq.has(d.id)&&d.subQuestion&&S[d.subQuestion.key]===null);
+}
+
+function fyStart(){ return parseDateInput((document.getElementById('fyStart')||{}).value); }
+function fyEnd(){ return parseDateInput((document.getElementById('fyEnd')||{}).value); }
+
+/* ==================================================================
+   Static chrome
+   ================================================================== */
+document.getElementById('legalStrip').innerHTML=
+  `<strong>Legal basis (primary sources only):</strong> Cabinet Decision No. 142 of 2024 (Annexure), Article 8.2 — 8.2.1 Transitional CbCR Safe Harbour, 8.2.2 Simplified Calculations Safe Harbour, 8.2.3 Disapplication — read with Articles 5.3, 5.5, 9.2 and 10.6 · 2026 OECD Consolidated Commentary, Annex A (Safe Harbours), adopted by Ministerial Decision No. 96 of 2026.`;
+
+document.getElementById('prepPanel').innerHTML=`
+  <div class="prep-panel">
+    <h2>What you'll need before you start</h2>
+    <p>This is a structured eligibility assessment, not a quick questionnaire. The tests below run on figures from your Qualified CbC Report and Qualified Financial Statements — most of which are not to hand in a browser session. Gather these first; every gate still displays its rules without them, so you can read through before collecting anything.</p>
+    <div class="prep-cols">
+      <div class="prep-col">
+        <h4>Always needed</h4>
+        <ul>
+          <li>Fiscal Year start and end dates</li>
+          <li>Whether the UAE Constituent Entities claimed the Transitional CbCR Safe Harbour in any earlier Pillar Two year</li>
+          <li>The source of the figures in your CbC Report</li>
+        </ul>
+      </div>
+      <div class="prep-col">
+        <h4>For the Transitional tests (Art 8.2.1)</h4>
+        <ul>
+          <li>UAE Total Revenue per the Qualified CbC Report</li>
+          <li>UAE Profit (Loss) before Income Tax per the same report</li>
+          <li>Simplified Covered Taxes — income tax expense per Qualified Financial Statements, less non-Covered Taxes and uncertain tax positions</li>
+          <li>UAE Substance-based Income Exclusion computed under Arts 5.3 and 9.2</li>
+        </ul>
+      </div>
+      <div class="prep-col">
+        <h4>For the Simplified Calculations tests (Art 8.2.2)</h4>
+        <ul>
+          <li>Average Pillar Two Revenue and Income over three Fiscal Years</li>
+          <li>Simplified Income and Simplified Taxes for Non-material Constituent Entities</li>
+          <li>Full Pillar Two figures for any UAE Constituent Entity that is <b>not</b> non-material</li>
+          <li>Whether the Consolidated Financial Statements are externally audited, and whether the opinion is qualified on the consolidation perimeter</li>
+        </ul>
+      </div>
+    </div>
+  </div>`;
+
+document.getElementById('entry').innerHTML=`
+  <div class="entry-card">
+    <h2>Your Fiscal Year</h2>
+    <div class="entry-note">The Transition Period test in Gate 1 runs off these two dates. Both conditions are tested independently, so a Fiscal Year that is longer or shorter than 12 months can satisfy one and fail the other.</div>
+    <div class="entry-row">
+      <div class="field">
+        <label for="fyStart">Fiscal Year start date</label>
+        <input type="date" id="fyStart">
+      </div>
+      <div class="field">
+        <label for="fyEnd">Fiscal Year end date</label>
+        <input type="date" id="fyEnd">
+      </div>
+    </div>
+    <div class="field-error" id="dateError" style="display:none"></div>
+    <div class="warn-box info">
+      <b>All thresholds below are stated in EUR.</b> Where your figures are in another currency, convert them using the average of the daily reference rates for the month of December prior to the commencement of the relevant Fiscal Year, as quoted by (a) the European Central Bank; (b) where the European Central Bank does not quote a rate for the local currency, the Central Bank of the UAE; or (c) if neither quotes a daily rate for the two currencies, another source acceptable to the Federal Tax Authority. This is the general rule for any threshold in the Decision, so it reaches the EUR 10 million, EUR 1 million and EUR 50 million figures used here.
+      <cite>${CITE_M2.currency}</cite>
+    </div>
+    <div class="inputs-summary" id="inputsSummary"></div>
+  </div>`;
+
+/* ==================================================================
+   Gate DOM is built ONCE and then refreshed in place. Re-rendering
+   innerHTML on every keystroke would drop focus mid-number and make
+   the figure fields unusable, so refresh() only rewrites the computed
+   parts — statuses, verdicts, working and visibility.
+   ================================================================== */
+function tileMarkup(id,label,sub,danger){
+  return `<button type="button" class="choice-tile${danger?' danger':''}" data-tile="${id}">
+    <span class="box"></span><span><b>${label}</b>${sub?`<small>${sub}</small>`:''}</span></button>`;
+}
+function numField(id,label,hint){
+  return `<div class="field"><label for="${id}">${label}</label><input type="number" id="${id}" inputmode="decimal" placeholder="EUR">${hint?`<div class="hint">${hint}</div>`:''}</div>`;
+}
+
+document.getElementById('gates').innerHTML=`
+  <!-- ============ GATE 1 ============ -->
+  <div class="gate" id="gate1">
+    <div class="gate-head">
+      <div><div class="gate-num">Gate 1</div><h2>Is the Transition Period still open?</h2></div>
+      <div class="gate-status pending" id="g1Status">Enter your dates</div>
+    </div>
+    <div class="gate-intro">The Transitional CbCR Safe Harbour is available only for a Fiscal Year that <b>begins before 1 January 2027</b> and <b>ends before 1 July 2028</b>. These are the UAE's own figures and are shorter than the OECD Commentary's generic window, because the UAE regime begins on 1 January 2025 and CD 142 omits the earlier tiers entirely.</div>
+    <div class="warn-box info" id="g1Detail"></div>
+    <cite>${CITE_M2.transitionPeriod} · ${CITE_M2.transitionRate}</cite>
+  </div>
+
+  <!-- ============ GATE 2 ============ -->
+  <div class="gate" id="gate2">
+    <div class="gate-head">
+      <div><div class="gate-num">Gate 2</div><h2>Transitional CbCR Safe Harbour</h2></div>
+      <div class="gate-status pending" id="g2Status">Pending Gate 1</div>
+    </div>
+    <div class="gate-intro">Meeting <b>any one</b> of the three tests means UAE Top-up Tax is deemed zero for the Fiscal Year. The disqualifying conditions are asked first, because any one of them is fatal regardless of how the tests come out.</div>
+
+    <div class="gate-section">
+      <h3>2a · Disqualifying conditions (Art 8.2.1.4)</h3>
+      <div class="sec-note">Select any that apply. This list is specific to CD 142 and is not the OECD's — two of these five have no OECD counterpart, and one condition in the OECD's list has no counterpart here.</div>
+      <div class="choice-group"><div class="choice-tiles" id="disqTiles">
+        ${DISQUALIFIERS.map(d=>tileMarkup(d.id,d.label,d.sub,true)).join('')}
+      </div></div>
+      <div id="disqSubs"></div>
+      <div id="disqVerdict"></div>
+    </div>
+
+    <div class="gate-section" id="g2QfsSection">
+      <h3>2b · Qualified Financial Statements</h3>
+      <div class="sec-note">The safe harbour runs on a <b>Qualified CbC Report</b> — one prepared using Qualified Financial Statements. Where are the figures drawn from?</div>
+      <div class="choice-group"><div class="choice-tiles" id="qfsTiles">
+        ${tileMarkup('a','The accounts used to prepare the UPE\'s Consolidated Financial Statements','The reporting package. Where the calculation is based on these consolidation accounts, Art 10.4 points to the Consolidated Financial Statements\' presentation currency')}
+        ${tileMarkup('b','Separate financial statements of each Constituent Entity','Prepared under an Acceptable or Authorised Financial Accounting Standard, with reliable information')}
+        ${tileMarkup('c','For entities unconsolidated on size or materiality grounds only, the accounts used for the CbC Report','The same accounts that fed the CbC Report itself')}
+      </div></div>
+      <div class="choice-group" style="margin-top:14px"><label>Purchase price accounting</label><div class="choice-tiles" id="ppaTiles">
+        ${tileMarkup('none','No PPA adjustments pushed down','Purchase price accounting has not been pushed into the acquired entity\'s reporting package or separate financial statements')}
+        ${tileMarkup('pushed','PPA adjustments have been pushed down','Those statements are NOT Qualified Financial Statements unless both conditions below are met',true)}
+      </div></div>
+      <div id="ppaSubs"></div>
+      <div class="warn-box info">
+        <b>Not required to file a Qualified CbC Report?</b> The safe harbour may still apply, provided the Top-up Tax Return includes the Qualified Financial Statement data that <i>would have been</i> reported as Total Revenue and Profit (Loss) before Income Tax.
+        <cite>${CITE_M2.noCbcRequired}</cite>
+      </div>
+    </div>
+
+    <div class="gate-section" id="g2TestSection">
+      <h3>2c · The three tests (Art 8.2.1.1)</h3>
+      <div class="sec-note">Any one passing ends the enquiry. Attempt whichever you have data for — they are independent, and there is no advantage to any particular one.</div>
+      <div class="test-grid">
+        <div class="test-card" id="t2a">
+          <h4>(a) De Minimis Test</h4>
+          <div class="rule">UAE Total Revenue &lt; EUR 10m <b>and</b> Profit (Loss) before Income Tax &lt; EUR 1m — both as reported in the Qualified CbC Report. <b>Current year only</b>, not an average.</div>
+          <div class="test-inputs">
+            ${numField('g2Revenue','UAE Total Revenue')}
+            ${numField('g2Pbt','UAE Profit (Loss) before Income Tax','A loss satisfies the second limb')}
+            ${numField('g2Hfs','Revenue of held-for-sale UAE entities','Optional. UAE entities the UPE controls but does not consolidate line-by-line because they are held for sale (Art 8.2.1.6)')}
+          </div>
+          <div class="verdict untested" id="t2aVerdict">Not yet tested</div>
+          <div class="working" id="t2aWorking" style="display:none"></div>
+          <cite>${CITE_M2.deMinimisT}</cite>
+        </div>
+        <div class="test-card" id="t2b">
+          <h4>(b) Simplified ETR Test</h4>
+          <div class="rule">Simplified Covered Taxes ÷ Profit (Loss) before Income Tax, compared against the Transition Rate for your Fiscal Year.</div>
+          <div class="test-inputs">
+            ${numField('g2Sct','Simplified Covered Taxes','Income tax expense per Qualified Financial Statements, less taxes that are not Covered Taxes and less uncertain tax positions')}
+          </div>
+          <div class="verdict untested" id="t2bVerdict">Not yet tested</div>
+          <div class="working" id="t2bWorking" style="display:none"></div>
+          <cite>${CITE_M2.simplifiedEtr}</cite>
+        </div>
+        <div class="test-card" id="t2c">
+          <h4>(c) Routine Profits Test</h4>
+          <div class="rule">UAE Profit (Loss) before Income Tax ≤ the Substance-based Income Exclusion computed under Arts 5.3 and 9.2 (transitional rates — 9.6%/7.6% for FY2025, 9.4%/7.4% for FY2026).</div>
+          <div class="test-inputs">
+            ${numField('g2Sbie','UAE Substance-based Income Exclusion','Exclude payroll and tangible assets of entities not reported in the UAE in the CbC Report, of Excluded Entities, and of entities located in different jurisdictions under CD 142 than under the CbC Report (Art 8.2.1.7)')}
+          </div>
+          <div class="verdict untested" id="t2cVerdict">Not yet tested</div>
+          <div class="working" id="t2cWorking" style="display:none"></div>
+          <cite>${CITE_M2.routineProfits}</cite>
+        </div>
+      </div>
+      <div class="warn-box amber" id="etrDisregardedNote" style="display:none">
+        <b>A failed Simplified ETR test leaves you with no usable rate.</b> The figure computed here is <b>disregarded</b> for GloBE purposes — it cannot be carried over and reused as the Article 5.2.1 ETR. A Simplified ETR of 10% does not become a 10% ETR for Top-up Tax Percentage purposes; a full computation, or the Simplified Calculations Safe Harbour below, is still required.
+        <cite>${CITE_M2.etrDisregarded}</cite>
+      </div>
+      <div class="warn-box info">
+        <b>Currency bases can differ across a single test.</b> The Routine Profits test compares a figure from the Qualified CbC Report against a Substance-based Income Exclusion computed under CD 142. Calculations under the Decision use the functional currency of the standalone financial statements, and where Domestic Group entities have different functional currencies a Five-Year Election is required to use either the UPE's presentation currency or UAE Dirhams. Check both sides are on the same basis before relying on the comparison.
+        <cite>${CITE_M2.functionalCurrency}</cite>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GATE 3 ============ -->
+  <div class="gate" id="gate3">
+    <div class="gate-head">
+      <div><div class="gate-num">Gate 3</div><h2>Simplified Calculations Safe Harbour</h2></div>
+      <div class="gate-status pending" id="g3Status">Permanent — no time limit</div>
+    </div>
+    <div class="gate-intro" id="g3Intro"></div>
+    <div class="warn-box amber">
+      <b>This is not a full escape hatch.</b> The Simplified Calculations apply <b>only to Non-material Constituent Entities</b>. Their simplified figures are <b>combined with full Pillar Two computations</b> for every UAE Constituent Entity that is not non-material, and the tests are then applied to that combined result. If the Group has material UAE entities, this safe harbour spares you the work on the non-material ones only — it does not avoid computation.
+      <cite>${CITE_M2.simplifiedCombined}</cite>
+    </div>
+    <div class="warn-box info">
+      <b>Scope limit.</b> Where a test is met, the Top-up Tax deemed zero is the Top-up Tax <b>other than Additional Current Top-up Tax</b>. Additional Current Top-up Tax arising from a recalculation of a prior year's ETR is unaffected.
+      <cite>${CITE_M2.simplified}</cite>
+    </div>
+
+    <div class="gate-section">
+      <h3>3a · Non-material Constituent Entity conditions</h3>
+      <div class="sec-note">All of the first four must hold. The last three are disqualifying: each one means there are no Non-material Constituent Entities at all, so the Simplified Calculations are unavailable.</div>
+      <div class="choice-group"><div class="choice-tiles" id="nmceTiles">
+        ${tileMarkup('excludedOnSizeOnly','Not consolidated line-by-line <b>solely</b> on size or materiality grounds, and is a Constituent Entity under Art 1.2.2','Required condition')}
+        ${tileMarkup('cfsParagraphAOrC','Those Consolidated Financial Statements fall under paragraph (a) or (c) of the Art 18.1 definition','Required condition')}
+        ${tileMarkup('externallyAudited','Those Consolidated Financial Statements are externally audited','Required condition')}
+        ${tileMarkup('revenueUnder50mOrAcceptableStandard','Total Revenue ≤ EUR 50m, or its CbC Report accounts are prepared under an Acceptable or Authorised Financial Accounting Standard','Required condition — the standard requirement bites only above EUR 50m')}
+        ${tileMarkup('cfsParagraphBMainEntityPEs','The Consolidated Financial Statements fall under paragraph (b) — a Main Entity with its foreign Permanent Establishments','Disqualifying: a Group composed exclusively of a Main Entity and its Permanent Establishments has no Non-material Constituent Entities at all',true)}
+        ${tileMarkup('cfsParagraphDDeemed','The Consolidated Financial Statements fall under paragraph (d) — the deeming provision where no consolidated accounts were prepared','Disqualifying: the definition requires actual consolidated, externally audited statements',true)}
+        ${tileMarkup('auditQualifiedOnPerimeter','The audit opinion contains an objection or qualification regarding the entity\'s exclusion from the consolidation perimeter','Disqualifying',true)}
+      </div></div>
+      <div id="nmceVerdict"></div>
+      <div class="warn-box info">
+        <b>Each Simplified Calculation is an Annual Election.</b> Simplified Revenue Calculation: the entity's Pillar Two Revenue is its Total Revenue per the Relevant CbC Regulations. Simplified Income Calculation: its Pillar Two Income or Loss is <b>also</b> its Total Revenue — deliberately conservative, since proxying income by gross revenue with no expense deduction overstates income and makes the tests harder to pass. Simplified Tax Calculation: its Adjusted Covered Taxes are its current-year Income Tax Accrued per those regulations.
+        <cite>${CITE_M2.simplifiedCalcs}</cite>
+      </div>
+      <div class="warn-box info">
+        <b>Relevant CbC Regulations</b> means the CbC regulations of the UPE Jurisdiction, or of the surrogate parent entity's jurisdiction where no CbC Report is filed in the UPE Jurisdiction. If neither has CbC legislation, the OECD BEPS Action 13 Final Report and the OECD Guidance on the Implementation of Country-by-Country Reporting apply instead.
+        <cite>${CITE_M2.relevantCbc}</cite>
+      </div>
+    </div>
+
+    <div class="gate-section">
+      <h3>3b · The three tests (Art 8.2.2.3)</h3>
+      <div class="sec-note">Any one passing means the Top-up Tax, other than Additional Current Top-up Tax, is deemed zero. Note the two differences from Gate 2: the de minimis test runs on <b>three-year averages</b>, and the ETR test uses <b>15%</b>, not the Transition Rate.</div>
+      <div class="test-grid">
+        <div class="test-card" id="t3a">
+          <h4>(a) Routine Profits Test</h4>
+          <div class="rule">Pillar Two Income in the UAE under the Simplified Income Calculation ≤ the Substance-based Income Exclusion computed under Art 5.3.</div>
+          <div class="test-inputs">
+            ${numField('g3Income','Pillar Two Income (Simplified)','Combined: simplified figures for Non-material Constituent Entities plus full computations for the others')}
+            ${numField('g3Sbie','UAE Substance-based Income Exclusion','Computed under Art 5.3')}
+          </div>
+          <div class="verdict untested" id="t3aVerdict">Not yet tested</div>
+          <div class="working" id="t3aWorking" style="display:none"></div>
+          <cite>${CITE_M2.simplifiedTests}</cite>
+        </div>
+        <div class="test-card" id="t3b">
+          <h4>(b) De Minimis Test</h4>
+          <div class="rule"><b>Average</b> Pillar Two Revenue &lt; EUR 10m <b>and</b> <b>Average</b> Pillar Two Income &lt; EUR 1m or a loss. Averages are over the current and two preceding Fiscal Years.</div>
+          <div class="test-inputs">
+            ${numField('g3AvgRev','Average Pillar Two Revenue','Three-year average per Art 5.5')}
+            ${numField('g3AvgInc','Average Pillar Two Income','Three-year average per Art 5.5. A loss satisfies the second limb')}
+          </div>
+          <div class="verdict untested" id="t3bVerdict">Not yet tested</div>
+          <div class="working" id="t3bWorking" style="display:none"></div>
+          <cite>${CITE_M2.deMinimisS}</cite>
+        </div>
+        <div class="test-card" id="t3c">
+          <h4>(c) Effective Tax Rate Test</h4>
+          <div class="rule">ETR under the Simplified Income and Simplified Tax Calculations ≥ <b>15%</b> — the Minimum Rate under Art 5.1.1, not the Transition Rate used in Gate 2.</div>
+          <div class="test-inputs">
+            ${numField('g3Tax','Adjusted Covered Taxes (Simplified)','Income Tax Accrued for the current year per the Relevant CbC Regulations, for Non-material Constituent Entities')}
+          </div>
+          <div class="verdict untested" id="t3cVerdict">Not yet tested</div>
+          <div class="working" id="t3cWorking" style="display:none"></div>
+          <cite>${CITE_M2.etrS}</cite>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+/* ==================================================================
+   Gate 4 — not a test. A standing caution shown whenever a safe
+   harbour is claimed, at the same visual weight as Module 4's Joint &
+   Several Liability callout, plus the once-out-always-out warning,
+   which is the single most consequential planning point here.
+   ================================================================== */
+document.getElementById('callouts').innerHTML=`
+  <div class="callout-row">
+    <div class="callout danger" id="callout-onceout">
+      <div class="tag">One-way door</div>
+      <h3>"Once out, always out"</h3>
+      <p>If the UAE Constituent Entities did <b>not</b> claim the Transitional CbCR Safe Harbour in an earlier Fiscal Year in which the MNE Group was subject to Pillar Two, they <b>cannot claim it now</b>. Eligibility is lost permanently, not merely for the year skipped.</p>
+      <p>The only relief is where the MNE Group had no UAE Constituent Entities in that year — there was then nothing to claim, so nothing was forfeited. This is worth checking before any year is allowed to pass unclaimed: the decision not to claim in one year forecloses every later year.</p>
+      <cite>${CITE_M2.onceOut}</cite>
+    </div>
+    <div class="callout caution" id="callout-disapplication">
+      <div class="tag">Gate 4 · Cautionary</div>
+      <h3>Claiming a safe harbour is not final for 36 months</h3>
+      <p>The Federal Tax Authority may disapply a safe harbour, but only where <b>all three</b> of the following are met:</p>
+      <ol>
+        <li>Top-up Tax could have been charged had the Article 5 ETR for the UAE been below 15%; <b>and</b></li>
+        <li>the FTA notifies the Liable Constituent Entity or Entities <b>within 36 months</b> of the Top-up Tax Return filing, setting out specific facts and circumstances that may have materially affected eligibility, and invites clarification <b>within six months</b>; <b>and</b></li>
+        <li>the entity <b>fails to demonstrate</b> within that six-month response period that those facts did not materially affect eligibility.</li>
+      </ol>
+      <p>The FTA may notify <b>some</b> rather than all Liable Constituent Entities where notifying all of them is difficult — so an entity that hears nothing has not necessarily been cleared.</p>
+      <p><b>Practical consequence:</b> keep the records that support the claim for at least 36 months after filing. The third condition puts the burden on the entity to demonstrate, within six months, that the facts raised did not materially affect eligibility.</p>
+      <cite>${CITE_M2.disapplication} · ${CITE_M2.disapplicationSome}</cite>
+    </div>
+  </div>`;
+
+document.getElementById('minorNotes').innerHTML=`
+  <details class="minor-note">
+    <summary>Joint Ventures, Investment Entities, and the QDMTT Safe Harbour other jurisdictions apply</summary>
+    <div class="detail-body">
+      <p><b>Joint Ventures and JV Subsidiaries are tested as a separate MNE Group</b>, using Qualified Financial Statements figures. In practice this means separate parallel computations: two UAE Constituent Entities and a UAE JV require two distinct safe harbour assessments, each with its own de minimis test. Running one combined test across both would be wrong in either direction.<cite>${CITE_M2.jv}</cite></p>
+      <p><b>Investment Entities do not block the transitional safe harbour.</b> Art 8.2.1.1 applies to the UAE Constituent Entities irrespective of whether an Investment Entity is reported in the UAE in the CbC Report — notwithstanding Art 2.3, which takes Investment Entities out of the charge.<cite>${CITE_M2.investmentEntityReported}</cite></p>
+      <p><b>The QDMTT Safe Harbour is not something a UAE entity claims.</b> It is the safe harbour <i>other</i> jurisdictions apply in respect of the UAE's QDMTT, so that a UAE Top-up Tax liability is not recomputed under their own IIR. It is relevant to the Group's position abroad rather than to this assessment, and the UAE's qualified status is recorded in the OECD Central Record. No action is required here.<cite>${CITE_M2.qdmttSafeHarbour}</cite></p>
+    </div>
+  </details>`;
+
+document.getElementById('disclaimer').innerHTML=`
+  <div class="disclaimer">
+    <strong>UAE DMTT — Module 2: Safe Harbour Screening.</strong> Assessment generated on <b>${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</b>. This is an automated preliminary assessment based on Cabinet Decision No. 142 of 2024 (Annexure) Article 8.2 and the OECD Commentary/Guidance adopted by Ministerial Decision No. 96 of 2026. It does not constitute tax advice and is not a substitute for review by a qualified UAE tax adviser. The FTA's dedicated Safe Harbour guide (TTGSHO1) had not been published when this tool was built; re-check any position against it once available.
+  </div>`;
+
+/* ==================================================================
+   refresh() — recomputes everything from the current inputs and
+   selections, and writes only the computed parts back into the DOM.
+   ================================================================== */
+function setStatus(id,cls,text){
+  const el=document.getElementById(id);
+  el.className='gate-status '+cls;
+  el.textContent=text;
+}
+function setVerdict(id,result,passText,failText){
+  const el=document.getElementById(id);
+  if(result===null){ el.className='verdict untested'; el.textContent='Not yet tested'; return; }
+  el.className='verdict '+(result.pass?'pass':'fail');
+  el.textContent=result.pass?passText:failText;
+}
+function setCard(id,result){
+  const el=document.getElementById(id);
+  el.className='test-card'+(result===null?'':(result.pass?' pass':' fail'));
+}
+function setWorking(id,html){
+  const el=document.getElementById(id);
+  if(!html){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';el.innerHTML=html;
+}
+
+function refresh(){
+  const start=fyStart(),end=fyEnd();
+
+  /* ---- date validation ---- */
+  const dateErr=document.getElementById('dateError');
+  if(start&&end&&end.getTime()<start.getTime()){
+    dateErr.style.display='';dateErr.textContent='The Fiscal Year end date is before the start date. Check both dates.';
+  } else { dateErr.style.display='none';dateErr.textContent=''; }
+
+  /* ---- inputs summary (survives into the PDF) ---- */
+  document.getElementById('inputsSummary').innerHTML=
+    `<div class="eyebrow-label">What you've entered</div>
+     <div class="row"><b>Fiscal Year start date:</b> ${start?fmtDate(start):'<span class="empty">Not yet entered</span>'}</div>
+     <div class="row"><b>Fiscal Year end date:</b> ${end?fmtDate(end):'<span class="empty">Not yet entered</span>'}</div>
+     <div class="row"><b>Disqualifying conditions selected:</b> ${S.disq.size?Array.from(S.disq).map(id=>DISQUALIFIERS.find(d=>d.id===id).cd).join(', '):'<span class="empty">None selected</span>'}</div>
+     <div class="row"><b>Source of CbC figures:</b> ${S.qfsSource?({a:'UPE consolidation reporting package',b:'Separate financial statements of each Constituent Entity',c:'Accounts used for the CbC Report'})[S.qfsSource]:'<span class="empty">Not yet selected</span>'}</div>`;
+
+  /* ---- GATE 1 ---- */
+  const open=isTransitionPeriodOpen(start,end);
+  const rate=transitionRateFor(start);
+  const g1=document.getElementById('g1Detail');
+  if(open===null){
+    setStatus('g1Status','pending','Enter your dates');
+    g1.innerHTML='Enter your Fiscal Year start and end dates above to test whether the Transition Period is open.';
+  } else if(open){
+    setStatus('g1Status','open','Transition Period open');
+    const beginsOk=start.getTime()<TRANSITION_PERIOD.beginsBefore, endsOk=end.getTime()<TRANSITION_PERIOD.endsBefore;
+    g1.innerHTML=`<b>Both conditions are met.</b> The Fiscal Year begins ${fmtDate(start)} (before 1 January 2027 ✓) and ends ${fmtDate(end)} (before 1 July 2028 ✓), so the Transitional CbCR Safe Harbour in Gate 2 is available.`
+      +(rate!==null
+        ? `<br><br><b>Transition Rate for this Fiscal Year: ${fmtPct(rate)}.</b> ${start.getUTCFullYear()===2025?'16% applies to Fiscal Years beginning in 2025.':'17% applies to Fiscal Years beginning in 2026.'} This is the rate the Simplified ETR test in Gate 2 is measured against.`
+        : `<br><br><b>No Transition Rate is defined for a Fiscal Year beginning in ${start.getUTCFullYear()}.</b> CD 142 sets rates only for Fiscal Years beginning in 2025 (16%) and 2026 (17%). Check the start date — the Decision applies only to Fiscal Years beginning on or after 1 January 2025.`);
+  } else {
+    setStatus('g1Status','closed','Transition Period closed');
+    const beginsOk=start.getTime()<TRANSITION_PERIOD.beginsBefore, endsOk=end.getTime()<TRANSITION_PERIOD.endsBefore;
+    g1.innerHTML=`<b>The Transition Period is closed for this Fiscal Year.</b> It begins ${fmtDate(start)} (${beginsOk?'before 1 January 2027 ✓':'<b>on or after 1 January 2027 ✗</b>'}) and ends ${fmtDate(end)} (${endsOk?'before 1 July 2028 ✓':'<b>on or after 1 July 2028 ✗</b>'}). Both conditions must be met. The Transitional CbCR Safe Harbour is unavailable, so go to Gate 3 — the Simplified Calculations Safe Harbour is permanent and has no time limit.`;
+  }
+
+  /* ---- GATE 2a — disqualifiers and their sub-questions ---- */
+  const subsBox=document.getElementById('disqSubs');
+  const pending=DISQUALIFIERS.filter(d=>S.disq.has(d.id)&&d.subQuestion);
+  subsBox.innerHTML=pending.map(d=>{
+    const v=S[d.subQuestion.key];
+    return `<div class="warn-box ${v===null?'amber':(v===d.subQuestion.clearsWhen?'info':'red')}">
+      <b>${d.cd} follow-up — ${d.subQuestion.q}</b>
+      <div class="choice-tiles" style="margin-top:9px">
+        <button type="button" class="choice-tile${v===true?' selected':''}" data-sub="${d.subQuestion.key}" data-val="true"><span class="box"></span><span><b>${d.subQuestion.yes}</b><small>${d.subQuestion.yesSub}</small></span></button>
+        <button type="button" class="choice-tile${v===false?' selected danger':''}" data-sub="${d.subQuestion.key}" data-val="false"><span class="box"></span><span><b>${d.subQuestion.no}</b><small>${d.subQuestion.noSub}</small></span></button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const active=activeDisqualifiers();
+  const unresolved=unresolvedSubQuestions();
+  const dv=document.getElementById('disqVerdict');
+  if(S.disq.size===0){
+    dv.innerHTML=`<div class="warn-box info">No disqualifying condition selected. The Transitional CbCR Safe Harbour remains available on this limb.<cite>${CITE_M2.disqualifiers}</cite></div>`;
+  } else if(unresolved.length){
+    dv.innerHTML=`<div class="warn-box amber"><b>Answer the follow-up above.</b> ${unresolved.map(d=>d.cd).join(' and ')} carries an exception that decides whether it actually disqualifies, so the result is held open until it is answered.<cite>${CITE_M2.disqualifiers}</cite></div>`;
+  } else if(active.length){
+    dv.innerHTML=`<div class="warn-box red"><b>Disqualified from the Transitional CbCR Safe Harbour.</b> ${active.map(d=>d.cd).join(', ')} ${active.length>1?'apply':'applies'}, and any one is fatal regardless of the three tests. Go to Gate 3 — the Simplified Calculations Safe Harbour is a separate mechanism with its own conditions and is not affected by these.<cite>${CITE_M2.disqualifiers}</cite></div>`;
+  } else {
+    dv.innerHTML=`<div class="warn-box info"><b>Not disqualified.</b> The conditions selected are resolved by their exceptions, so the Transitional CbCR Safe Harbour remains available on this limb.<cite>${CITE_M2.disqualifiers}</cite></div>`;
+  }
+
+  /* ---- GATE 2b — PPA follow-ups ---- */
+  const ppaBox=document.getElementById('ppaSubs');
+  if(S.ppaPushedDown===true){
+    const bad=S.ppaConsistent===false||S.ppaGoodwill===false;
+    const done=S.ppaConsistent!==null&&S.ppaGoodwill!==null;
+    ppaBox.innerHTML=`<div class="warn-box ${!done?'amber':(bad?'red':'info')}">
+      <b>Both conditions must be met, or the statements are not Qualified Financial Statements.</b>
+      <div class="choice-tiles" style="margin-top:9px">
+        <button type="button" class="choice-tile${S.ppaConsistent===true?' selected':''}${S.ppaConsistent===false?' selected danger':''}" data-ppa="ppaConsistent"><span class="box"></span><span><b>Consistent reporting condition met</b><small>The MNE Group has not submitted a CbC Report for a Fiscal Year beginning after 31 December 2022 based on that entity's statements <i>without</i> the PPA adjustments — except where required by law or regulation to change</small></span></button>
+        <button type="button" class="choice-tile${S.ppaGoodwill===true?' selected':''}${S.ppaGoodwill===false?' selected danger':''}" data-ppa="ppaGoodwill"><span class="box"></span><span><b>Goodwill impairment adjustment made</b><small>Any reduction in income from goodwill impairment relating to transactions entered into after 30 November 2021 is added back to Profit (Loss) before Income Tax — for the Routine Profits test, and for the Simplified ETR test only where the accounts do not also show a reversal of a deferred tax liability or the recognition or increase of a deferred tax asset in respect of that impairment</small></span></button>
+      </div>
+      ${done?(bad?'<div style="margin-top:9px"><b>Not Qualified Financial Statements.</b> Where purchase price accounting has been pushed down, both conditions must hold. The Transitional CbCR Safe Harbour cannot be based on these figures.</div>':'<div style="margin-top:9px">Both conditions met — the statements remain Qualified Financial Statements despite the pushed-down purchase price accounting.</div>'):''}
+      <cite>${CITE_M2.ppa}</cite>
+    </div>`;
+  } else { ppaBox.innerHTML=''; }
+  const ppaBlocks=S.ppaPushedDown===true&&(S.ppaConsistent===false||S.ppaGoodwill===false);
+
+  /* ---- GATE 2c — the three tests ---- */
+  const revenue=num('g2Revenue'),pbt=num('g2Pbt'),hfs=num('g2Hfs'),sct=num('g2Sct'),sbie=num('g2Sbie');
+
+  const dm=deMinimisTransitional(revenue,pbt,hfs);
+  setCard('t2a',dm);
+  setVerdict('t2aVerdict',dm,'Passes — Top-up Tax deemed zero','Does not pass');
+  setWorking('t2aWorking',dm===null?null:(
+    dm.blockedByHeldForSale
+      ? `Blocked by Art 8.2.1.6. UAE Total Revenue ${fmtEur(revenue)} plus held-for-sale entity revenue ${fmtEur(hfs)} = <b>${fmtEur(dm.combined)}</b>, which reaches EUR 10 million. This test cannot be relied on, even though the UAE figure alone is below the threshold.`
+      : `Total Revenue ${fmtEur(revenue)} ${revenue<EUR_10M?'&lt;':'≥'} EUR 10,000,000 ${revenue<EUR_10M?'✓':'✗'}<br>Profit (Loss) before Income Tax ${fmtEur(pbt)} ${pbt<EUR_1M?'&lt;':'≥'} EUR 1,000,000 ${pbt<EUR_1M?'✓':'✗'}${pbt<0?' (a loss satisfies this limb)':''}`));
+
+  const etrRes=simplifiedEtrTest(sct,pbt,rate);
+  setCard('t2b',etrRes);
+  setVerdict('t2bVerdict',etrRes,'Passes — Top-up Tax deemed zero','Does not pass');
+  setWorking('t2bWorking',etrRes===null?null:
+    `Simplified ETR = ${fmtEur(sct)} ÷ ${fmtEur(pbt)} = <b>${fmtPct(etrRes.etr)}</b><br>Transition Rate for this Fiscal Year: ${fmtPct(rate)} — ${etrRes.pass?'met ✓':'not met ✗'}`);
+  document.getElementById('etrDisregardedNote').style.display=(etrRes&&!etrRes.pass)?'':'none';
+
+  const rp=routineProfitsTest(pbt,sbie);
+  setCard('t2c',rp);
+  setVerdict('t2cVerdict',rp,'Passes — Top-up Tax deemed zero','Does not pass');
+  setWorking('t2cWorking',rp===null?null:(
+    rp.autoPass
+      ? `Profit (Loss) before Income Tax is ${fmtEur(pbt)} — a loss or zero profit. A jurisdiction with a loss or zero profits <b>always</b> meets this test, so no Substance-based Income Exclusion figure is needed.`
+      : `Profit (Loss) before Income Tax ${fmtEur(pbt)} ${pbt<=sbie?'≤':'&gt;'} Substance-based Income Exclusion ${fmtEur(sbie)} ${rp.pass?'✓':'✗'}`));
+
+  const g2Tests=[dm,etrRes,rp];
+  const g2Pass=g2Tests.some(t=>t&&t.pass);
+  const g2AllTested=g2Tests.every(t=>t!==null);
+  const g2Blocked=active.length>0||unresolved.length>0||ppaBlocks||open===false;
+
+  const gate2El=document.getElementById('gate2');
+  if(open===null){ setStatus('g2Status','pending','Pending Gate 1'); gate2El.className='gate inactive'; }
+  else if(open===false){ setStatus('g2Status','closed','Unavailable — window closed'); gate2El.className='gate inactive'; }
+  else if(active.length){ setStatus('g2Status','blocked','Disqualified'); gate2El.className='gate'; }
+  else if(ppaBlocks){ setStatus('g2Status','blocked','No Qualified Financial Statements'); gate2El.className='gate'; }
+  else if(g2Pass){ setStatus('g2Status','open','Safe harbour available'); gate2El.className='gate'; }
+  else if(g2AllTested){ setStatus('g2Status','closed','All three tests failed'); gate2El.className='gate'; }
+  else { setStatus('g2Status','pending','Available — enter figures'); gate2El.className='gate'; }
+
+  /* ---- GATE 3 ---- */
+  const nmceRes=isNmce(S.nmce);
+  const nv=document.getElementById('nmceVerdict');
+  if(nmceRes===null){
+    nv.innerHTML=`<div class="warn-box info">Select the conditions that apply to see whether the entity is a Non-material Constituent Entity.<cite>${CITE_M2.nmce}</cite></div>`;
+  } else if(nmceRes.isNmce){
+    nv.innerHTML=`<div class="warn-box info"><b>Non-material Constituent Entity.</b> All four conditions hold and none of the disqualifying circumstances apply, so the Simplified Calculations are available for this entity — combined with full Pillar Two computations for any UAE Constituent Entity that is not non-material.<cite>${CITE_M2.nmce}</cite></div>`;
+  } else {
+    const why={paragraphB:'The Consolidated Financial Statements fall under paragraph (b) of the Art 18.1 definition — a Main Entity with its foreign Permanent Establishments. A Group composed exclusively of a Main Entity and its Permanent Establishments has <b>no</b> Non-material Constituent Entities at all, so the Simplified Calculations are unavailable to it entirely.',
+      paragraphD:'The Consolidated Financial Statements fall under paragraph (d) — the deeming provision applying where no consolidated accounts were prepared. The definition requires actual consolidated, externally audited statements.',
+      auditQualified:'The audit opinion carries an objection or qualification regarding the entity\'s exclusion from the consolidation perimeter.'}[nmceRes.reason];
+    nv.innerHTML=`<div class="warn-box red"><b>Not a Non-material Constituent Entity.</b> ${why||'One or more of the four required conditions is not met.'}<cite>${why?CITE_M2.nmceCommentary:CITE_M2.nmce}</cite></div>`;
+  }
+
+  const g3Income=num('g3Income'),g3Sbie=num('g3Sbie'),g3AvgRev=num('g3AvgRev'),g3AvgInc=num('g3AvgInc'),g3Tax=num('g3Tax');
+
+  const s3a=routineProfitsSimplified(g3Income,g3Sbie);
+  setCard('t3a',s3a);
+  setVerdict('t3aVerdict',s3a,'Passes — Top-up Tax deemed zero','Does not pass');
+  setWorking('t3aWorking',s3a===null?null:(
+    s3a.autoPass
+      ? `Pillar Two Income is ${fmtEur(g3Income)} — a loss or zero. The test is met without an SBIE comparison.`
+      : `Pillar Two Income ${fmtEur(g3Income)} ${g3Income<=g3Sbie?'≤':'&gt;'} SBIE ${fmtEur(g3Sbie)} ${s3a.pass?'✓':'✗'}`));
+
+  const s3b=deMinimisSimplified(g3AvgRev,g3AvgInc);
+  setCard('t3b',s3b);
+  setVerdict('t3bVerdict',s3b,'Passes — Top-up Tax deemed zero','Does not pass');
+  setWorking('t3bWorking',s3b===null?null:
+    `<b>Three-year averages</b>, not current-year figures.<br>Average Pillar Two Revenue ${fmtEur(g3AvgRev)} ${g3AvgRev<EUR_10M?'&lt;':'≥'} EUR 10,000,000 ${g3AvgRev<EUR_10M?'✓':'✗'}<br>Average Pillar Two Income ${fmtEur(g3AvgInc)} ${g3AvgInc<EUR_1M?'&lt;':'≥'} EUR 1,000,000 ${g3AvgInc<EUR_1M?'✓':'✗'}${g3AvgInc<0?' (a loss satisfies this limb)':''}`);
+
+  const s3c=etrTestSimplified(g3Tax,g3Income);
+  setCard('t3c',s3c);
+  setVerdict('t3cVerdict',s3c,'Passes — Top-up Tax deemed zero','Does not pass');
+  setWorking('t3cWorking',s3c===null?null:
+    `ETR = ${fmtEur(g3Tax)} ÷ ${fmtEur(g3Income)} = <b>${fmtPct(s3c.etr)}</b><br>Minimum Rate: 15.00% — ${s3c.pass?'met ✓':'not met ✗'}<br><span style="color:var(--text-secondary)">Note this is 15%, not the Gate 2 Transition Rate.</span>`);
+
+  const g3Tests=[s3a,s3b,s3c];
+  const g3Pass=g3Tests.some(t=>t&&t.pass);
+  const g3AllTested=g3Tests.every(t=>t!==null);
+
+  const gate3El=document.getElementById('gate3');
+  const g3Intro=document.getElementById('g3Intro');
+  if(g2Pass){
+    setStatus('g3Status','pending','Not needed');
+    gate3El.className='gate inactive';
+    g3Intro.innerHTML='<b>Not needed on these figures.</b> A Transitional CbCR Safe Harbour test already passes in Gate 2, which deems the Top-up Tax zero for the Fiscal Year. This gate is left visible for reference — it is a permanent mechanism and will matter once the Transition Period closes.';
+  } else {
+    gate3El.className='gate';
+    if(g3Pass) setStatus('g3Status','open','Safe harbour available');
+    else if(g3AllTested) setStatus('g3Status','closed','All three tests failed');
+    else setStatus('g3Status','pending','Permanent — no time limit');
+    g3Intro.innerHTML=open===false
+      ? 'The Transition Period has closed for this Fiscal Year, so this is the safe harbour still open to you. It is permanent and has no time limit.'
+      : (g2Blocked
+        ? 'Reached because the Transitional CbCR Safe Harbour is unavailable on the answers given above. This is a separate mechanism with its own conditions — the Gate 2 disqualifiers do not apply to it.'
+        : 'Permanent and always available, whether or not the Transition Period is open. Worth testing if the Gate 2 tests do not pass.');
+  }
+
+  /* ---- OUTCOME ---- */
+  const out=document.getElementById('outcome');
+  if(g2Pass){
+    const which=[dm&&dm.pass?'De Minimis':null,etrRes&&etrRes.pass?'Simplified ETR':null,rp&&rp.pass?'Routine Profits':null].filter(Boolean);
+    out.innerHTML=`<div class="outcome zero"><div class="tag">Outcome</div>
+      <h2>UAE Top-up Tax is deemed zero for this Fiscal Year</h2>
+      <p>The <b>${which.join(' and ')}</b> ${which.length>1?'tests':'test'} under the Transitional CbCR Safe Harbour ${which.length>1?'are':'is'} met, so no full Article 3/4/5 computation is required for the UAE for this Fiscal Year.</p>
+      <p>Read this with the Gate 4 caution below: the claim is open to disapplication by the FTA for 36 months from the filing of the Top-up Tax Return, so keep the records that support it.</p>
+      <cite>${CITE_M2.transitional}</cite></div>`;
+  } else if(g3Pass){
+    const which=[s3a&&s3a.pass?'Routine Profits':null,s3b&&s3b.pass?'De Minimis':null,s3c&&s3c.pass?'Effective Tax Rate':null].filter(Boolean);
+    out.innerHTML=`<div class="outcome zero"><div class="tag">Outcome</div>
+      <h2>UAE Top-up Tax, other than Additional Current Top-up Tax, is deemed zero</h2>
+      <p>The <b>${which.join(' and ')}</b> ${which.length>1?'tests':'test'} under the Simplified Calculations Safe Harbour ${which.length>1?'are':'is'} met. Note the scope limit: <b>Additional Current Top-up Tax is not covered</b>, so any arising from a recalculation of a prior year's ETR remains payable.</p>
+      <p>Remember that this result rests on simplified figures for Non-material Constituent Entities <b>combined with full computations</b> for every UAE Constituent Entity that is not non-material.</p>
+      <cite>${CITE_M2.simplified}</cite></div>`;
+  } else if(g2AllTested&&g3AllTested&&!g2Blocked){
+    out.innerHTML=`<div class="outcome none"><div class="tag">Outcome</div>
+      <h2>No safe harbour available on these figures</h2>
+      <p>None of the three Transitional CbCR tests and none of the three Simplified Calculations tests are met, so a full Article 3/4/5 computation is required for the UAE — Pillar Two Income or Loss, Adjusted Covered Taxes, the Effective Tax Rate and any Top-up Tax. That computation is outside this module.</p>
+      <p>If the Simplified ETR test was among those that failed, note that the rate it produced <b>cannot be reused</b> as the Article 5.2.1 ETR — the full computation starts from the statutory figures, not from that one.</p>
+      <cite>${CITE_M2.art82}</cite></div>`;
+  } else {
+    out.innerHTML=`<div class="outcome pending"><div class="tag">Outcome</div>
+      <h2>Assessment in progress</h2>
+      <p>Enter your Fiscal Year dates to open Gate 1, then work through whichever tests you have figures for. Every gate displays its rules whether or not figures are entered, so you can read through before gathering data.</p></div>`;
+  }
+}
+
+/* ==================================================================
+   Wiring
+   ================================================================== */
+document.addEventListener('input',e=>{ if(e.target.matches('input')) refresh(); });
+document.addEventListener('click',e=>{
+  const tile=e.target.closest('[data-tile]');
+  if(tile){
+    const id=tile.dataset.tile, group=tile.closest('.choice-tiles').id;
+    if(group==='disqTiles'){
+      if(S.disq.has(id)){ S.disq.delete(id); const d=DISQUALIFIERS.find(x=>x.id===id); if(d.subQuestion)S[d.subQuestion.key]=null; }
+      else S.disq.add(id);
+      tile.classList.toggle('selected',S.disq.has(id));
+      tile.querySelector('.box').textContent=S.disq.has(id)?'✓':'';
+    } else if(group==='qfsTiles'){
+      S.qfsSource=S.qfsSource===id?null:id;
+      [...tile.parentElement.children].forEach(b=>{ const on=b.dataset.tile===S.qfsSource; b.classList.toggle('selected',on); b.querySelector('.box').textContent=on?'✓':''; });
+    } else if(group==='ppaTiles'){
+      const v=id==='pushed';
+      S.ppaPushedDown=(S.ppaPushedDown===v)?null:v;
+      if(S.ppaPushedDown!==true){ S.ppaConsistent=null;S.ppaGoodwill=null; }
+      [...tile.parentElement.children].forEach(b=>{ const on=(b.dataset.tile==='pushed')===S.ppaPushedDown&&S.ppaPushedDown!==null; b.classList.toggle('selected',on); b.querySelector('.box').textContent=on?'✓':''; });
+    } else if(group==='nmceTiles'){
+      S.nmce[id]=S.nmce[id]===true?null:true;
+      tile.classList.toggle('selected',S.nmce[id]===true);
+      tile.querySelector('.box').textContent=S.nmce[id]===true?'✓':'';
+    }
+    refresh();return;
+  }
+  const sub=e.target.closest('[data-sub]');
+  if(sub){ S[sub.dataset.sub]=sub.dataset.val==='true'; refresh(); return; }
+  const ppa=e.target.closest('[data-ppa]');
+  if(ppa){ const k=ppa.dataset.ppa; S[k]=S[k]===true?false:(S[k]===false?null:true); refresh(); return; }
+});
+
+document.getElementById('startOverBtn').addEventListener('click',()=>{
+  ['fyStart','fyEnd','g2Revenue','g2Pbt','g2Hfs','g2Sct','g2Sbie','g3Income','g3Sbie','g3AvgRev','g3AvgInc','g3Tax']
+    .forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
+  S.disq.clear();S.qualifiedPersonsAll=null;S.noUaeCEsPrevYear=null;S.qfsSource=null;
+  S.ppaPushedDown=null;S.ppaConsistent=null;S.ppaGoodwill=null;
+  Object.keys(S.nmce).forEach(k=>S.nmce[k]=null);
+  document.querySelectorAll('.choice-tile').forEach(b=>{ b.classList.remove('selected'); const box=b.querySelector('.box'); if(box)box.textContent=''; });
+  refresh();
+});
+
+/* ---- lead capture (same pattern as index.html / module4; distinguished
+       by source_tool) ---- */
+let leadCaptured=false,pendingAfterLead=null;
+function requireLeadCapture(fn){
+  if(leadCaptured){fn();return;}
+  pendingAfterLead=fn;
+  document.getElementById('leadModal').classList.add('show');
+}
+document.getElementById('leadSubmitBtn').addEventListener('click',()=>{
+  const n=document.getElementById('leadName').value.trim();
+  const c=document.getElementById('leadCompany').value.trim();
+  const em=document.getElementById('leadEmail').value.trim();
+  const ok=n&&c&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em);
+  document.getElementById('leadError').style.display=ok?'none':'block';
+  if(!ok)return;
+  try{
+    fetch('https://script.google.com/macros/s/AKfycbyEfpaq6MPdKVBpSlbHXDHK7TwgdSODyzGi5g0Y7LCcVSzhZqMOZ8kZq-Sv9e2_kmUW/exec',{
+      method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({name:n,company:c,email:em,source_tool:'dmtt_safe_harbour',ts:new Date().toISOString()})
+    });
+  }catch(e){}
+  leadCaptured=true;
+  document.getElementById('leadModal').classList.remove('show');
+  if(pendingAfterLead){const f=pendingAfterLead;pendingAfterLead=null;f();}
+});
+document.getElementById('leadModal').addEventListener('click',e=>{
+  if(e.target.id==='leadModal')document.getElementById('leadModal').classList.remove('show');
+});
+document.getElementById('pdfBtn').addEventListener('click',()=>requireLeadCapture(()=>window.print()));
+
+refresh();
+</script>
+</body>
+</html>
