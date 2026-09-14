@@ -355,6 +355,28 @@ const CITE={
   locPEStateless:"Art. 18.3.3(d), CD 142/2024 Annexure; Art. 2.1, CD 142/2024 Annexure",
   reverseHybrid:"Art. 2.1, CD 142/2024 Annexure; Art. 18.2 (Reverse Hybrid Entity), CD 142/2024 Annexure",
   investmentEntity:"Art. 18 (Investment Entity), CD 142/2024 Annexure",
+  // ---- Practical effects of an Excluded / Investment Entity conclusion ----
+  ttgeie10:"TTGEIE1 §10",
+  exclNotCharged:"Art. 1.5, CD 142/2024 Annexure (not a Constituent Entity); Art. 2.1, CD 142/2024 Annexure (charging provision); TTGEIE1 §10",
+  exclAttributes:"TTGEIE1 §10; Commentary to Art. 1 ¶37(b), adopted by Ministerial Decision No. 96 of 2026",
+  // TODO(Art 7 numbering): sources disagree on which paragraphs of Art 7
+  // carry these two elections. docs/CD142-Complete-Extract.md (Pass 1, the
+  // article-by-article read of CD 142 itself) lists 7.3 as "Eligible
+  // Distribution Tax Systems", 7.4 as "ETR computation for Investment
+  // Entities", 7.5 as the Investment Entity Tax Transparency Election and
+  // 7.6 as the Taxable Distribution Method Election.
+  // docs/FTA-Guides-Extract.md (Pass 4, Finding C) instead says "an
+  // election is made under CD 142 Art 7.3/7.4", without naming either
+  // election — and the fix list then paired that pair of numbers with the
+  // names, which is where "Art 7.3 (Investment Entity Tax Transparency
+  // Election)" came from. Pass 1 is the direct read of the Decision and
+  // its names match exactly, so 7.5/7.6 is used here. Both elections are
+  // ALSO named in full, so the citation stays findable even if the
+  // numbering turns out to be the other way round. Confirm against CD 142
+  // Art 7 and correct in one place if needed.
+  ieElections:"Art. 7.5 (Investment Entity Tax Transparency Election) and Art. 7.6 (Taxable Distribution Method Election), CD 142/2024 Annexure; TTGEIE1 §10",
+  noAdminObligations:"TTGEIE1 §10; Art. 13.1, CD 142/2024 Annexure (registration); Art. 8.1, CD 142/2024 Annexure (Top-up Tax Return)",
+  girStructure:"Art. 15.2, CD 142/2024 Annexure; TTGEIE1 §10",
   investmentEntityCharge:"Art. 2.3, CD 142/2024 Annexure",
   charging:"Art. 2.1, CD 142/2024 Annexure"
 };
@@ -538,6 +560,50 @@ function pathBlock(){
   trail.forEach(t=>{const r=document.createElement('div');r.className='path-row';r.innerHTML=`<span class="pq">${t.q}</span><span class="pa ${t.cls}">${t.a}</span>`;d.appendChild(r);});
   return d;
 }
+/* Section 4 — the practical consequences of the conclusion, per TTGEIE1
+   §10. Deliberately NOT folded into Section 3: that section is the
+   provisions relied on to REACH the conclusion, whereas these are what
+   follows FROM it. Filing them together would misrepresent both. Rendered
+   as a plain card in the same DOM the PDF prints, so it reaches the
+   printed output without a second render path. */
+function effectsBlock(effects){
+  const d=document.createElement('div');d.className='card facts';
+  d.innerHTML=`<h3>Section 4 — What This Conclusion Means in Practice</h3>`;
+  effects.forEach(f=>{const el=document.createElement('div');el.className='fact';el.innerHTML=`<div class="ft">${f.t}</div><div class="fb">${f.b}</div>${f.c?`<cite>${f.c}</cite>`:''}`;d.appendChild(el);});
+  return d;
+}
+
+/* TTGEIE1 §10's three effects. Points 1 and 2 differ between the two
+   conclusions and point 3 is common, so this is parameterised rather than
+   duplicated — the Investment Entity case in particular is materially
+   different from the Excluded Entity one and must not be paraphrased into
+   it. Note the citation for point 1: Art 2.3 is specific to Investment
+   Entities, so it is cited only there. An Excluded Entity falls outside
+   the charge for a different reason — Art 1.5 takes it out of the
+   Constituent Entity definition, so Art 2.1 never reaches it. */
+function ttgeie10Effects(kind){
+  const isExcluded=kind==='excluded';
+  return [
+    isExcluded
+      ? {t:"1. The Entity is not subject to the charging provision.",
+         b:"An Excluded Entity is not a Constituent Entity, so the charge in Art 2.1 — which applies to Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE — does not reach it. No Top-up Tax is payable by this Entity.",
+         c:CITE.exclNotCharged}
+      : {t:"1. The Entity is not subject to the charging provision.",
+         b:"Art 2.3 provides that an Investment Entity located in the UAE is not subject to the charge. No Top-up Tax is payable by the Investment Entity itself.",
+         c:CITE.investmentEntityCharge},
+    isExcluded
+      ? {t:"2. Its attributes are removed from the QDMTT computations.",
+         b:"The Entity's profits, losses, taxes accrued, tangible assets and payroll expenses are removed from the various computations under the QDMTT Legislation. They do not form part of the Pillar Two Income or Loss, Adjusted Covered Taxes, or Substance-based Income Exclusion of any other Entity.",
+         c:CITE.exclAttributes}
+      : {t:"2. Its attributes may still be included — but only by election.",
+         b:"Unlike an Excluded Entity, an Investment Entity's attributes are not simply removed. They MAY be included in the calculations of its Constituent Entity-owners, but only where those owners make an election to that effect — either the Investment Entity Tax Transparency Election or the Taxable Distribution Method Election. Absent an election by the owners, no such inclusion arises.",
+         c:CITE.ieElections},
+    {t:"3. No administrative obligations of its own — but the Group still reports it.",
+     b:`The Entity has no Top-up Tax administrative obligations: no registration with the FTA for Top-up Tax, no Top-up Tax Return, and no Pillar Two Information Return of its own. However, a Pillar Two Information Return must still be filed by another Entity for the MNE Group, and that return must report the overall corporate structure <strong>including</strong> ${isExcluded?'Excluded Entities':'Investment Entities'} such as this one — while <strong>not</strong> reporting their income, taxes, assets and similar data. Being outside the charge is not the same as being invisible to the Group's filing.`,
+     c:CITE.girStructure}
+  ];
+}
+
 function actionRow(showModule4Link){
   const wrap=document.createElement('div');wrap.style.cssText='display:flex;gap:10px;flex-wrap:wrap;margin-top:4px';
   const p=document.createElement('button');p.className='btn primary';p.textContent='Print / Save as PDF';p.onclick=()=>{requireLeadCapture(function(){window.print();});};
@@ -549,18 +615,20 @@ function actionRow(showModule4Link){
   }
   return wrap;
 }
-function result(kind,tag,title,rateLine,facts,extraNote){
+function result(kind,tag,title,rateLine,facts,extraNote,effects){
   const node=document.createElement('div');
   const v=document.createElement('div');v.className='verdict '+kind;
   v.innerHTML=`<div class="tag">Section 1 — Conclusion · ${tag}</div><h2>${title}</h2><div class="rate-line">${rateLine}</div>${extraNote?`<p>${extraNote}</p>`:''}`;
   node.appendChild(pdfHeaderBlock());
-  node.appendChild(v);node.appendChild(pathBlock());node.appendChild(factsBlock(facts));node.appendChild(actionRow(tag==='IN SCOPE'));
+  node.appendChild(v);node.appendChild(pathBlock());node.appendChild(factsBlock(facts));
+  if(effects&&effects.length)node.appendChild(effectsBlock(effects));
+  node.appendChild(actionRow(tag==='IN SCOPE'));
   mount(node,'final');fixTooltips();
 }
-function outOfScope(title,rateLine,facts,extraNote){result('pass','OUT OF SCOPE',title,rateLine,facts,extraNote);}
-function inScope(title,rateLine,facts,extraNote){result('review','IN SCOPE',title,rateLine,facts,extraNote);}
-function notDirectlyLiable(title,rateLine,facts,extraNote){result('review','NOT DIRECTLY LIABLE',title,rateLine,facts,extraNote);}
-function reviewRequired(title,rateLine,facts,extraNote){result('fail','REVIEW REQUIRED',title,rateLine,facts,extraNote);}
+function outOfScope(title,rateLine,facts,extraNote,effects){result('pass','OUT OF SCOPE',title,rateLine,facts,extraNote,effects);}
+function inScope(title,rateLine,facts,extraNote,effects){result('review','IN SCOPE',title,rateLine,facts,extraNote,effects);}
+function notDirectlyLiable(title,rateLine,facts,extraNote,effects){result('review','NOT DIRECTLY LIABLE',title,rateLine,facts,extraNote,effects);}
+function reviewRequired(title,rateLine,facts,extraNote,effects){result('fail','REVIEW REQUIRED',title,rateLine,facts,extraNote,effects);}
 
 /* ==================================================================
    STEP A — Revenue Threshold Test (Art 1.1.1–1.1.2)
@@ -1130,7 +1198,7 @@ function concludeE(selectedAll,operative,electionMade,electedKeys){
   }
   outOfScope("Out of scope — Excluded Entity.",
     "The UAE Entity matches one or more of the Excluded Entity tests and is therefore not a Constituent Entity for UAE DMTT purposes. This result is entity-specific — other UAE entities in the same Group may still be in scope and should be assessed separately.",
-    facts);
+    facts,null,ttgeie10Effects('excluded'));
 }
 
 /* ==================================================================
@@ -1151,8 +1219,9 @@ function stepF(){
           [{t:"Charging provision.",b:"UAE DMTT is imposed on Constituent Entities, Joint Ventures and JV Subsidiaries located in the UAE. On the facts entered, the UAE Entity is a Constituent Entity that is not Excluded and not an Investment Entity, so the charge applies to it.",c:CITE.charging}]);}},
       {key:'B',label:'Yes',action:()=>{record("UAE Entity is an Investment Entity (Art 18)?","Yes","no");
         notDirectlyLiable("NOT DIRECTLY LIABLE — Investment Entity.",
-          "The UAE Entity is an Investment Entity. Per Art 2.3, an Investment Entity located in the UAE is not directly liable to pay Top-up Tax — but it is still included in the Constituent Entity population for the wider ETR and Top-up Tax computation, since its data feeds that calculation for other Group entities.",
-          [{t:"Investment Entities are excluded from the direct charge.",b:"An Investment Entity located in the UAE is not subject to Top-up Tax directly, although its data may still feed the wider ETR computation for the jurisdiction.",c:CITE.investmentEntityCharge}]);}}
+          "The UAE Entity is an Investment Entity. Per Art 2.3, an Investment Entity located in the UAE is not subject to the charging provision and is not directly liable to pay Top-up Tax. It remains part of the MNE Group and is reported in the Group's Pillar Two Information Return, but its attributes are brought into its Constituent Entity-owners' computations only where those owners make one of the Art 7 elections — see Section 4 below.",
+          [{t:"Investment Entities are excluded from the direct charge.",b:"An Investment Entity located in the UAE is not subject to Top-up Tax directly. Whether its attributes enter the wider computation for the jurisdiction depends on whether its Constituent Entity-owners have made the Investment Entity Tax Transparency Election or the Taxable Distribution Method Election — it is not automatic.",c:CITE.investmentEntityCharge}],
+          null,ttgeie10Effects('investment'));}}
     ],'Investment Entity Charging Confirmation');
   mount(node,'step');fixTooltips();
 }

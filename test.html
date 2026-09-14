@@ -490,6 +490,114 @@
   });
 
   // =======================================================================
+  // TTGEIE1 §10's three practical effects (Part 4). A conclusion that only
+  // says "out of scope" leaves the user not knowing what follows from it.
+  // These assert the effects are present, correctly DIFFERENTIATED between
+  // the Excluded and Investment Entity cases (they are materially
+  // different, and paraphrasing one into the other would be wrong), and
+  // that they reach the PDF.
+  // =======================================================================
+  const effectsText=()=>{
+    const cards=[...stage().querySelectorAll('.card.facts')];
+    const c=cards.find(x=>(x.querySelector('h3')||{}).textContent==='Section 4 — What This Conclusion Means in Practice');
+    return c?c.textContent:'';
+  };
+  const effectsCites=()=>{
+    const cards=[...stage().querySelectorAll('.card.facts')];
+    const c=cards.find(x=>(x.querySelector('h3')||{}).textContent==='Section 4 — What This Conclusion Means in Practice');
+    return c?[...c.querySelectorAll('cite')].map(e=>e.textContent).join(' | '):'';
+  };
+
+  tc('Practical effects — Excluded Entity conclusion carries all three, in its own section', ()=>{
+    toStepE();
+    clickTileByLabel('Governmental Entity');
+    clickContinueTiles();
+    assertVerdict('OUT OF SCOPE','Excluded Entity');
+    const e=effectsText();
+    assert('a Section 4 block exists, separate from Provisions Relied Upon', !!e, 'no Section 4 found');
+    assertIncludes('effect 1 — not subject to the charging provision', e, 'not subject to the charging provision');
+    assertIncludes('effect 2 — attributes removed from the computations', e, 'removed from the various computations');
+    assertIncludes('effect 2 — names profits, losses, taxes accrued', e, 'profits, losses, taxes accrued');
+    assertIncludes('effect 2 — names tangible assets and payroll expenses', e, 'tangible assets and payroll expenses');
+    assertIncludes('effect 3 — no FTA registration', e, 'no registration with the FTA');
+    assertIncludes('effect 3 — no Top-up Tax Return', e, 'no Top-up Tax Return');
+    assertIncludes('effect 3 — but the Group still files a Pillar Two Information Return', e, 'must still be filed by another Entity');
+    assertIncludes('effect 3 — the structure IS reported', e, 'overall corporate structure');
+    assertIncludes('effect 3 — income/taxes/assets are NOT reported', e, 'not');
+    assertIncludes('cites TTGEIE1 §10', effectsCites(), 'TTGEIE1 §10');
+    assertIncludes('cites Art 15.2 for the GIR structure-reporting point', effectsCites(), '15.2');
+  });
+
+  // The Excluded and Investment cases diverge on effects 1 and 2. An
+  // Excluded Entity's attributes are removed outright; an Investment
+  // Entity's may be included, but only if its owners elect. Asserting the
+  // divergence in both directions stops one being paraphrased into the other.
+  tc('Practical effects — Investment Entity gets the election-conditional version, not the removal version', ()=>{
+    toStepE();
+    clickContinueTiles(); // no Excluded tiles -> Step F
+    clickOpt(1);          // F: Yes — Investment Entity
+    assertVerdict('NOT DIRECTLY LIABLE','Investment Entity');
+    const e=effectsText();
+    assert('a Section 4 block exists on this conclusion too', !!e, 'no Section 4 found');
+    assertIncludes('effect 1 — cites Art 2.3, which is Investment-Entity specific', effectsCites(), '2.3');
+    assertIncludes('effect 2 — inclusion is by election only', e, 'only where those owners make an election');
+    assertIncludes('effect 2 — names the Tax Transparency Election', e, 'Investment Entity Tax Transparency Election');
+    assertIncludes('effect 2 — names the Taxable Distribution Method Election', e, 'Taxable Distribution Method Election');
+    assertIncludes('effect 2 — states the default absent an election', e, 'Absent an election');
+    assert('does NOT claim the attributes are simply removed (that is the Excluded Entity rule)',
+      !e.includes('removed from the various computations'), e);
+    assertIncludes('effect 3 — reports Investment Entities, not Excluded Entities, in the GIR', e, 'including Investment Entities');
+  });
+
+  tc('Practical effects — Excluded Entity does not get the Investment Entity election wording', ()=>{
+    toStepE();
+    clickTileByLabel('Pension Fund (or Pension Services Entity)');
+    clickContinueTiles();
+    const e=effectsText();
+    assert('no election-conditional language on the Excluded Entity conclusion',
+      !e.includes('only where those owners make an election'), e);
+    assertIncludes('reports Excluded Entities, not Investment Entities, in the GIR', e, 'including Excluded Entities');
+    assertIncludes('effect 1 reasons from Art 1.5 / Art 2.1, not Art 2.3', effectsCites(), 'not a Constituent Entity');
+  });
+
+  // The Investment Entity conclusion used to assert its data "feeds that
+  // calculation for other Group entities" unconditionally, which overstates
+  // it — inclusion depends on an owner election under Art 7.
+  tc('Practical effects — the Investment Entity conclusion no longer claims inclusion is automatic', ()=>{
+    toStepE();
+    clickContinueTiles();
+    clickOpt(1);
+    const line=stage().querySelector('.rate-line').textContent;
+    assert('does not state the data simply feeds the wider computation',
+      !line.includes('its data feeds that calculation'), line);
+    assertIncludes('makes inclusion conditional on the Art 7 elections', line, 'only where those owners make one of the Art 7 elections');
+    const facts=[...stage().querySelectorAll('.facts .fact .fb')].map(e=>e.textContent).join(' ');
+    assertIncludes('the supporting fact says it is not automatic', facts, 'it is not automatic');
+  });
+
+  tc('Practical effects — Section 4 sits after Section 3 and survives into the PDF', ()=>{
+    toStepE();
+    clickTileByLabel('Governmental Entity');
+    clickContinueTiles();
+    const hs=sectionHeadings();
+    assertSectionOrder();
+    assert('Section 4 is present and ordered after Section 3',
+      hs.indexOf('Section 4 — What This Conclusion Means in Practice')>hs.indexOf('Section 3 — Provisions Relied Upon'),
+      JSON.stringify(hs));
+    // Module 1's PDF is window.print() over this same DOM, so the guard that
+    // matters is that no print rule hides the block.
+    let printCss='';
+    for(const sheet of document.styleSheets){
+      let rules; try{ rules=sheet.cssRules; }catch(e){ continue; }
+      for(const rule of rules||[]){
+        if(rule instanceof CSSMediaRule && rule.conditionText==='print') printCss+=[...rule.cssRules].map(r=>r.cssText).join(' ');
+      }
+    }
+    assert('print rules do NOT hide .facts, which carries Sections 3 and 4',
+      !/\.facts[^}]*\{[^}]*display:\s*none/.test(printCss), printCss.slice(0,300));
+  });
+
+  // =======================================================================
   // LOCATION OF THE ENTITY (Art 18.3) — the gap this step closes is that
   // Art 2.1 charges only Entities LOCATED IN THE UAE, and every earlier
   // step called the subject "the UAE Entity" without ever testing it. The
