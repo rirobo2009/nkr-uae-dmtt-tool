@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAE DMTT — ETR &amp; Top-up Tax Calculation</title>
+<style>
+  :root{
+    color-scheme: light;
+    --nkr-navy:#14283F;--nkr-teal:#2A6F77;--nkr-green:#1D9E75;--nkr-green-dark:#115F46;--nkr-offwhite:#F5F7FA;
+    --bg-page:#FFFFFF;--bg-surface:#F5F7FA;--text-primary:#14283F;--text-secondary:#2A6F77;
+    --accent-primary:#1D9E75;--accent-warning:#D97706;--warning-bg:#FBF1E4;--border:#E2E8F0;
+    --red:#B3261E;--red-bg:#FBEAEA;--green-bg:#E4F5EE;
+    --text-primary-ondark:#F5F7FA;--text-secondary-ondark:#7FA8AD;
+    --nkr-navy-soft:#4A5F7A;--highlight-blue:#94DCF8;
+    --shadow:0 2px 10px rgba(20,40,63,.06);--shadow-lg:0 8px 30px rgba(20,40,63,.16);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font);background:var(--bg-surface);color:var(--text-primary);line-height:1.6;padding:28px 16px 80px}
+  .wrap{max-width:1100px;margin:0 auto}
+
+  .brand-bar{position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--nkr-navy),var(--nkr-teal),var(--nkr-green));z-index:101}
+
+  header.masthead{border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);margin-bottom:20px;position:sticky;top:4px;background:var(--highlight-blue);z-index:100;padding:16px 22px}
+  .head-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+  .head-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+  .logo-mark img{width:135px;height:auto;display:block}
+  .logo-mark .logo-light{display:block}
+  .logo-mark .logo-dark{display:none}
+  .eyebrow{font-size:11px;letter-spacing:normal;text-transform:uppercase;color:var(--nkr-green-dark);font-weight:700;margin-bottom:6px}
+  h1{font-size:24px;line-height:1.2;color:var(--nkr-navy);font-weight:700;letter-spacing:-.01em}
+  .sub{margin-top:6px;color:var(--nkr-navy-soft);font-weight:400;font-size:13.5px;max-width:680px}
+  .explore{flex-shrink:0;font-weight:700;font-size:12.5px;letter-spacing:.02em;color:#fff;background:var(--nkr-navy);border:1.5px solid var(--nkr-navy);border-radius:8px;padding:7px 14px;text-decoration:none;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+  .explore:hover{background:#1c3a5c}
+  .explore svg{width:12px;height:12px}
+
+  .legal-strip{font-size:11.5px;color:var(--text-secondary);background:#fff;border:1px solid var(--border);border-left:4px solid var(--nkr-teal);border-radius:6px;padding:10px 14px;margin:16px 0 26px;letter-spacing:.01em;line-height:1.5;box-shadow:var(--shadow)}
+  .legal-strip strong{color:var(--nkr-navy)}
+
+  /* ---- tool nav (reusable pattern — same markup/classes in index.html) ---- */
+  .tool-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12.5px}
+  .tool-nav a,.tool-nav .reset-link{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--nkr-navy-soft);background:none;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;padding:2px}
+  .tool-nav a:hover,.tool-nav .reset-link:hover{color:var(--nkr-navy);text-decoration:underline}
+
+  /* ---- entry inputs ---- */
+  .entry-card{background:#fff;border:1.5px solid var(--nkr-teal);border-radius:10px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:22px}
+  .entry-card h2{font-size:16px;color:var(--nkr-navy);font-weight:700;margin-bottom:4px}
+  .entry-card .entry-note{font-size:13px;color:var(--text-secondary);margin-bottom:16px;max-width:760px}
+  /* Deliberately NOT in the print-hide list — the readable record of what
+     was entered, the counterpart of Module 1's "Inputs Entered" section.
+     Screen and PDF share this DOM, so it must survive print. */
+  .inputs-summary{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+  .inputs-summary .eyebrow-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);font-weight:700;margin-bottom:8px}
+  .inputs-summary .row{font-size:13.5px;color:var(--nkr-navy);margin-bottom:4px}
+  .inputs-summary .row b{font-weight:600}
+  .inputs-summary .row .empty{color:var(--text-secondary);font-style:italic;font-weight:400}
+  .field-error{color:var(--red);font-size:12.5px;margin-top:10px}
+  .entry-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:220px}
+  .field label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);font-weight:700}
+  .field input{font-family:inherit;font-size:15px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-surface);color:var(--text-primary)}
+  .field input:focus{outline:none;border-color:var(--nkr-navy);background:#fff}
+  .field .hint{font-size:11.5px;color:var(--text-secondary);line-height:1.4;max-width:260px}
+
+  .choice-group{display:flex;flex-direction:column;gap:5px}
+  .choice-group>label{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary);font-weight:700}
+  .choice-tiles{display:flex;gap:10px;flex-wrap:wrap}
+  .choice-tile{text-align:left;font-family:inherit;font-size:13.5px;color:var(--text-primary);background:#fff;border:1.5px solid var(--nkr-teal);border-radius:8px;padding:11px 13px;cursor:pointer;transition:.15s;line-height:1.4;display:flex;align-items:flex-start;gap:9px;flex:1 1 260px;min-width:240px}
+  .choice-tile:hover{border-color:var(--nkr-navy);background:var(--highlight-blue)}
+  .choice-tile.selected{border-color:var(--accent-primary);background:var(--green-bg)}
+  .choice-tile.selected.danger{border-color:var(--red);background:var(--red-bg)}
+  .choice-tile .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border);background:#fff;flex-shrink:0;display:grid;place-items:center;margin-top:1px;transition:.15s;font-size:11px;font-weight:700;color:#fff}
+  .choice-tile.selected .box{background:var(--accent-primary);border-color:var(--accent-primary)}
+  .choice-tile.selected.danger .box{background:var(--red);border-color:var(--red)}
+  .choice-tile b{display:block;font-weight:600;color:var(--nkr-navy);margin-bottom:2px}
+  .choice-tile small{color:var(--text-secondary);display:block}
+
+  /* ---- "what you'll need" panel ---- */
+  .prep-panel{background:#fff;border:1.5px solid var(--nkr-navy);border-radius:10px;box-shadow:var(--shadow);padding:20px 24px;margin-bottom:22px}
+  .prep-panel h2{font-size:16px;color:var(--nkr-navy);font-weight:700;margin-bottom:6px}
+  .prep-panel p{font-size:13px;color:var(--text-secondary);line-height:1.55;margin-bottom:12px;max-width:800px}
+  .prep-cols{display:flex;gap:24px;flex-wrap:wrap}
+  .prep-col{flex:1 1 300px}
+  .prep-col h4{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--nkr-green-dark);font-weight:700;margin-bottom:7px}
+  .prep-col ul{margin:0;padding-left:18px}
+  .prep-col li{font-size:12.5px;color:var(--text-primary);line-height:1.5;margin-bottom:5px}
+
+  /* ---- gates ---- */
+  .gate{background:#fff;border:1.5px solid var(--nkr-teal);border-radius:10px;box-shadow:var(--shadow);padding:22px 24px;margin-bottom:22px}
+  .gate.inactive{border-color:var(--border);background:var(--bg-surface);opacity:.75}
+  .gate-head{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+  .gate-head h2{font-size:17px;color:var(--nkr-navy);font-weight:700}
+  .gate-num{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--nkr-green-dark);font-weight:700;margin-bottom:3px}
+  .gate-status{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:5px 11px;border-radius:99px;border:1px solid;white-space:nowrap}
+  .gate-status.open{background:var(--green-bg);border-color:#B8E0CE;color:var(--nkr-green-dark)}
+  .gate-status.closed{background:var(--warning-bg);border-color:#EAD4A8;color:var(--accent-warning)}
+  .gate-status.blocked{background:var(--red-bg);border-color:#E8C2BE;color:var(--red)}
+  .gate-status.pending{background:var(--bg-surface);border-color:var(--border);color:var(--text-secondary)}
+  .gate-intro{font-size:13.5px;color:var(--text-secondary);line-height:1.55;margin-bottom:14px;max-width:820px}
+  .gate cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:10px;letter-spacing:.02em}
+  .gate-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+  .gate-section:first-of-type{border-top:none;padding-top:0;margin-top:14px}
+  .gate-section h3{font-size:13.5px;color:var(--nkr-navy);font-weight:700;margin-bottom:4px}
+  .gate-section .sec-note{font-size:12.5px;color:var(--text-secondary);line-height:1.5;margin-bottom:12px;max-width:820px}
+
+  /* ---- test cards (the three parallel tests in each gate) ---- */
+  .test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .test-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:15px 16px;display:flex;flex-direction:column;gap:9px}
+  .test-card.pass{background:var(--green-bg);border-color:#B8E0CE}
+  .test-card.fail{background:var(--red-bg);border-color:#E8C2BE}
+  .test-card h4{font-size:13.5px;color:var(--nkr-navy);font-weight:700}
+  .test-card .rule{font-size:12px;color:var(--text-secondary);line-height:1.45}
+  .test-card .verdict{font-size:12.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+  .test-card.pass .verdict{color:var(--nkr-green-dark)}
+  .test-card.fail .verdict{color:var(--red)}
+  .test-card .verdict.untested{color:var(--text-secondary)}
+  .test-card .working{font-size:12px;color:var(--text-primary);background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;line-height:1.5}
+  .test-card cite{font-size:10.5px}
+  .test-inputs{display:flex;flex-direction:column;gap:9px}
+  .test-inputs .field{min-width:0}
+  .test-inputs .field input{font-size:14px;padding:8px 10px}
+
+  /* ---- callouts ---- */
+  .callout-row{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .callout{flex:1 1 320px;border-radius:10px;padding:18px 20px;border:1px solid;box-shadow:var(--shadow)}
+  .callout.good{background:var(--green-bg);border-color:#B8E0CE}
+  .callout.caution{background:var(--warning-bg);border-color:#EAD4A8}
+  .callout.danger{background:var(--red-bg);border-color:#E8C2BE}
+  .callout .tag{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .callout.good .tag{color:var(--accent-primary)}
+  .callout.caution .tag{color:var(--accent-warning)}
+  .callout.danger .tag{color:var(--red)}
+  .callout h3{font-size:15.5px;color:var(--nkr-navy);font-weight:700;margin-bottom:8px}
+  .callout p{font-size:13.5px;color:var(--text-primary);line-height:1.55}
+  .callout p+p{margin-top:8px}
+  .callout ol,.callout ul{margin:8px 0 0;padding-left:18px}
+  .callout li{font-size:13px;color:var(--text-primary);line-height:1.5;margin-bottom:5px}
+  .callout cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:10px;letter-spacing:.02em}
+
+  .warn-box{border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;border:1px solid;margin-top:12px}
+  .warn-box.amber{background:var(--warning-bg);border-color:#EAD4A8;color:var(--text-primary)}
+  .warn-box.red{background:var(--red-bg);border-color:#E8C2BE;color:var(--text-primary)}
+  .warn-box.info{background:var(--bg-surface);border-color:var(--border);color:var(--text-primary)}
+  .warn-box b{color:var(--nkr-navy)}
+  .warn-box cite{display:block;font-style:normal;font-size:10.5px;color:var(--text-secondary);margin-top:6px}
+
+  /* ---- outcome banner ---- */
+  .outcome{border-radius:10px;padding:22px 24px;margin-bottom:22px;border:1.5px solid;box-shadow:var(--shadow)}
+  .outcome.zero{background:var(--green-bg);border-color:#B8E0CE}
+  .outcome.none{background:var(--warning-bg);border-color:#EAD4A8}
+  .outcome.pending{background:var(--bg-surface);border-color:var(--border)}
+  .outcome .tag{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px}
+  .outcome.zero .tag{color:var(--nkr-green-dark)}
+  .outcome.none .tag{color:var(--accent-warning)}
+  .outcome.pending .tag{color:var(--text-secondary)}
+  .outcome h2{font-size:19px;color:var(--nkr-navy);font-weight:700;margin-bottom:8px;line-height:1.3}
+  .outcome p{font-size:13.5px;color:var(--text-primary);line-height:1.55;max-width:860px}
+  .outcome p+p{margin-top:8px}
+  .outcome cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:10px}
+
+  .minor-note{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:22px;font-size:13px}
+  .minor-note summary{cursor:pointer;font-weight:700;color:var(--nkr-navy);list-style:none}
+  .minor-note summary::-webkit-details-marker{display:none}
+  .minor-note summary::before{content:"+ ";color:var(--accent-primary)}
+  .minor-note[open] summary::before{content:"– ";}
+  .minor-note .detail-body{margin-top:10px;color:var(--text-secondary);line-height:1.6}
+  .minor-note .detail-body p+p{margin-top:8px}
+  .minor-note cite{display:block;font-style:normal;font-size:11px;color:var(--text-secondary);margin-top:6px}
+
+  .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .btn{font-family:inherit;font-weight:700;font-size:14px;letter-spacing:.02em;color:#fff;background:var(--nkr-navy);border:none;border-radius:8px;padding:13px 22px;cursor:pointer;transition:.15s;text-decoration:none;display:inline-flex;align-items:center}
+  .btn:hover{background:#1c3a5c}
+  .btn:focus-visible{outline:3px solid var(--accent-primary);outline-offset:2px}
+  .btn.primary{background:var(--accent-primary)}
+  .btn.primary:hover{background:#178a63}
+
+  .lead-modal{position:fixed;inset:0;background:rgba(20,40,63,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
+  .lead-modal.show{display:flex}
+  .lead-box{width:100%;max-width:460px;background:#fff;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-lg);padding:26px}
+  .lead-box h2{margin:0 0 8px;font-weight:700;color:var(--nkr-navy);font-size:20px}
+  .lead-box p{margin:0 0 18px;color:var(--text-secondary);font-size:13px;line-height:1.55}
+  .lead-box .form-row{margin-bottom:13px;display:block}
+  .lead-box label{display:block;margin-bottom:5px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-secondary)}
+  .lead-box input{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:15px;background:var(--bg-surface);color:var(--text-primary)}
+  .lead-box input:focus{outline:none;border-color:var(--nkr-navy);background:#fff}
+  .lead-error{color:var(--red);font-size:12px;display:none;margin-bottom:12px}
+  .lead-box .btn{width:100%;justify-content:center;margin-top:4px}
+
+  footer{text-align:center;font-size:11px;color:var(--text-secondary);margin-top:30px;letter-spacing:.02em;line-height:1.7}
+  footer .verified{color:var(--nkr-navy);font-weight:700}
+  footer a{color:var(--nkr-navy);text-decoration:none;border-bottom:1px solid var(--accent-primary)}
+  .disclaimer{font-size:11.5px;color:var(--text-secondary);background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;line-height:1.55;margin:0 0 20px}
+  .disclaimer strong{color:var(--nkr-navy)}
+
+  /* ---- Module 3: computation working ---- */
+  .work{background:var(--bg-surface);border:1px solid var(--border);border-radius:9px;padding:4px 16px;margin-top:12px}
+  .work-row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .work-row:last-child{border-bottom:none}
+  .work-row .lbl{font-size:13px;color:var(--text-primary);flex:1 1 300px}
+  .work-row .lbl small{display:block;color:var(--text-secondary);font-size:11.5px;line-height:1.45;margin-top:2px}
+  .work-row .val{font-size:15px;font-weight:700;color:var(--nkr-navy);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .work-row.total{background:var(--green-bg);margin:0 -16px;padding:12px 16px;border-radius:0 0 8px 8px;border-bottom:none}
+  .work-row.total .val{font-size:19px;color:var(--nkr-green-dark)}
+  .work-row.muted .val{color:var(--text-secondary);font-weight:400}
+  .work-row cite{display:block;font-style:normal;font-size:10.5px;color:var(--text-secondary);margin-top:3px}
+  .estimate-band{background:var(--warning-bg);border:1px solid #EAD4A8;border-radius:8px;padding:11px 14px;font-size:12.5px;line-height:1.5;color:var(--text-primary);margin-bottom:16px}
+  .estimate-band b{color:var(--nkr-navy)}
+  .route-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:860px){ .route-grid{grid-template-columns:1fr} }
+
+  @media (max-width:860px){ .test-grid{grid-template-columns:1fr} }
+  @media (max-width:760px){ .entry-row{flex-direction:column} .callout-row{flex-direction:column;align-items:stretch} .prep-cols{flex-direction:column} }
+
+  @media print{
+    .btn,.explore,.lead-modal,.brand-bar,.entry-note,.field,.choice-tiles,.choice-group>label,.tool-nav,.field-error,.prep-panel{display:none!important}
+    .action-row{display:none!important}
+    body{background:#fff;padding:0}
+    header.masthead{position:static!important;background:var(--highlight-blue)!important;border:1px solid #ccc!important;box-shadow:none!important}
+    header.masthead .head-top{align-items:flex-start!important}
+    header.masthead .head-right{align-self:flex-start!important}
+    header.masthead .eyebrow{color:var(--nkr-green-dark)!important}
+    header.masthead h1{color:var(--nkr-navy)!important}
+    header.masthead .sub{color:var(--nkr-navy)!important}
+    .logo-mark .logo-light{display:block!important}
+    .logo-mark .logo-dark{display:none!important}
+    .logo-mark img{width:155px!important;height:auto!important}
+    .head-right{gap:0!important}
+    .wrap{max-width:100%}
+    .entry-card{box-shadow:none;border:1px solid #ccc}
+    .gate,.callout,.outcome,.test-card{box-shadow:none;break-inside:avoid;border:1px solid #ccc}
+    .test-grid{grid-template-columns:1fr 1fr 1fr}
+    .minor-note{break-inside:avoid}
+    .legal-strip{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="brand-bar"></div>
+
+<div class="lead-modal" id="leadModal">
+  <div class="lead-box">
+    <h2>Your details</h2>
+    <p>Enter your details to print or save the calculation as a PDF. Your details may be recorded by this tool provider. The figures you entered above are not transmitted.</p>
+    <div class="lead-error" id="leadError">Please complete name, company name and a valid email address.</div>
+    <div class="form-row"><label for="leadName">Name</label><input type="text" id="leadName" placeholder="Your name"></div>
+    <div class="form-row"><label for="leadCompany">Company name</label><input type="text" id="leadCompany" placeholder="Company name"></div>
+    <div class="form-row"><label for="leadEmail">Email</label><input type="text" id="leadEmail" placeholder="name@company.com"></div>
+    <button class="btn" id="leadSubmitBtn">Print / Save as PDF</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="tool-nav">
+    <a href="index.html">🏠 Home</a>
+    <button type="button" class="reset-link" id="startOverBtn">↺ Start over</button>
+  </div>
+  <header class="masthead">
+    <div class="head-top">
+      <div class="head-title">
+        <div class="eyebrow">UAE Domestic Minimum Top-up Tax · Module 3</div>
+        <h1>ETR &amp; Top-up Tax Calculation</h1>
+        <div class="sub">An estimated UAE Top-up Tax figure from aggregate inputs — for an entity in scope with no safe harbour available.</div>
+      </div>
+      <div class="head-right">
+        <div class="logo-mark">
+          <img class="logo-light" src="assets/nkr-logo-light.png" alt="NKR Auditing LLC">
+          <img class="logo-dark" src="assets/nkr-logo-dark.png" alt="NKR Auditing LLC">
+        </div>
+        <a class="explore" href="https://nkr.ae/automations" target="_blank" rel="noopener">Explore more
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="legal-strip" id="legalStrip"></div>
+  <div id="prepPanel"></div>
+  <div id="entry"></div>
+  <div id="outcome"></div>
+  <div id="routes"></div>
+  <div id="main"></div>
+  <div id="flags"></div>
+  <div id="minorNotes"></div>
+
+  <div class="action-row">
+    <button class="btn primary" id="pdfBtn">Print / Save as PDF</button>
+    <a class="btn" href="module2-safe-harbour.html">← Back to Safe Harbour Screening</a>
+    <a class="btn" href="module4-compliance-calendar.html">Compliance Calendar →</a>
+  </div>
+
+  <div id="disclaimer"></div>
+
+  <footer>
+    Not tax advice. Confirm any position against the primary legislation and a qualified UAE tax adviser before filing.<br>
+    <span class="verified">Designed and verified by <a href="https://nkr.ae" target="_blank" rel="noopener">NKR Auditing LLC</a></span>
+  </footer>
+</div>
+<script src="assets/dmtt-dates.js"></script>
+<script>
+/* ==================================================================
+   UAE DMTT — Module 3: ETR & Top-up Tax Calculation
+   Legal basis: CD 142/2024 Annexure Art 5 (5.1–5.6), Art 4.1.5–4.1.6,
+   Art 9.2 (transitional SBIE rates), Art 9.3 (Initial Phase),
+   Art 10.6 (currency), read with the 2026 OECD Consolidated Commentary
+   adopted by MD 96 of 2026.
+
+   This is a SIMPLIFIED ESTIMATE. It takes aggregate Pillar Two Income,
+   Losses and Adjusted Covered Taxes as inputs; it does not derive them.
+   The full Article 3 (income adjustments) and Article 4 (covered taxes)
+   computations are separate modules. Every output says so.
+
+   ⚠️ Three things a general Pillar Two implementation gets wrong here —
+   each is marked at the point it matters: there is NO QDMTT term in
+   CD 142's Art 5.2.3; the SBIE rate is NOT 5% for any year this tool
+   will realistically see (Art 9.2 overrides through FY2032); and the
+   ETR rounds to FOUR decimal places, not two.
+   ================================================================== */
+
+const CITE_M3={
+  etr:"Art. 5.1.1, CD 142/2024 Annexure",
+  netIncome:"Art. 5.1.2, CD 142/2024 Annexure",
+  investmentEntityExcl:"Art. 5.1.3, CD 142/2024 Annexure",
+  stateless:"Art. 5.1.1, CD 142/2024 Annexure",
+  etrRounding:"Commentary to Art. 5.1.1 ¶3, adopted by Ministerial Decision No. 96 of 2026",
+  noEtrOnLoss:"Commentary to Art. 5.1.1 ¶3, adopted by Ministerial Decision No. 96 of 2026",
+  topUpPct:"Art. 5.2.1, CD 142/2024 Annexure",
+  excessProfit:"Art. 5.2.2, CD 142/2024 Annexure",
+  topUpTax:"Art. 5.2.3, CD 142/2024 Annexure",
+  negativeTaxes:"Commentary to Art. 5.2.1 ¶15.2–15.5, adopted by Ministerial Decision No. 96 of 2026",
+  sbie:"Art. 5.3, CD 142/2024 Annexure",
+  sbiePayroll:"Art. 5.3.3, CD 142/2024 Annexure; Art. 9.2, CD 142/2024 Annexure",
+  sbieTangible:"Art. 5.3.4, CD 142/2024 Annexure; Art. 9.2, CD 142/2024 Annexure",
+  sbieElection:"Art. 5.3.1, CD 142/2024 Annexure; Commentary to Art. 5.2.2 ¶17",
+  sbieInvestmentExcl:"Art. 5.3.2, CD 142/2024 Annexure",
+  sbieRates:"Art. 9.2, CD 142/2024 Annexure",
+  actt:"Art. 5.4, CD 142/2024 Annexure",
+  art415:"Art. 4.1.5, CD 142/2024 Annexure",
+  art416:"Art. 4.1.6, CD 142/2024 Annexure",
+  deMinimis:"Art. 5.5, CD 142/2024 Annexure",
+  deMinimisAvg:"Art. 5.5.2, CD 142/2024 Annexure",
+  deMinimisDefs:"Art. 5.5.3, CD 142/2024 Annexure",
+  deMinimisScope:"Art. 5.5.4, CD 142/2024 Annexure",
+  initialPhase:"Art. 9.3, CD 142/2024 Annexure",
+  referenceJurisdiction:"Art. 9.3.3, CD 142/2024 Annexure",
+  minorityOwned:"Art. 5.6.1–5.6.2, CD 142/2024 Annexure; Commentary to Art. 5.1 ¶2",
+  currency:"Art. 10.6, CD 142/2024 Annexure"
+};
+
+/* ---- operative constants ---- */
+const MINIMUM_RATE=0.15;          // Art 5.1.1 Minimum Rate
+const EUR_10M=10_000_000;         // Art 5.5 de minimis revenue
+const EUR_1M=1_000_000;           // Art 5.5 de minimis income
+const EUR_50M=50_000_000;         // Art 9.3 initial-phase tangible assets
+const INITIAL_PHASE_MAX_JURISDICTIONS=6;
+
+/* ⚠️ Art 9.2 transitional SBIE rates, keyed to the calendar year the
+   Fiscal Year BEGINS in. Arts 5.3.3/5.3.4 state 5%, but Art 9.2
+   overrides that through FY2032 — using 5% for any year this tool will
+   realistically see would understate the carve-out and overstate the
+   tax. The 5% base rate applies only from 2033 onwards. */
+const SBIE_RATES={
+  2025:{payroll:0.096,tangible:0.076},
+  2026:{payroll:0.094,tangible:0.074},
+  2027:{payroll:0.092,tangible:0.072},
+  2028:{payroll:0.090,tangible:0.070},
+  2029:{payroll:0.082,tangible:0.066},
+  2030:{payroll:0.074,tangible:0.062},
+  2031:{payroll:0.066,tangible:0.058},
+  2032:{payroll:0.058,tangible:0.054}
+};
+const SBIE_BASE_RATES={payroll:0.05,tangible:0.05};   // Art 5.3.3/5.3.4, from 2033
+
+function sbieRatesFor(fyStartYear){
+  if(fyStartYear===null||fyStartYear===undefined)return null;
+  if(Object.prototype.hasOwnProperty.call(SBIE_RATES,fyStartYear))
+    return {...SBIE_RATES[fyStartYear],transitional:true,year:fyStartYear};
+  if(fyStartYear>=2033) return {...SBIE_BASE_RATES,transitional:false,year:fyStartYear};
+  return null;   // before 2025 the Decision does not apply at all
+}
+
+/* ==================================================================
+   PURE COMPUTATION — kept separate from rendering so test.html can
+   assert on the rules directly as well as through the DOM.
+   ================================================================== */
+
+/* Step 1 — Art 5.1.2. Net Pillar Two Income is a POSITIVE amount only;
+   zero or below is a Net Pillar Two Loss and there is no ETR. */
+function netPillarTwoIncome(income,losses){
+  if(income===null||losses===null)return null;
+  return income-losses;
+}
+
+/* Art 5.1.1, Commentary ¶3: the ETR is "expressed as a percentage
+   rounded to the fourth decimal place (e.g. 14.12346% = 14.1235%)".
+   FOUR decimal places of the PERCENTAGE, not of the ratio and not two —
+   which is exactly what decides borderline cases against the 15%
+   Minimum Rate. */
+function roundEtrPercent(pct){ return Math.round(pct*10000)/10000; }
+function effectiveTaxRate(adjustedCoveredTaxes,netIncome){
+  if(adjustedCoveredTaxes===null||netIncome===null||!(netIncome>0))return null;
+  const raw=adjustedCoveredTaxes/netIncome;
+  return {raw,percent:roundEtrPercent(raw*100)};
+}
+
+/* Step 4 — Art 5.2.1. Positive difference only. */
+function topUpTaxPercentage(etrPercent){
+  if(etrPercent===null)return null;
+  const pct=(MINIMUM_RATE*100)-etrPercent;
+  return pct>0?roundEtrPercent(pct):0;
+}
+
+/* Step 5 — Art 5.3 with Art 9.2 rates. */
+function computeSbie(payrollCosts,tangibleValue,rates){
+  if(rates===null)return null;
+  if(payrollCosts===null&&tangibleValue===null)return null;
+  const p=(payrollCosts||0)*rates.payroll, t=(tangibleValue||0)*rates.tangible;
+  return {payroll:p,tangible:t,total:p+t,rates};
+}
+
+/* Step 6 — Art 5.2.2. Positive amount only. Commentary ¶17: where the
+   SBIE equals or exceeds Net Pillar Two Income there is no Excess
+   Profit and no Top-up Tax for the year. */
+function excessProfit(netIncome,sbieTotal){
+  if(netIncome===null||sbieTotal===null)return null;
+  return Math.max(0,netIncome-sbieTotal);
+}
+
+/* Step 7 — Art 5.2.3.
+   ⚠️ Top-up Tax = (Top-up Tax Percentage × Excess Profit)
+                   + Additional Current Top-up Tax
+   That is the COMPLETE formula. There is deliberately NO QDMTT term:
+   the OECD Model Rules subtract QDMTT, but the UAE *is* the QDMTT
+   jurisdiction, so there is nothing to deduct. Do not add one. */
+function topUpTax(topUpPercent,excess,additionalCurrent){
+  if(topUpPercent===null||excess===null)return null;
+  const base=(topUpPercent/100)*excess;
+  return Math.max(0,base+(additionalCurrent||0));
+}
+
+/* Art 4.1.5 — Additional Current Top-up Tax in a year with NO Net
+   Pillar Two Income. Verbatim: where the Adjusted Covered Taxes are
+   less than zero AND less than the Expected Adjusted Covered Taxes
+   Amount, the UAE Constituent Entities are treated as having
+   Additional Current Top-up Tax equal to the difference. The Expected
+   Adjusted Covered Taxes Amount is the Pillar Two Income or Loss
+   multiplied by the Minimum Rate — so in a loss year it is NEGATIVE.
+
+   Worked: loss 2,000,000 → Expected −300,000. Adjusted Covered Taxes
+   −500,000 is both below zero and below −300,000, so Additional
+   Current Top-up Tax = −300,000 − (−500,000) = 200,000. The excess tax
+   benefit booked beyond the 15% the loss "expects" is clawed back. */
+function expectedAdjustedCoveredTaxes(pillarTwoIncomeOrLoss){
+  if(pillarTwoIncomeOrLoss===null)return null;
+  return pillarTwoIncomeOrLoss*MINIMUM_RATE;
+}
+function art415AdditionalCurrentTopUpTax(pillarTwoIncomeOrLoss,adjustedCoveredTaxes){
+  if(pillarTwoIncomeOrLoss===null||adjustedCoveredTaxes===null)return null;
+  const expected=expectedAdjustedCoveredTaxes(pillarTwoIncomeOrLoss);
+  if(pillarTwoIncomeOrLoss>0)   return {applies:false,reason:'hasNetIncome',expected};
+  if(!(adjustedCoveredTaxes<0)) return {applies:false,reason:'taxesNotNegative',expected};
+  if(!(adjustedCoveredTaxes<expected)) return {applies:false,reason:'notBelowExpected',expected};
+  return {applies:true,expected,amount:expected-adjustedCoveredTaxes};
+}
+
+/* Art 5.2.1 / Commentary ¶15 — the OTHER negative-taxes case, and a
+   different one: Net Pillar Two Income is POSITIVE while Adjusted
+   Covered Taxes are negative, which pushes the Top-up Tax Percentage
+   above 15%. Mutually exclusive with Art 4.1.5 by trigger — that one
+   requires no Net Pillar Two Income, this one requires some. Detected
+   and flagged only: the ¶15.2–15.5 procedure needs multi-year state
+   this tool does not hold. */
+function negativeTaxesWithIncome(netIncome,adjustedCoveredTaxes){
+  if(netIncome===null||adjustedCoveredTaxes===null)return null;
+  return netIncome>0&&adjustedCoveredTaxes<0;
+}
+
+/* Step 8 — Art 5.5. Average over the current and two preceding Fiscal
+   Years (Art 5.5.2), EXCLUDING any preceding year in which there were
+   no Constituent Entities with Pillar Two Revenue or Losses. */
+function averageOverYears(values){
+  const present=values.filter(v=>v!==null&&v!==undefined&&v!=='');
+  if(!present.length)return null;
+  return {average:present.reduce((a,b)=>a+Number(b),0)/present.length,yearsUsed:present.length};
+}
+function deMinimisTest(avgRevenue,avgIncome){
+  if(avgRevenue===null||avgIncome===null)return null;
+  return {pass:avgRevenue<EUR_10M&&avgIncome<EUR_1M};
+}
+
+/* Step 9 — Art 9.3. All three conditions must hold. */
+function initialPhaseTest(jurisdictionCount,tangibleAssetsOutsideReference,heldByQualifiedIirParent){
+  if(jurisdictionCount===null||tangibleAssetsOutsideReference===null||heldByQualifiedIirParent===null)return null;
+  const okJurisdictions=jurisdictionCount<=INITIAL_PHASE_MAX_JURISDICTIONS;
+  const okAssets=tangibleAssetsOutsideReference<=EUR_50M;
+  const okIir=heldByQualifiedIirParent===false;
+  return {pass:okJurisdictions&&okAssets&&okIir,okJurisdictions,okAssets,okIir};
+}
+
+/* ---- selection state (numbers are read straight from their inputs) ---- */
+const S={
+  sbieElected:true,        // Art 5.3.1 is an election NOT to apply SBIE; default is to apply it
+  art416Elected:false,     // Art 4.1.6 substitution election
+  art416LossCarryBack:null,
+  hasInvestmentEntities:null,
+  hasStatelessCEs:null,
+  hasMinorityOwnedSubgroup:null,
+  route:null,              // 'deminimis' | 'initialphase' | null
+  iirParent:null           // Art 9.3 third condition
+};
+
+function fyStartEl(){ return document.getElementById('fyStart'); }
+function fyEndEl(){ return document.getElementById('fyEnd'); }
+function fyStartDate(){ return parseDateInput(fyStartEl().value); }
+function fyStartYear(){ const d=fyStartDate(); return d?d.getUTCFullYear():null; }
+function num(id){ const el=document.getElementById(id); if(!el||el.value==='')return null; const v=Number(el.value); return isNaN(v)?null:v; }
+function fmtEur(n){ return n===null||n===undefined||isNaN(n)?'—':(n<0?'−':'')+'EUR '+Math.abs(Number(n)).toLocaleString('en-GB',{maximumFractionDigits:0}); }
+function fmtPct4(p){ return p===null||p===undefined||isNaN(p)?'—':p.toFixed(4)+'%'; }
+function fmtDate(d){ return d?d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}):''; }
+
+/* ==================================================================
+   Static chrome
+   ================================================================== */
+document.getElementById('legalStrip').innerHTML=
+  `<strong>Legal basis (primary sources only):</strong> Cabinet Decision No. 142 of 2024 (Annexure), Article 5 (5.1–5.6 — ETR, Top-up Tax, Substance-based Income Exclusion, Additional Current Top-up Tax, De Minimis Exclusion, Minority-Owned Constituent Entities) · Articles 4.1.5–4.1.6 · Article 9.2 (transitional SBIE rates) · Article 9.3 (Initial Phase of International Activity) · Article 10.6 (currency) · 2026 OECD Consolidated Commentary, adopted by Ministerial Decision No. 96 of 2026.`;
+
+document.getElementById('prepPanel').innerHTML=`
+  <div class="prep-panel">
+    <h2>What you'll need before you start</h2>
+    <p>This module produces <b>the number</b> — an estimated UAE Top-up Tax liability. It takes aggregate figures as inputs and does not derive them: the full Article 3 (income adjustments) and Article 4 (covered taxes) computations are separate exercises. Gather these before starting.</p>
+    <div class="prep-cols">
+      <div class="prep-col">
+        <h4>Always needed</h4>
+        <ul>
+          <li>Fiscal Year start date (drives the Art 9.2 SBIE rate) and end date</li>
+          <li>Aggregate Pillar Two Income of all UAE Constituent Entities</li>
+          <li>Aggregate Pillar Two Losses of all UAE Constituent Entities</li>
+          <li>Aggregate Adjusted Covered Taxes of UAE Constituent Entities</li>
+        </ul>
+      </div>
+      <div class="prep-col">
+        <h4>For the Substance-based Income Exclusion</h4>
+        <ul>
+          <li>Eligible Payroll Costs in the UAE</li>
+          <li>Carrying value of Eligible Tangible Assets in the UAE</li>
+          <li>Whether payroll was capitalised into those assets, or relates to excluded International Shipping Income — both are excluded</li>
+        </ul>
+      </div>
+      <div class="prep-col">
+        <h4>Only if testing an alternative route</h4>
+        <ul>
+          <li><b>De Minimis:</b> Pillar Two Revenue and Income/Loss for the current and two preceding Fiscal Years</li>
+          <li><b>Initial Phase:</b> number of Jurisdictions with Constituent Entities, and Net Book Value of Tangible Assets outside the Reference Jurisdiction</li>
+          <li>Additional Current Top-up Tax from a prior-year recalculation, if any</li>
+        </ul>
+      </div>
+    </div>
+  </div>`;
+
+document.getElementById('entry').innerHTML=`
+  <div class="entry-card">
+    <h2>Fiscal Year and entity character</h2>
+    <div class="entry-note">The Fiscal Year start date selects the Art 9.2 transitional Substance-based Income Exclusion rate, which is <b>not</b> the 5% base rate for any year before 2033. The end date auto-fills as start + 1 year − 1 day and can be overridden.</div>
+    <div class="entry-row">
+      <div class="field"><label for="fyStart">Fiscal Year start date</label><input type="date" id="fyStart"></div>
+      <div class="field"><label for="fyEnd">Fiscal Year end date</label><input type="date" id="fyEnd"></div>
+    </div>
+    <div class="field-error" id="dateError" style="display:none"></div>
+    <div class="choice-group" style="margin-top:16px"><label>Does any of the following apply to the UAE Constituent Entities?</label>
+      <div class="choice-tiles" id="characterTiles">
+        <button type="button" class="choice-tile" data-tile="hasInvestmentEntities"><span class="box"></span><span><b>One or more is an Investment Entity</b><small>Art 5.1.3 excludes Investment Entities from the ETR and Net Pillar Two Income computation, and Art 5.3.2 excludes them from the Substance-based Income Exclusion entirely</small></span></button>
+        <button type="button" class="choice-tile" data-tile="hasStatelessCEs"><span class="box"></span><span><b>One or more is a Stateless Constituent Entity</b><small>Art 5.1.1 treats Stateless Constituent Entities subject to the Decision as if a single Constituent Entity located in the UAE</small></span></button>
+        <button type="button" class="choice-tile" data-tile="hasMinorityOwnedSubgroup"><span class="box"></span><span><b>There is a Minority-Owned Subgroup in the UAE</b><small>Art 5.6 requires a separate ETR and Top-up Tax computation for the subgroup, distinct from this one</small></span></button>
+      </div>
+    </div>
+    <div id="characterNotes"></div>
+    <div class="warn-box info">
+      <b>All thresholds below are stated in EUR.</b> Where your figures are in another currency, convert them using the average of the daily reference rates for the month of December prior to the commencement of the relevant Fiscal Year, as quoted by (a) the European Central Bank; (b) where the European Central Bank does not quote a rate for the local currency, the Central Bank of the UAE; or (c) if neither quotes a daily rate for the two currencies, another source acceptable to the Federal Tax Authority.
+      <cite>${CITE_M3.currency}</cite>
+    </div>
+    <div class="inputs-summary" id="inputsSummary"></div>
+  </div>`;
+
+/* ==================================================================
+   Alternative routes — De Minimis (Art 5.5) and Initial Phase
+   (Art 9.3). Presented BEFORE the main computation because passing
+   either ends the enquiry, the same shape Module 2 uses.
+   ================================================================== */
+function numField(id,label,hint){
+  return `<div class="field"><label for="${id}">${label}</label><input type="number" id="${id}" inputmode="decimal" placeholder="EUR">${hint?`<div class="hint">${hint}</div>`:''}</div>`;
+}
+
+document.getElementById('routes').innerHTML=`
+  <div class="gate">
+    <div class="gate-head">
+      <div><div class="gate-num">Alternative routes</div><h2>Two ways the Top-up Tax is nil regardless of the calculation</h2></div>
+    </div>
+    <div class="gate-intro">Either of these ends the enquiry. Both are elections or reliefs applied to the Fiscal Year as a whole, so they are worth testing before working through the full computation below.</div>
+    <div class="route-grid">
+
+      <div class="test-card" id="routeDeMinimis">
+        <h4>De Minimis Exclusion — Annual Election</h4>
+        <div class="rule">Top-up Tax is deemed <b>zero</b> if <b>both</b>: Average Pillar Two Revenue &lt; EUR 10m, <b>and</b> Average Pillar Two Income or Loss is a loss or &lt; EUR 1m. Averages run over the current and the two preceding Fiscal Years.</div>
+        <div class="warn-box info" style="margin-top:0">
+          <b>Two separate rules in Art 5.5.4, and they are not alternatives.</b><br>
+          <b>1 — The election is unavailable</b> to a Constituent Entity that is a Stateless Constituent Entity subject to the Decision.<br>
+          <b>2 — Exclude from the figures below</b> the revenue and Pillar Two Income or Loss of <b>both</b> Stateless Constituent Entities <b>and</b> Investment Entities. This is a different exclusion from Art 5.1.3's, which removes Investment Entities from the main ETR computation — same entities, different authority, and both apply.
+          <cite>${CITE_M3.deMinimisScope}</cite>
+        </div>
+        <div class="test-inputs">
+          <div class="hint" style="font-weight:700;color:var(--nkr-navy)">Pillar Two Revenue</div>
+          ${numField('dmRev0','Current Fiscal Year')}
+          ${numField('dmRev1','First preceding Fiscal Year','Leave blank if there were no Constituent Entities with Pillar Two Revenue or Losses that year — the year is then excluded from the average')}
+          ${numField('dmRev2','Second preceding Fiscal Year','Leave blank on the same basis')}
+          <div class="hint" style="font-weight:700;color:var(--nkr-navy);margin-top:4px">Pillar Two Income or Loss</div>
+          ${numField('dmInc0','Current Fiscal Year')}
+          ${numField('dmInc1','First preceding Fiscal Year')}
+          ${numField('dmInc2','Second preceding Fiscal Year')}
+        </div>
+        <div class="verdict untested" id="dmVerdict">Not yet tested</div>
+        <div class="working" id="dmWorking" style="display:none"></div>
+        <cite>${CITE_M3.deMinimis} · ${CITE_M3.deMinimisAvg} · ${CITE_M3.deMinimisDefs}</cite>
+      </div>
+
+      <div class="test-card" id="routeInitialPhase">
+        <h4>Initial Phase of International Activity</h4>
+        <div class="rule">Top-up Tax is <b>reduced to zero</b> if <b>all three</b> hold: Constituent Entities in no more than six Jurisdictions; the sum of Net Book Values of Tangible Assets in all Jurisdictions other than the Reference Jurisdiction does not exceed EUR 50m; and no ownership interests of the UAE Constituent Entities are held by a Parent Entity subject to a Qualified IIR elsewhere.</div>
+        <div class="test-inputs">
+          <div class="field"><label for="ipJurisdictions">Number of Jurisdictions with Constituent Entities</label><input type="number" id="ipJurisdictions" inputmode="numeric" placeholder="e.g. 4"></div>
+          ${numField('ipAssets','Net Book Value of Tangible Assets outside the Reference Jurisdiction','Reference Jurisdiction is where the MNE Group had the highest total value of Tangible Assets in the Fiscal Year it first met the Art 1.1.1 threshold')}
+        </div>
+        <div class="choice-group" style="margin-top:2px"><label>Qualified IIR parent</label>
+          <div class="choice-tiles" id="iirTiles">
+            <button type="button" class="choice-tile" data-iir="no"><span class="box"></span><span><b>No such Parent Entity</b><small>No ownership interests of the UAE Constituent Entities are held by a Parent Entity subject to a Qualified IIR in another Jurisdiction</small></span></button>
+            <button type="button" class="choice-tile danger" data-iir="yes"><span class="box"></span><span><b>Yes, there is one</b><small>The relief is unavailable</small></span></button>
+          </div>
+        </div>
+        <div class="verdict untested" id="ipVerdict">Not yet tested</div>
+        <div class="working" id="ipWorking" style="display:none"></div>
+        <cite>${CITE_M3.initialPhase} · ${CITE_M3.referenceJurisdiction}</cite>
+      </div>
+
+    </div>
+  </div>`;
+
+/* ==================================================================
+   Main computation
+   ================================================================== */
+document.getElementById('main').innerHTML=`
+  <div class="gate">
+    <div class="gate-head">
+      <div><div class="gate-num">The calculation</div><h2>Effective Tax Rate and Top-up Tax</h2></div>
+      <div class="gate-status pending" id="mainStatus">Enter your figures</div>
+    </div>
+    <div class="estimate-band">
+      <b>This is an estimate, not a filing position.</b> The figures below are the aggregates you enter, not amounts this tool derives. A filing position requires the full Article 3 computation of Pillar Two Income or Loss and the full Article 4 computation of Adjusted Covered Taxes, each of which involves adjustments this module does not perform.
+    </div>
+
+    <div class="gate-section">
+      <h3>Aggregate figures</h3>
+      <div class="sec-note">All amounts for the UAE as a whole — the ETR is computed on a jurisdictional basis by blending every UAE Constituent Entity.${'<span id="excludeNote"></span>'}</div>
+      <div class="entry-row">
+        ${numField('p2Income','Aggregate Pillar Two Income','Of all UAE Constituent Entities (Art 5.1.2(a))')}
+        ${numField('p2Losses','Aggregate Pillar Two Losses','Of all UAE Constituent Entities (Art 5.1.2(b))')}
+        ${numField('act','Aggregate Adjusted Covered Taxes','Of UAE Constituent Entities (Art 5.1.1). May be negative')}
+      </div>
+      <div class="entry-row" style="margin-top:14px">
+        ${numField('payroll','Eligible Payroll Costs (UAE)','Of Eligible Employees performing activities for the MNE Group in the UAE. Exclude costs capitalised into Eligible Tangible Assets, and any attributable to International Shipping Income excluded under Art 3.3.5')}
+        ${numField('tangible','Carrying value of Eligible Tangible Assets (UAE)','(a) property, plant and equipment in the UAE; (b) natural resources in the UAE; (c) a lessee\'s right-of-use of tangible assets in the UAE; (d) licences or similar arrangements for the use of immovable property in the UAE')}
+        ${numField('acttPrior','Additional Current Top-up Tax','From a prior-year recalculation under Art 5.4.1, if any. A current-year Art 4.1.5 amount is computed below — do not enter it here as well')}
+      </div>
+      <div class="choice-group" style="margin-top:16px"><label>Substance-based Income Exclusion</label>
+        <div class="choice-tiles" id="sbieTiles">
+          <button type="button" class="choice-tile selected" data-sbie="apply"><span class="box">✓</span><span><b>Apply the Substance-based Income Exclusion</b><small>The default. Excess Profit = Net Pillar Two Income − SBIE</small></span></button>
+          <button type="button" class="choice-tile" data-sbie="elect-out"><span class="box"></span><span><b>Elect not to apply it (Art 5.3.1)</b><small>An Annual Election. Where made, Excess Profit = Net Pillar Two Income in full</small></span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="gate-section">
+      <h3>Working</h3>
+      <div class="sec-note">Every step is shown, with the provision it comes from. The workings are the point — a bare number cannot be checked.</div>
+      <div class="work" id="working"></div>
+    </div>
+  </div>`;
+
+document.getElementById('minorNotes').innerHTML=`
+  <details class="minor-note">
+    <summary>What this module does not compute, and why</summary>
+    <div class="detail-body">
+      <p><b>Article 3 (Pillar Two Income or Loss) and Article 4 (Adjusted Covered Taxes)</b> are taken as inputs. Deriving them involves the eleven Art 3.2 income adjustments and the Art 4.4 deferred tax machinery, each a substantial exercise in its own right and each a separate module.</p>
+      <p><b>The Excess Negative Tax Expense Carry-forward is never tracked across years.</b> It arises two ways — by mandatory administrative procedure where there is Pillar Two Income and negative Adjusted Covered Taxes (Commentary to Art 5.2.1), and by election under Art 4.1.6 in substitution for an Art 4.1.5 amount. Both need a running balance across Fiscal Years; this tool holds one Fiscal Year.<cite>${CITE_M3.negativeTaxes}; ${CITE_M3.art416}</cite></p>
+      <p><b>Investment Entity ETR computation</b> under the Art 7 machinery is out of scope. Investment Entities are excluded from this computation and flagged.<cite>${CITE_M3.investmentEntityExcl}</cite></p>
+      <p><b>Allocation of Top-up Tax among individual Constituent Entities</b> is out of scope. This module produces the UAE jurisdictional figure; which entity bears it, and any Domestic Designated Filing Entity arrangement, is a separate question.</p>
+    </div>
+  </details>`;
+
+document.getElementById('disclaimer').innerHTML=`
+  <div class="disclaimer">
+    <strong>UAE DMTT — Module 3: ETR &amp; Top-up Tax Calculation.</strong> Estimate generated on <b>${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</b>. This is an automated preliminary <b>estimate</b> based on Cabinet Decision No. 142 of 2024 (Annexure) Article 5 and the OECD Commentary/Guidance adopted by Ministerial Decision No. 96 of 2026, computed from aggregate figures supplied by the user. It is not a filing position, does not constitute tax advice, and is not a substitute for review by a qualified UAE tax adviser.
+  </div>`;
+
+/* ==================================================================
+   refresh() — recomputes from current inputs and writes only the
+   computed parts back. Built-once/refresh-in-place, same as Module 2:
+   re-rendering on every keystroke would drop focus mid-number.
+   ================================================================== */
+function row(label,value,sub,cite,cls){
+  return `<div class="work-row ${cls||''}"><div class="lbl">${label}${sub?`<small>${sub}</small>`:''}${cite?`<cite>${cite}</cite>`:''}</div><div class="val">${value}</div></div>`;
+}
+function setVerdict(id,result,passText,failText){
+  const el=document.getElementById(id);
+  if(result===null){ el.className='verdict untested'; el.textContent='Not yet tested'; return; }
+  el.className='verdict '+(result.pass?'pass':'fail');
+  el.textContent=result.pass?passText:failText;
+}
+function setCard(id,result){
+  document.getElementById(id).className='test-card'+(result===null?'':(result.pass?' pass':' fail'));
+}
+function setWorking(id,html){
+  const el=document.getElementById(id);
+  if(!html){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='';el.innerHTML=html;
+}
+
+function refresh(){
+  const start=fyStartDate(),end=parseDateInput(fyEndEl().value),year=fyStartYear();
+
+  const dateErr=document.getElementById('dateError');
+  if(start&&end&&end.getTime()<start.getTime()){
+    dateErr.style.display='';dateErr.textContent='The Fiscal Year end date is before the start date. Check both dates.';
+  } else { dateErr.style.display='none'; }
+
+  /* ---- entity-character notes ---- */
+  const cn=[];
+  if(S.hasInvestmentEntities) cn.push(`<div class="warn-box amber"><b>Exclude the Investment Entities' figures from everything below.</b> Art 5.1.3 excludes an Investment Entity from the Net Pillar Two Income and ETR computation, and Art 5.3.2 excludes it from the Substance-based Income Exclusion entirely. Its own ETR and Top-up Tax are determined under the Art 7 machinery, which is outside this module.<cite>${CITE_M3.investmentEntityExcl}; ${CITE_M3.sbieInvestmentExcl}</cite></div>`);
+  if(S.hasStatelessCEs) cn.push(`<div class="warn-box info"><b>Stateless Constituent Entities subject to the Decision are treated as if a single Constituent Entity located in the UAE</b> for this computation, so include their figures here. Note separately that the De Minimis election is <b>not available</b> to them, and their revenue and Pillar Two Income or Loss must be excluded from the De Minimis averages.<cite>${CITE_M3.stateless}; ${CITE_M3.deMinimisScope}</cite></div>`);
+  if(S.hasMinorityOwnedSubgroup) cn.push(`<div class="warn-box red"><b>A separate computation is required for the Minority-Owned Subgroup.</b> Art 5.6 requires its ETR and Top-up Tax to be computed separately from the main UAE computation, as though it were a distinct group. This tool runs one computation at a time — complete this one for the non-subgroup entities, then run it again for the subgroup. Do not combine them.<cite>${CITE_M3.minorityOwned}</cite></div>`);
+  document.getElementById('characterNotes').innerHTML=cn.join('');
+  document.getElementById('excludeNote').innerHTML=S.hasInvestmentEntities
+    ? ' <b>Exclude Investment Entity figures</b> from the three amounts below (Art 5.1.3).' : '';
+
+  /* ---- inputs summary (survives into the PDF) ---- */
+  document.getElementById('inputsSummary').innerHTML=
+    `<div class="eyebrow-label">What you've entered</div>
+     <div class="row"><b>Fiscal Year:</b> ${start?fmtDate(start):'<span class="empty">Not yet entered</span>'}${end?' to '+fmtDate(end):''}</div>
+     <div class="row"><b>Substance-based Income Exclusion:</b> ${S.sbieElected?'Applied':'Elected not to apply (Art 5.3.1)'}</div>
+     <div class="row"><b>Entity character:</b> ${[S.hasInvestmentEntities&&'Investment Entities present',S.hasStatelessCEs&&'Stateless Constituent Entities present',S.hasMinorityOwnedSubgroup&&'Minority-Owned Subgroup present'].filter(Boolean).join('; ')||'<span class="empty">None indicated</span>'}</div>`;
+
+  /* ---- alternative route: De Minimis ---- */
+  const rev=averageOverYears([num('dmRev0'),num('dmRev1'),num('dmRev2')]);
+  const inc=averageOverYears([num('dmInc0'),num('dmInc1'),num('dmInc2')]);
+  const dm=(rev&&inc)?deMinimisTest(rev.average,inc.average):null;
+  setCard('routeDeMinimis',dm);
+  setVerdict('dmVerdict',dm,'Passes — Top-up Tax deemed zero','Does not pass');
+  setWorking('dmWorking',dm===null?null:
+    `Average Pillar Two Revenue over ${rev.yearsUsed} Fiscal Year${rev.yearsUsed===1?'':'s'}: <b>${fmtEur(rev.average)}</b> ${rev.average<EUR_10M?'&lt;':'≥'} EUR 10,000,000 ${rev.average<EUR_10M?'✓':'✗'}<br>Average Pillar Two Income or Loss over ${inc.yearsUsed} Fiscal Year${inc.yearsUsed===1?'':'s'}: <b>${fmtEur(inc.average)}</b> ${inc.average<EUR_1M?'&lt;':'≥'} EUR 1,000,000 ${inc.average<EUR_1M?'✓':'✗'}${inc.average<0?' (a loss satisfies this limb)':''}${(rev.yearsUsed<3||inc.yearsUsed<3)?'<br><span style="color:var(--text-secondary)">Years left blank are excluded from the average, per Art 5.5.2.</span>':''}`);
+
+  /* ---- alternative route: Initial Phase ---- */
+  const ip=initialPhaseTest(num('ipJurisdictions'),num('ipAssets'),S.iirParent===null?null:S.iirParent);
+  setCard('routeInitialPhase',ip);
+  setVerdict('ipVerdict',ip,'Passes — Top-up Tax reduced to zero','Does not pass');
+  setWorking('ipWorking',ip===null?null:
+    `Jurisdictions with Constituent Entities: <b>${num('ipJurisdictions')}</b> ${ip.okJurisdictions?'≤ 6 ✓':'&gt; 6 ✗'}<br>Tangible Assets outside the Reference Jurisdiction: <b>${fmtEur(num('ipAssets'))}</b> ${ip.okAssets?'≤ EUR 50,000,000 ✓':'&gt; EUR 50,000,000 ✗'}<br>Held by a Parent Entity subject to a Qualified IIR: <b>${S.iirParent?'Yes':'No'}</b> ${ip.okIir?'✓':'✗'}`);
+
+  /* ---- main computation ---- */
+  const income=num('p2Income'),losses=num('p2Losses'),act=num('act');
+  const net=netPillarTwoIncome(income,losses);
+  const rates=sbieRatesFor(year);
+  const sbie=S.sbieElected?computeSbie(num('payroll'),num('tangible'),rates):{payroll:0,tangible:0,total:0,rates,electedOut:true};
+  const acttPrior=num('acttPrior');
+
+  const w=[];
+  const flags=[];
+  let headline=null,shortCircuit=null;
+
+  if(net===null){
+    w.push(row('Net Pillar Two Income','—','Enter aggregate Pillar Two Income and Losses above.',CITE_M3.netIncome,'muted'));
+    document.getElementById('mainStatus').className='gate-status pending';
+    document.getElementById('mainStatus').textContent='Enter your figures';
+  } else {
+    w.push(row('Aggregate Pillar Two Income',fmtEur(income),null,null,'muted'));
+    w.push(row('Aggregate Pillar Two Losses',fmtEur(losses),null,null,'muted'));
+    w.push(row('<b>1 · Net Pillar Two Income</b>',fmtEur(net),
+      net>0?'Income less losses. A positive amount, so an ETR is computed.':'Income less losses is zero or negative — this is a Net Pillar Two Loss.',CITE_M3.netIncome));
+
+    if(net>0){
+      const etr=effectiveTaxRate(act,net);
+      if(etr===null){
+        w.push(row('<b>2 · Effective Tax Rate</b>','—','Enter aggregate Adjusted Covered Taxes above.',CITE_M3.etr,'muted'));
+      } else {
+        const negWithIncome=negativeTaxesWithIncome(net,act);
+        w.push(row('<b>2 · Effective Tax Rate</b>',fmtPct4(etr.percent),
+          `${fmtEur(act)} ÷ ${fmtEur(net)}. Rounded to four decimal places, not two — which is what decides borderline cases against the 15% Minimum Rate.`,
+          `${CITE_M3.etr}; ${CITE_M3.etrRounding}`));
+        const pct=topUpTaxPercentage(etr.percent);
+        w.push(row('<b>3 · Top-up Tax Percentage</b>',fmtPct4(pct),
+          pct>0?`15.0000% − ${fmtPct4(etr.percent)}. A positive difference, so the UAE is low-taxed for the Fiscal Year.`
+               :`15.0000% − ${fmtPct4(etr.percent)} is not positive. The ETR is at or above the Minimum Rate, so no Constituent Entity is low-taxed.`,
+          CITE_M3.topUpPct));
+
+        if(negWithIncome){
+          flags.push(`<div class="callout danger"><div class="tag">Mandatory procedure</div><h3>Negative Adjusted Covered Taxes with Pillar Two Income</h3>
+            <p>The UAE has Net Pillar Two Income of ${fmtEur(net)} but <b>negative</b> Adjusted Covered Taxes of ${fmtEur(act)}, which pushes the Top-up Tax Percentage <b>above</b> the 15% Minimum Rate — here ${fmtPct4(pct)}.</p>
+            <p>The Commentary mandates an administrative procedure in this case: the Negative Tax Expense is <b>excluded</b> from aggregate Adjusted Covered Taxes and an <b>Excess Negative Tax Expense Carry-forward</b> is established, to be used in all subsequent jurisdictional ETR computations.</p>
+            <p><b>The figure above does not reflect that procedure.</b> Applying it needs a running balance across Fiscal Years, and this tool holds one. The procedure is mandatory, not elective — treat this result as requiring professional review rather than as the answer.</p>
+            <p>Compare the Art 4.1.5 case below, which is the same carry-forward concept arising on the other side of the income/loss split. The two are mutually exclusive: that one requires <i>no</i> Net Pillar Two Income, this one requires some. The Art 4.1.5 amount is computed because its formula is in the Decision; this one is not, because its procedure is not.</p>
+            <cite>${CITE_M3.negativeTaxes}</cite></div>`);
+        }
+
+        if(pct<=0){
+          shortCircuit={kind:'etr-at-or-above',cite:CITE_M3.topUpPct};
+          w.push(row('<b>Result</b>','Nil','The ETR is at or above the 15% Minimum Rate, so there is no Top-up Tax Percentage and no Excess Profit to apply it to. Any Additional Current Top-up Tax is unaffected and still applies.',CITE_M3.topUpPct,'total'));
+          headline=topUpTax(0,0,acttPrior);
+        } else if(sbie===null){
+          w.push(row('<b>4 · Substance-based Income Exclusion</b>','—',
+            rates===null?'Enter a Fiscal Year start date from 2025 onwards to select the Art 9.2 rate.':'Enter Eligible Payroll Costs and/or Eligible Tangible Assets above.',CITE_M3.sbie,'muted'));
+        } else {
+          if(sbie.electedOut){
+            w.push(row('<b>4 · Substance-based Income Exclusion</b>','Nil — elected out',
+              'An Annual Election has been made under Art 5.3.1 not to apply the Substance-based Income Exclusion, so Excess Profit is the whole of Net Pillar Two Income.',CITE_M3.sbieElection));
+          } else {
+            w.push(row('4a · Payroll carve-out',fmtEur(sbie.payroll),
+              `${(rates.payroll*100).toFixed(1)}% × ${fmtEur(num('payroll')||0)}${rates.transitional?` — the Art 9.2 transitional rate for a Fiscal Year beginning in ${rates.year}, not the 5% base rate`:' — the Art 5.3.3 base rate, which applies from 2033 onwards'}`,
+              CITE_M3.sbiePayroll));
+            w.push(row('4b · Tangible asset carve-out',fmtEur(sbie.tangible),
+              `${(rates.tangible*100).toFixed(1)}% × ${fmtEur(num('tangible')||0)}${rates.transitional?` — the Art 9.2 transitional rate for a Fiscal Year beginning in ${rates.year}`:' — the Art 5.3.4 base rate'}`,
+              CITE_M3.sbieTangible));
+            w.push(row('<b>4 · Substance-based Income Exclusion</b>',fmtEur(sbie.total),'Payroll carve-out plus tangible asset carve-out.',CITE_M3.sbie));
+          }
+          const excess=excessProfit(net,sbie.total);
+          w.push(row('<b>5 · Excess Profit</b>',fmtEur(excess),
+            excess>0?`${fmtEur(net)} − ${fmtEur(sbie.total)}. A positive amount only.`
+                    :`The Substance-based Income Exclusion of ${fmtEur(sbie.total)} equals or exceeds Net Pillar Two Income of ${fmtEur(net)}, so there is no Excess Profit.`,
+            CITE_M3.excessProfit));
+
+          if(excess<=0){
+            shortCircuit={kind:'sbie-covers',cite:CITE_M3.excessProfit};
+            headline=topUpTax(pct,0,acttPrior);
+            w.push(row('<b>Result</b>',fmtEur(headline),
+              'With no Excess Profit there is no Top-up Tax for the Fiscal Year, aside from any Additional Current Top-up Tax. This is a common and favourable outcome for substance-heavy UAE operations.',CITE_M3.excessProfit,'total'));
+          } else {
+            headline=topUpTax(pct,excess,acttPrior);
+            w.push(row('<b>6 · Top-up Tax</b>',fmtEur(headline),
+              `(${fmtPct4(pct)} × ${fmtEur(excess)})${acttPrior?` + ${fmtEur(acttPrior)} Additional Current Top-up Tax`:''}. There is deliberately no QDMTT term in this formula — the UAE is the QDMTT jurisdiction, so there is nothing to deduct.`,
+              CITE_M3.topUpTax,'total'));
+          }
+        }
+      }
+    } else {
+      /* ---- Net Pillar Two Loss branch ---- */
+      shortCircuit={kind:'loss',cite:CITE_M3.noEtrOnLoss};
+      w.push(row('<b>2 · Effective Tax Rate</b>','Not computed',
+        'No Effective Tax Rate is computed for a Fiscal Year in which the UAE has a Net Pillar Two Loss, so there is no Top-up Tax Percentage and no Excess Profit.',CITE_M3.noEtrOnLoss));
+      const a415=art415AdditionalCurrentTopUpTax(net,act);
+      if(a415===null){
+        w.push(row('<b>3 · Art 4.1.5 check</b>','—','Enter aggregate Adjusted Covered Taxes above to test whether Additional Current Top-up Tax arises on these figures.',CITE_M3.art415,'muted'));
+      } else if(a415.applies){
+        w.push(row('Expected Adjusted Covered Taxes Amount',fmtEur(a415.expected),
+          `${fmtEur(net)} × 15%. Negative, because the Pillar Two Income or Loss it is computed on is a loss.`,CITE_M3.art415,'muted'));
+        w.push(row('<b>3 · Additional Current Top-up Tax (Art 4.1.5)</b>',fmtEur(a415.amount),
+          `Adjusted Covered Taxes of ${fmtEur(act)} are below zero and below the Expected Adjusted Covered Taxes Amount of ${fmtEur(a415.expected)}, so the difference is treated as Additional Current Top-up Tax arising in this Fiscal Year. In substance: a tax benefit was booked beyond the 15% the loss itself expects, and the excess is clawed back.`,
+          CITE_M3.art415));
+        headline=topUpTax(0,0,(acttPrior||0)+(S.art416Elected?0:a415.amount));
+        w.push(row('<b>Result</b>',fmtEur(headline),
+          S.art416Elected
+            ? 'The Art 4.1.6 election substitutes the Art 4.1.5 amount with an Excess Negative Tax Expense Carry-forward, so no Additional Current Top-up Tax is payable this year — see the flag below.'
+            : 'No Top-up Tax arises from current-year profit, but the Art 4.1.5 amount does arise, plus any prior-year Additional Current Top-up Tax entered above.',
+          CITE_M3.actt,'total'));
+      } else {
+        const why={hasNetIncome:'there is Net Pillar Two Income',
+          taxesNotNegative:`Adjusted Covered Taxes of ${fmtEur(act)} are not below zero`,
+          notBelowExpected:`Adjusted Covered Taxes of ${fmtEur(act)} are not below the Expected Adjusted Covered Taxes Amount of ${fmtEur(a415.expected)}`}[a415.reason];
+        w.push(row('<b>3 · Additional Current Top-up Tax (Art 4.1.5)</b>','Nil',
+          `Art 4.1.5 does not apply: ${why}. All three of its conditions must hold together.`,CITE_M3.art415));
+        headline=topUpTax(0,0,acttPrior);
+        w.push(row('<b>Result</b>',fmtEur(headline),
+          'No Top-up Tax arises from current-year profit. Additional Current Top-up Tax from a prior-year recalculation under Art 5.4.1 may still apply and requires a full Article 4 computation.',CITE_M3.actt,'total'));
+      }
+
+      /* Art 4.1.6 election — only meaningful where an Art 4.1.5 amount exists. */
+      if(a415&&a415.applies){
+        flags.push(`<div class="callout caution"><div class="tag">Annual Election</div><h3>Art 4.1.6 — substitute an Excess Negative Tax Expense Carry-forward</h3>
+          <p>A Filing Constituent Entity may elect, annually, to substitute the Additional Current Top-up Tax of <b>${fmtEur(a415.amount)}</b> computed above with an <b>excess negative tax expense carry-forward</b> of the same amount, instead of paying it this year.</p>
+          <p>Where elected, that balance <b>must</b> be used in all subsequent jurisdictional ETR computations: in each later Fiscal Year with positive Pillar Two Income and positive Adjusted Covered Taxes, the aggregate Adjusted Covered Taxes are reduced — but not below zero — by the remaining balance, and the balance reduces by the same amount.</p>
+          <div class="warn-box red" style="margin-top:10px"><b>Carried-back losses cannot go into the carry-forward.</b> Any part of the excess negative tax expense attributable to a loss carried back against prior years for domestic tax purposes must be taken into account currently under Art 4.1.5, and cannot be added to the balance.</div>
+          <p style="margin-top:10px"><b>This tool does not track the balance.</b> It holds one Fiscal Year. If you elect, record ${fmtEur(a415.amount)} as the opening carry-forward and carry it forward yourself.</p>
+          <div class="choice-tiles" style="margin-top:10px">
+            <button type="button" class="choice-tile${S.art416Elected?'':' selected'}" data-416="no"><span class="box">${S.art416Elected?'':'✓'}</span><span><b>Do not elect</b><small>The ${fmtEur(a415.amount)} is Additional Current Top-up Tax for this Fiscal Year</small></span></button>
+            <button type="button" class="choice-tile${S.art416Elected?' selected':''}" data-416="yes"><span class="box">${S.art416Elected?'✓':''}</span><span><b>Elect under Art 4.1.6</b><small>Substitute a carry-forward of ${fmtEur(a415.amount)}, to be tracked across future years</small></span></button>
+          </div>
+          <cite>${CITE_M3.art416}</cite></div>`);
+      }
+    }
+  }
+  document.getElementById('working').innerHTML=w.join('');
+
+  if(S.hasMinorityOwnedSubgroup){
+    flags.push(`<div class="callout danger"><div class="tag">Separate computation required</div><h3>Minority-Owned Subgroup</h3>
+      <p>Art 5.6 requires the Effective Tax Rate and Top-up Tax of a Minority-Owned Subgroup to be computed <b>separately</b> from the main UAE computation, as though the subgroup were a distinct group. The figure above covers only the entities included in the amounts you entered.</p>
+      <p>Run this tool a second time for the subgroup, with its own aggregate figures. Do not add the two results together without checking how they interact — that is a question for a qualified adviser, not arithmetic.</p>
+      <cite>${CITE_M3.minorityOwned}</cite></div>`);
+  }
+  document.getElementById('flags').innerHTML=flags.length?`<div class="callout-row">${flags.join('')}</div>`:'';
+
+  /* ---- outcome ---- */
+  const out=document.getElementById('outcome');
+  const st=document.getElementById('mainStatus');
+  if(dm&&dm.pass){
+    st.className='gate-status closed';st.textContent='Superseded by De Minimis';
+    out.innerHTML=`<div class="outcome zero"><div class="tag">Outcome</div><h2>UAE Top-up Tax is deemed zero for this Fiscal Year</h2>
+      <p>The De Minimis Exclusion applies: average Pillar Two Revenue and average Pillar Two Income or Loss are both below their thresholds over the tested Fiscal Years. This is an <b>Annual Election</b> and must be made for the year.</p>
+      <p>The calculation below is left visible for reference, but it does not determine the liability where this election is made.</p>
+      <cite>${CITE_M3.deMinimis}</cite></div>`;
+  } else if(ip&&ip.pass){
+    st.className='gate-status closed';st.textContent='Superseded by Initial Phase';
+    out.innerHTML=`<div class="outcome zero"><div class="tag">Outcome</div><h2>UAE Top-up Tax is reduced to zero for this Fiscal Year</h2>
+      <p>The Initial Phase of International Activity relief applies: all three conditions are met. The relief is time-limited in nature and should be re-tested every Fiscal Year — it is lost as soon as any one condition fails.</p>
+      <cite>${CITE_M3.initialPhase}</cite></div>`;
+  } else if(headline===null){
+    st.className='gate-status pending';st.textContent='Enter your figures';
+    out.innerHTML=`<div class="outcome pending"><div class="tag">Outcome</div><h2>Calculation in progress</h2>
+      <p>Enter your Fiscal Year start date and the aggregate figures below. Every step of the working is shown as it is computed, with the provision it comes from.</p></div>`;
+  } else {
+    const zero=headline<=0;
+    st.className='gate-status '+(zero?'open':'blocked');
+    st.textContent=zero?'No Top-up Tax':'Top-up Tax arises';
+    const scText={
+      'loss':`The UAE has a Net Pillar Two Loss for the Fiscal Year, so no Effective Tax Rate is computed and no Top-up Tax arises from current-year profit.`,
+      'etr-at-or-above':`The Effective Tax Rate is at or above the 15% Minimum Rate, so no Constituent Entity in the UAE is low-taxed for the Fiscal Year.`,
+      'sbie-covers':`The Substance-based Income Exclusion equals or exceeds Net Pillar Two Income, so there is no Excess Profit for the Top-up Tax Percentage to apply to.`
+    }[shortCircuit&&shortCircuit.kind];
+    out.innerHTML=`<div class="outcome ${zero?'zero':'none'}"><div class="tag">Estimated outcome</div>
+      <h2>${zero?'No UAE Top-up Tax on these figures':'Estimated UAE Top-up Tax: '+fmtEur(headline)}</h2>
+      ${scText?`<p>${scText}</p>`:''}
+      <p><b>This is an estimate.</b> It is computed from the aggregate figures you entered, not derived by this tool. A filing position requires the full Article 3 computation of Pillar Two Income or Loss and the full Article 4 computation of Adjusted Covered Taxes.</p>
+      <cite>${shortCircuit?shortCircuit.cite:CITE_M3.topUpTax}</cite></div>`;
+  }
+}
+
+/* ==================================================================
+   Wiring
+   ================================================================== */
+/* END-date auto-fill via the shared helper, same as Modules 2 and 4.
+   A DEFAULT, not a lock: fyEndTouched is one-way and set only from a
+   real user event on the END field. Setting .value from script fires
+   no input event, so the auto-fill cannot mark itself as touched —
+   which matters here because this module, like Module 2, listens by
+   delegation on document rather than per-element. refresh() runs after
+   the write for the same reason: the write fires nothing. */
+let fyEndTouched=false;
+document.addEventListener('input',e=>{
+  if(!e.target.matches('input')) return;
+  if(e.target.id==='fyEnd') fyEndTouched=true;
+  if(e.target.id==='fyStart') autoFillEndDate(fyStartEl(),fyEndEl(),fyEndTouched);
+  refresh();
+});
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tile]');
+  if(t){ const k=t.dataset.tile; S[k]=!S[k];
+    t.classList.toggle('selected',S[k]); t.querySelector('.box').textContent=S[k]?'✓':'';
+    refresh(); return; }
+  const sb=e.target.closest('[data-sbie]');
+  if(sb){ S.sbieElected=sb.dataset.sbie==='apply';
+    [...sb.parentElement.children].forEach(b=>{ const on=(b.dataset.sbie==='apply')===S.sbieElected;
+      b.classList.toggle('selected',on); b.querySelector('.box').textContent=on?'✓':''; });
+    refresh(); return; }
+  const iir=e.target.closest('[data-iir]');
+  if(iir){ const v=iir.dataset.iir==='yes'; S.iirParent=(S.iirParent===v)?null:v;
+    [...iir.parentElement.children].forEach(b=>{ const on=S.iirParent!==null&&((b.dataset.iir==='yes')===S.iirParent);
+      b.classList.toggle('selected',on); b.querySelector('.box').textContent=on?'✓':''; });
+    refresh(); return; }
+  const el416=e.target.closest('[data-416]');
+  if(el416){ S.art416Elected=el416.dataset['416']==='yes'; refresh(); return; }
+});
+
+document.getElementById('startOverBtn').addEventListener('click',()=>{
+  ['fyStart','fyEnd','p2Income','p2Losses','act','payroll','tangible','acttPrior',
+   'dmRev0','dmRev1','dmRev2','dmInc0','dmInc1','dmInc2','ipJurisdictions','ipAssets']
+    .forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
+  fyEndTouched=false;
+  S.sbieElected=true;S.art416Elected=false;S.art416LossCarryBack=null;
+  S.hasInvestmentEntities=null;S.hasStatelessCEs=null;S.hasMinorityOwnedSubgroup=null;
+  S.route=null;S.iirParent=null;
+  document.querySelectorAll('.choice-tile').forEach(b=>{ b.classList.remove('selected'); const bx=b.querySelector('.box'); if(bx)bx.textContent=''; });
+  const apply=document.querySelector('[data-sbie="apply"]');
+  if(apply){ apply.classList.add('selected'); apply.querySelector('.box').textContent='✓'; }
+  refresh();
+});
+
+/* ---- lead capture (same webhook and payload shape as the other
+       modules, distinguished by source_tool) ---- */
+let leadCaptured=false,pendingAfterLead=null;
+function requireLeadCapture(fn){
+  if(leadCaptured){fn();return;}
+  pendingAfterLead=fn;
+  document.getElementById('leadModal').classList.add('show');
+}
+document.getElementById('leadSubmitBtn').addEventListener('click',()=>{
+  const n=document.getElementById('leadName').value.trim();
+  const c=document.getElementById('leadCompany').value.trim();
+  const em=document.getElementById('leadEmail').value.trim();
+  const ok=n&&c&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em);
+  document.getElementById('leadError').style.display=ok?'none':'block';
+  if(!ok)return;
+  try{
+    fetch('https://script.google.com/macros/s/AKfycbyEfpaq6MPdKVBpSlbHXDHK7TwgdSODyzGi5g0Y7LCcVSzhZqMOZ8kZq-Sv9e2_kmUW/exec',{
+      method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({name:n,company:c,email:em,source_tool:'dmtt_etr_calc',ts:new Date().toISOString()})
+    });
+  }catch(e){}
+  leadCaptured=true;
+  document.getElementById('leadModal').classList.remove('show');
+  if(pendingAfterLead){const f=pendingAfterLead;pendingAfterLead=null;f();}
+});
+document.getElementById('leadModal').addEventListener('click',e=>{
+  if(e.target.id==='leadModal')document.getElementById('leadModal').classList.remove('show');
+});
+document.getElementById('pdfBtn').addEventListener('click',()=>requireLeadCapture(()=>window.print()));
+
+/* Test surface. The rule functions above are function declarations and so
+   already properties of window; `const` declarations are not, so the
+   figures the deliberate-break checks guard — the Minimum Rate, every
+   Art 9.2 rate pair, and the EUR thresholds — are exposed explicitly.
+   Without this a test could only reach them through rendered text and
+   would miss a changed constant that happened to render the same way. */
+Object.assign(window,{MINIMUM_RATE,SBIE_RATES,SBIE_BASE_RATES,EUR_10M,EUR_1M,EUR_50M,
+  INITIAL_PHASE_MAX_JURISDICTIONS,CITE_M3,S});
+
+refresh();
+</script>
+</body>
+</html>
