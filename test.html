@@ -63,6 +63,11 @@
      would collide on the first top-level `const` redeclaration. An iframe
      also renders Module 4's real CSS/layout, not just its logic. -->
 <iframe id="m4Frame" style="position:absolute;left:-9999px;top:-9999px;width:900px;height:1600px;border:0"></iframe>
+<!-- Module 2 gets its own iframe for the same reason as Module 4: it is a
+     self-contained single-file tool with its own top-level consts
+     (TRANSITION_PERIOD, EUR_10M, S, ...) that would collide with Module 4's
+     if both were eval'd into one scope. -->
+<iframe id="m2Frame" style="position:absolute;left:-9999px;top:-9999px;width:900px;height:2400px;border:0"></iframe>
 
 <script>
 (async function(){
@@ -1536,6 +1541,487 @@
     });
   }catch(e){
     current={name:'Module 4 test setup',cases:[{desc:'iframe load/setup threw an exception',pass:false,detail:(e&&e.stack)||String(e)}]};
+    groups.push(current);
+  }
+
+  // =======================================================================
+  // MODULE 2 — Safe Harbour Screening (CD 142 Art 8.2)
+  //
+  // Two layers of coverage. The operative rules are pure functions in the
+  // module, so most assertions call them directly — that is where a wrong
+  // threshold or a reversed test would actually live. A second layer drives
+  // the rendered DOM, because the routing between gates and the wording of
+  // the traps are themselves part of what the spec requires.
+  // =======================================================================
+  const m2Frame=document.getElementById('m2Frame');
+  const m2Win=()=>m2Frame.contentWindow;
+  const m2Doc=()=>m2Frame.contentDocument;
+  function loadM2(){
+    return new Promise((resolve,reject)=>{
+      m2Frame.onload=()=>resolve();
+      m2Frame.onerror=()=>reject(new Error('module2-safe-harbour.html failed to load'));
+      m2Frame.src='module2-safe-harbour.html';
+    });
+  }
+  function resetM2(){
+    return new Promise((resolve,reject)=>{
+      m2Frame.onload=()=>resolve();
+      m2Frame.onerror=()=>reject(new Error('module2-safe-harbour.html failed to reload'));
+      m2Frame.contentWindow.location.reload();
+    });
+  }
+  async function tc2(name,fn){
+    current={name,cases:[]};
+    groups.push(current);
+    try{ await fn(); }
+    catch(e){ current.cases.push({desc:'scenario threw an exception',pass:false,detail:(e&&e.stack)||String(e)}); }
+  }
+  function m2Set(id,val){
+    const inp=m2Doc().getElementById(id);
+    if(!inp) throw new Error('input not found: '+id);
+    inp.value=val;
+    inp.dispatchEvent(new (m2Win().Event)('input',{bubbles:true}));
+  }
+  function m2ClickTile(groupId,tileId){
+    const t=m2Doc().querySelector('#'+groupId+' [data-tile="'+tileId+'"]');
+    if(!t) throw new Error('tile not found: '+groupId+'/'+tileId);
+    t.click();
+  }
+  function m2ClickSub(key,val){
+    const b=m2Doc().querySelector('[data-sub="'+key+'"][data-val="'+val+'"]');
+    if(!b) throw new Error('sub-question button not found: '+key+'='+val);
+    b.click();
+  }
+  function m2Text(sel){ const el=m2Doc().querySelector(sel); return el?el.textContent:null; }
+  function m2Status(id){ return m2Text('#'+id); }
+  function m2UTC(y,m,day){ return new (m2Win().Date)(Date.UTC(y,m-1,day)); }
+
+  try{
+    await loadM2();
+
+    // -----------------------------------------------------------------
+    // GATE 1 — Transition Period and Transition Rate.
+    //
+    // ⚠️ These are the UAE's own figures, not the OECD Commentary's. The
+    //    Commentary's generic window runs to FYs beginning on or before
+    //    31 Dec 2027 and not ending after 30 Jun 2029, with a 15% tier
+    //    for 2023-24. A build from those would tell UAE users the window
+    //    is open when CD 142 has closed it. Boundaries are asserted on
+    //    both sides of each date, per §10 of the handoff brief.
+    // -----------------------------------------------------------------
+    await tc2('Gate 1 — Transition Period boundary: FY beginning 31 Dec 2026 vs 1 Jan 2027', async ()=>{
+      await resetM2();
+      const w=m2Win();
+      assert('FY beginning 31 Dec 2026 is inside the window',
+        w.isTransitionPeriodOpen(m2UTC(2026,12,31),m2UTC(2027,6,30))===true);
+      assert('FY beginning 1 Jan 2027 is outside the window',
+        w.isTransitionPeriodOpen(m2UTC(2027,1,1),m2UTC(2027,12,31))===false);
+    });
+
+    await tc2('Gate 1 — Transition Period boundary: FY ending 30 June 2028 vs 1 July 2028', async ()=>{
+      const w=m2Win();
+      assert('FY ending 30 June 2028 is inside the window',
+        w.isTransitionPeriodOpen(m2UTC(2026,7,1),m2UTC(2028,6,30))===true);
+      assert('FY ending 1 July 2028 is outside the window',
+        w.isTransitionPeriodOpen(m2UTC(2026,7,2),m2UTC(2028,7,1))===false);
+    });
+
+    await tc2('Gate 1 — both conditions are conjunctive and tested independently', async ()=>{
+      const w=m2Win();
+      // A long Fiscal Year can begin inside the window and still end outside it.
+      assert('begins in time but ends too late → closed',
+        w.isTransitionPeriodOpen(m2UTC(2026,6,1),m2UTC(2028,7,31))===false);
+      assert('begins too late but ends in time → closed',
+        w.isTransitionPeriodOpen(m2UTC(2027,1,1),m2UTC(2027,6,30))===false);
+      assert('both in time → open',
+        w.isTransitionPeriodOpen(m2UTC(2025,1,1),m2UTC(2025,12,31))===true);
+      assert('returns null rather than a verdict when dates are missing',
+        w.isTransitionPeriodOpen(null,m2UTC(2025,12,31))===null);
+    });
+
+    await tc2('Gate 1 — Transition Rate is 16% for FY2025 and 17% for FY2026, with no 15% tier', async ()=>{
+      const w=m2Win();
+      assert('FY beginning 2025 → 16%', w.transitionRateFor(m2UTC(2025,1,1))===0.16);
+      assert('FY beginning 2026 → 17%', w.transitionRateFor(m2UTC(2026,1,1))===0.17);
+      // The OECD's generic table has a 15% tier for 2023-24 and extends 17%
+      // to 2027. CD 142 has neither, because the UAE regime begins in 2025.
+      assert('no rate for a FY beginning 2024 (the OECD 15% tier does not exist here)',
+        w.transitionRateFor(m2UTC(2024,1,1))===null);
+      assert('no rate for a FY beginning 2027 (outside the UAE window entirely)',
+        w.transitionRateFor(m2UTC(2027,1,1))===null);
+      assert('the rate table contains exactly the two UAE tiers',
+        JSON.stringify(w.TRANSITION_RATE)===JSON.stringify({2025:0.16,2026:0.17}), JSON.stringify(w.TRANSITION_RATE));
+    });
+
+    // Deliberate-break check on the hard-coded window, same approach as the
+    // GIR 15-month figure: assert the constants themselves, so that editing
+    // them to the OECD's generic values fails here rather than silently
+    // changing every downstream answer.
+    await tc2('Gate 1 — the hard-coded window constants are CD 142\'s, not the Commentary\'s', async ()=>{
+      const w=m2Win();
+      assert('beginsBefore is 1 Jan 2027', w.TRANSITION_PERIOD.beginsBefore===Date.UTC(2027,0,1));
+      assert('endsBefore is 1 July 2028', w.TRANSITION_PERIOD.endsBefore===Date.UTC(2028,6,1));
+      assert('beginsBefore is NOT the Commentary\'s 1 Jan 2028', w.TRANSITION_PERIOD.beginsBefore!==Date.UTC(2028,0,1));
+      assert('endsBefore is NOT the Commentary\'s 1 July 2029', w.TRANSITION_PERIOD.endsBefore!==Date.UTC(2029,6,1));
+    });
+
+    await tc2('Gate 1 — rendered status and rate for an open and a closed window', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      assertIncludes('status reads open', m2Status('g1Status'), 'open');
+      assertIncludes('displays the 16% Transition Rate for FY2025', m2Text('#g1Detail'), '16.00%');
+      m2Set('fyStart','2026-01-01'); m2Set('fyEnd','2026-12-31');
+      assertIncludes('displays the 17% Transition Rate for FY2026', m2Text('#g1Detail'), '17.00%');
+      m2Set('fyStart','2027-01-01'); m2Set('fyEnd','2027-12-31');
+      assertIncludes('status reads closed', m2Status('g1Status'), 'closed');
+      assertIncludes('routes the user to the permanent safe harbour', m2Text('#g1Detail'), 'Gate 3');
+      assertIncludes('names which condition failed', m2Text('#g1Detail'), 'on or after 1 January 2027');
+    });
+
+    // -----------------------------------------------------------------
+    // GATE 2a — the five Art 8.2.1.4 disqualifiers, each individually,
+    // plus the two sub-question reversals.
+    // -----------------------------------------------------------------
+    await tc2('Gate 2a — the disqualifier list is CD 142\'s five, and excludes the OECD\'s Art 7.3 condition', async ()=>{
+      await resetM2();
+      const w=m2Win();
+      assert('exactly five disqualifiers', w.DISQUALIFIERS.length===5, 'got '+w.DISQUALIFIERS.length);
+      const cds=w.DISQUALIFIERS.map(d=>d.cd).join(' ');
+      ['8.2.1.4(a)','8.2.1.4(b)','8.2.1.4(c)','8.2.1.4(d)','8.2.1.4(e)'].forEach(c=>
+        assertIncludes('includes '+c, cds, c));
+      const allText=w.DISQUALIFIERS.map(d=>d.label+' '+(d.sub||'')).join(' ');
+      // The single most important negative assertion in this module.
+      assert('does NOT include the OECD\'s Eligible Distribution Tax Systems condition',
+        !/Eligible Distribution Tax System/i.test(allText), allText);
+      assert('and does not reference Art 7.3 at all, which in CD 142 is an unrelated election',
+        !/7\.3/.test(allText), allText);
+      assertIncludes('(b) is the narrower Stateless Reverse Hybrid condition, not Stateless CEs generally',
+        allText, 'Stateless Reverse Hybrid Entity');
+    });
+
+    await tc2('Gate 2a — each of the five disqualifiers blocks Gate 2 on its own', async ()=>{
+      for(const id of ['d1','d2','d3','d4','d5']){
+        await resetM2();
+        m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+        m2ClickTile('disqTiles',id);
+        // d1 and d4 carry sub-questions; unresolved, they must still block.
+        const st=m2Status('g2Status');
+        assert(id+' blocks Gate 2 (status: '+st+')', /Disqualified|Answer/i.test(st)||st.toLowerCase().includes('disqualified'), st);
+        if(id==='d2'||id==='d3'||id==='d5'){
+          assertIncludes(id+' names the disqualifying article', m2Text('#disqVerdict'), '8.2.1.4');
+          assertIncludes(id+' routes to Gate 3', m2Text('#disqVerdict'), 'Gate 3');
+        }
+      }
+    });
+
+    await tc2('Gate 2a — 8.2.1.4(a) sub-question: Qualified Persons exception clears it', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2ClickTile('disqTiles','d1');
+      assertIncludes('held open until the follow-up is answered', m2Text('#disqVerdict'), 'Answer the follow-up');
+      m2ClickSub('qualifiedPersonsAll','true');
+      assertIncludes('all Ownership Interests held by Qualified Persons → not disqualified', m2Text('#disqVerdict'), 'Not disqualified');
+      m2ClickSub('qualifiedPersonsAll','false');
+      assertIncludes('otherwise → disqualified', m2Text('#disqVerdict'), 'Disqualified');
+    });
+
+    await tc2('Gate 2a — 8.2.1.4(d) sub-question: no UAE Constituent Entities that year clears once-out-always-out', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2ClickTile('disqTiles','d4');
+      assertIncludes('held open until the follow-up is answered', m2Text('#disqVerdict'), 'Answer the follow-up');
+      m2ClickSub('noUaeCEsPrevYear','true');
+      assertIncludes('no UAE CEs that year → nothing was forfeited, not disqualified', m2Text('#disqVerdict'), 'Not disqualified');
+      m2ClickSub('noUaeCEsPrevYear','false');
+      assertIncludes('there were UAE CEs → the safe harbour is lost permanently', m2Text('#disqVerdict'), 'Disqualified');
+    });
+
+    await tc2('Gate 2a — "once out, always out" gets its own warning callout, not just a question', async ()=>{
+      await resetM2();
+      const c=m2Text('#callout-onceout');
+      assert('a dedicated callout exists', !!c);
+      assertIncludes('states eligibility is lost permanently', c, 'cannot claim it now');
+      assertIncludes('says it is not merely the year skipped', c, 'not merely for the year skipped');
+      assertIncludes('states the only relief', c, 'no UAE Constituent Entities');
+      assertIncludes('frames it as foreclosing later years', c, 'forecloses every later year');
+      assert('is styled as a danger callout, not an aside',
+        m2Doc().querySelector('#callout-onceout').classList.contains('danger'));
+    });
+
+    // -----------------------------------------------------------------
+    // GATE 2c — the three tests, each passing and failing.
+    // -----------------------------------------------------------------
+    await tc2('Gate 2c — De Minimis is CURRENT YEAR ONLY, both limbs required', async ()=>{
+      const w=m2Win();
+      assert('both limbs under → passes', w.deMinimisTransitional(9_000_000,500_000,null).pass===true);
+      assert('revenue at the threshold → fails', w.deMinimisTransitional(10_000_000,500_000,null).pass===false);
+      assert('PBT at the threshold → fails', w.deMinimisTransitional(9_000_000,1_000_000,null).pass===false);
+      assert('a loss satisfies the income limb', w.deMinimisTransitional(9_000_000,-2_000_000,null).pass===true);
+      assert('revenue over but income under → fails', w.deMinimisTransitional(11_000_000,100_000,null).pass===false);
+      assert('returns null when a figure is missing', w.deMinimisTransitional(null,500_000,null)===null);
+    });
+
+    await tc2('Gate 2c — held-for-sale exclusion blocks De Minimis even where the UAE figure alone is under', async ()=>{
+      const w=m2Win();
+      const r=w.deMinimisTransitional(9_000_000,500_000,2_000_000);
+      assert('combined revenue reaches EUR 10m → blocked', r.pass===false);
+      assert('and the reason is flagged as the held-for-sale exclusion', r.blockedByHeldForSale===true);
+      assert('the combined figure is reported back', r.combined===11_000_000, String(r.combined));
+      const ok=w.deMinimisTransitional(9_000_000,500_000,500_000);
+      assert('combined still under EUR 10m → not blocked', ok.blockedByHeldForSale===false&&ok.pass===true);
+    });
+
+    await tc2('Gate 2c — Simplified ETR is measured against the Transition Rate, not 15%', async ()=>{
+      const w=m2Win();
+      const at16=w.simplifiedEtrTest(1_600_000,10_000_000,0.16);
+      assert('exactly 16% against a 16% rate → passes', at16.pass===true);
+      assert('and reports the computed rate', Math.abs(at16.etr-0.16)<1e-9, String(at16.etr));
+      assert('16% against a 17% rate → fails', w.simplifiedEtrTest(1_600_000,10_000_000,0.17).pass===false);
+      // 15% would pass a Minimum Rate test but must fail the transitional one.
+      assert('15% fails at the 16% Transition Rate — it is not the Art 5.1.1 rate',
+        w.simplifiedEtrTest(1_500_000,10_000_000,0.16).pass===false);
+      assert('returns null when PBT is zero rather than dividing by it',
+        w.simplifiedEtrTest(1_000_000,0,0.16)===null);
+    });
+
+    await tc2('Gate 2c — a failed Simplified ETR shows that the rate cannot be reused as the Art 5.2.1 ETR', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2Set('g2Pbt','10000000'); m2Set('g2Sct','1000000');   // 10% — fails against 16%
+      assert('the note is shown on failure', m2Doc().getElementById('etrDisregardedNote').style.display!=='none');
+      const n=m2Text('#etrDisregardedNote');
+      assertIncludes('says the figure is disregarded', n, 'disregarded');
+      assertIncludes('says it cannot be reused as the Art 5.2.1 ETR', n, 'Article 5.2.1 ETR');
+      assertIncludes('gives the concrete worked warning', n, '10% does not become');
+      m2Set('g2Sct','1700000');                                // 17% — passes
+      assert('the note is hidden once the test passes', m2Doc().getElementById('etrDisregardedNote').style.display==='none');
+    });
+
+    await tc2('Gate 2c — Routine Profits auto-passes on a loss or zero profit, without needing an SBIE figure', async ()=>{
+      const w=m2Win();
+      const loss=w.routineProfitsTest(-500_000,null);
+      assert('a loss passes with no SBIE supplied', loss.pass===true&&loss.autoPass===true);
+      const zero=w.routineProfitsTest(0,null);
+      assert('zero profit passes with no SBIE supplied', zero.pass===true&&zero.autoPass===true);
+      assert('a profit with no SBIE is undecidable, not a pass', w.routineProfitsTest(500_000,null)===null);
+      assert('profit at or below SBIE passes', w.routineProfitsTest(400_000,400_000).pass===true);
+      assert('profit above SBIE fails', w.routineProfitsTest(500_000,400_000).pass===false);
+      assert('and a real comparison is not flagged as an auto-pass', w.routineProfitsTest(400_000,400_000).autoPass===false);
+    });
+
+    await tc2('Gate 2c — a single passing test is enough, and the outcome says which', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2Set('g2Revenue','5000000'); m2Set('g2Pbt','400000');
+      assertIncludes('Gate 2 reports a safe harbour available', m2Status('g2Status'), 'available');
+      const o=m2Text('#outcome');
+      assertIncludes('outcome states Top-up Tax deemed zero', o, 'deemed zero');
+      assertIncludes('names the test that passed', o, 'De Minimis');
+      assertIncludes('states no full computation is required', o, 'no full Article 3/4/5 computation');
+      assertIncludes('cross-refers to the 36-month disapplication risk', o, '36 months');
+      assertIncludes('Gate 3 goes inactive rather than asking for figures that cannot matter',
+        m2Text('#g3Intro'), 'Not needed');
+    });
+
+    // -----------------------------------------------------------------
+    // GATE 3 — Simplified Calculations Safe Harbour.
+    // -----------------------------------------------------------------
+    await tc2('Gate 3 — De Minimis uses THREE-YEAR AVERAGES, a different basis from Gate 2', async ()=>{
+      const w=m2Win();
+      assert('both averages under → passes', w.deMinimisSimplified(9_000_000,500_000).pass===true);
+      assert('average revenue at the threshold → fails', w.deMinimisSimplified(10_000_000,500_000).pass===false);
+      assert('average income at the threshold → fails', w.deMinimisSimplified(9_000_000,1_000_000).pass===false);
+      assert('an average loss satisfies the income limb', w.deMinimisSimplified(9_000_000,-1_000_000).pass===true);
+      // The two de minimis tests are separate functions precisely so neither
+      // can be called for the other. Guard that they stay separate.
+      assert('the two de minimis tests are distinct functions',
+        w.deMinimisSimplified!==w.deMinimisTransitional);
+      assert('the transitional one takes a held-for-sale argument the averaged one does not',
+        w.deMinimisTransitional.length===3&&w.deMinimisSimplified.length===2,
+        'arity: transitional='+w.deMinimisTransitional.length+' simplified='+w.deMinimisSimplified.length);
+    });
+
+    await tc2('Gate 3 — the ETR test uses the 15% Minimum Rate, not the Transition Rate', async ()=>{
+      const w=m2Win();
+      assert('the Minimum Rate constant is 15%', w.MINIMUM_RATE===0.15);
+      assert('exactly 15% passes', w.etrTestSimplified(1_500_000,10_000_000).pass===true);
+      assert('just under 15% fails', w.etrTestSimplified(1_499_999,10_000_000).pass===false);
+      // 16% would be the Gate 2 rate for FY2025; 15% must pass here regardless.
+      assert('15% passes here even though it would fail Gate 2\'s 16% Transition Rate',
+        w.etrTestSimplified(1_500_000,10_000_000).pass===true&&
+        w.simplifiedEtrTest(1_500_000,10_000_000,0.16).pass===false);
+      assert('returns null on zero income rather than dividing by it',
+        w.etrTestSimplified(1_000_000,0)===null);
+    });
+
+    await tc2('Gate 3 — Routine Profits, including the loss auto-pass', async ()=>{
+      const w=m2Win();
+      assert('a loss passes without an SBIE figure', w.routineProfitsSimplified(-100_000,null).autoPass===true);
+      assert('income at or below SBIE passes', w.routineProfitsSimplified(300_000,300_000).pass===true);
+      assert('income above SBIE fails', w.routineProfitsSimplified(400_000,300_000).pass===false);
+    });
+
+    await tc2('Gate 3 — Non-material Constituent Entity: the four required conditions', async ()=>{
+      const w=m2Win();
+      const base={excludedOnSizeOnly:true,cfsParagraphAOrC:true,externallyAudited:true,
+                  revenueUnder50mOrAcceptableStandard:true};
+      assert('all four met → is an NMCE', w.isNmce({...base}).isNmce===true);
+      ['excludedOnSizeOnly','cfsParagraphAOrC','externallyAudited','revenueUnder50mOrAcceptableStandard'].forEach(k=>{
+        assert('missing '+k+' → not an NMCE', w.isNmce({...base,[k]:false}).isNmce===false);
+        assert('unanswered '+k+' → undecided, not a false', w.isNmce({...base,[k]:null})===null);
+      });
+    });
+
+    await tc2('Gate 3 — the three Commentary restrictions each defeat NMCE status outright', async ()=>{
+      const w=m2Win();
+      const base={excludedOnSizeOnly:true,cfsParagraphAOrC:true,externallyAudited:true,
+                  revenueUnder50mOrAcceptableStandard:true};
+      const b=w.isNmce({...base,cfsParagraphBMainEntityPEs:true});
+      assert('paragraph (b) — a Main Entity with its PEs → no NMCEs at all', b.isNmce===false&&b.reason==='paragraphB');
+      const d=w.isNmce({...base,cfsParagraphDDeemed:true});
+      assert('paragraph (d) — deemed consolidated statements → not an NMCE', d.isNmce===false&&d.reason==='paragraphD');
+      const q=w.isNmce({...base,auditQualifiedOnPerimeter:true});
+      assert('a qualified audit opinion on the consolidation perimeter → not an NMCE', q.isNmce===false&&q.reason==='auditQualified');
+      assert('these override even where all four required conditions are met',
+        w.isNmce({...base}).isNmce===true&&b.isNmce===false);
+    });
+
+    await tc2('Gate 3 — the rendered NMCE verdict explains the paragraph (b) consequence in full', async ()=>{
+      await resetM2();
+      ['excludedOnSizeOnly','cfsParagraphAOrC','externallyAudited','revenueUnder50mOrAcceptableStandard']
+        .forEach(k=>m2ClickTile('nmceTiles',k));
+      assertIncludes('all four selected → NMCE', m2Text('#nmceVerdict'), 'Non-material Constituent Entity');
+      m2ClickTile('nmceTiles','cfsParagraphBMainEntityPEs');
+      const v=m2Text('#nmceVerdict');
+      assertIncludes('paragraph (b) defeats it', v, 'Not a Non-material Constituent Entity');
+      assertIncludes('states the group-level consequence, not just the entity-level one', v, 'no');
+      assertIncludes('names a Main Entity with its foreign PEs', v, 'Main Entity');
+      assertIncludes('says the calculations are unavailable to it entirely', v, 'unavailable to it entirely');
+    });
+
+    await tc2('Gate 3 — states plainly that it is not a full escape hatch', async ()=>{
+      await resetM2();
+      const g3=m2Text('#gate3');
+      assertIncludes('says the simplified figures cover only NMCEs', g3, 'only to Non-material Constituent Entities');
+      assertIncludes('says they are combined with full computations', g3, 'combined with full Pillar Two computations');
+      assertIncludes('says it does not avoid computation', g3, 'does not avoid computation');
+      assertIncludes('states the Additional Current Top-up Tax scope limit', g3, 'other than Additional Current Top-up Tax');
+    });
+
+    await tc2('Gate 3 — a pass gives the correctly scoped conclusion, not Gate 2\'s', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2027-01-01'); m2Set('fyEnd','2027-12-31');  // window closed
+      assertIncludes('Gate 2 is unavailable', m2Status('g2Status'), 'Unavailable');
+      assertIncludes('Gate 3 is offered as the remaining route', m2Text('#g3Intro'), 'permanent');
+      m2Set('g3AvgRev','5000000'); m2Set('g3AvgInc','200000');
+      const o=m2Text('#outcome');
+      assertIncludes('scoped to exclude Additional Current Top-up Tax', o, 'other than Additional Current Top-up Tax');
+      assertIncludes('names the test that passed', o, 'De Minimis');
+      assertIncludes('repeats the combined-computation caveat', o, 'combined with full computations');
+    });
+
+    await tc2('Gate 3 — a disqualified Gate 2 still routes here, since the disqualifiers do not apply to Art 8.2.2', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2ClickTile('disqTiles','d2');   // Stateless Reverse Hybrid — no sub-question
+      assertIncludes('Gate 2 disqualified', m2Status('g2Status'), 'Disqualified');
+      assertIncludes('Gate 3 explains why it is reached', m2Text('#g3Intro'), 'do not apply to it');
+      m2Set('g3AvgRev','4000000'); m2Set('g3AvgInc','100000');
+      assertIncludes('and can still produce a deemed-zero outcome', m2Text('#outcome'), 'deemed zero');
+    });
+
+    // -----------------------------------------------------------------
+    // Outcome, Gate 4 and PDF consistency.
+    // -----------------------------------------------------------------
+    await tc2('Outcome — no safe harbour on any test states that full computation is required', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2Set('g2Revenue','50000000'); m2Set('g2Pbt','20000000');
+      m2Set('g2Sct','1000000'); m2Set('g2Sbie','1000000');
+      m2Set('g3Income','20000000'); m2Set('g3Sbie','1000000');
+      m2Set('g3AvgRev','50000000'); m2Set('g3AvgInc','20000000'); m2Set('g3Tax','1000000');
+      const o=m2Text('#outcome');
+      assertIncludes('states no safe harbour is available', o, 'No safe harbour available');
+      assertIncludes('states full computation is required', o, 'full Article 3/4/5 computation');
+      assertIncludes('repeats that the failed Simplified ETR cannot be reused', o, 'cannot be reused');
+    });
+
+    await tc2('Gate 4 — the disapplication callout states all three conditions and the 36-month window', async ()=>{
+      await resetM2();
+      const c=m2Text('#callout-disapplication');
+      assertIncludes('condition 1 — Top-up Tax could have been charged', c, 'could have been charged');
+      assertIncludes('condition 2 — 36-month notification window', c, 'within 36 months');
+      assertIncludes('condition 2 — six months to respond', c, 'within six months');
+      assertIncludes('condition 3 — the entity bears the burden', c, 'fails to demonstrate');
+      assertIncludes('all three are required together', c, 'all three');
+      assertIncludes('the FTA may notify only some Liable Constituent Entities', c, 'some');
+      assertIncludes('practical record-keeping consequence stated', c, 'keep the records');
+    });
+
+    await tc2('Module 2 — JV, Investment Entity and QDMTT Safe Harbour notes are present and correctly scoped', async ()=>{
+      await resetM2();
+      const n=m2Text('.minor-note');
+      assertIncludes('JVs are tested as a separate MNE Group', n, 'separate MNE Group');
+      assertIncludes('and that means separate parallel computations', n, 'separate parallel');
+      assertIncludes('Investment Entities do not block the transitional safe harbour', n, 'irrespective of whether an Investment Entity');
+      assertIncludes('the QDMTT Safe Harbour is framed as other jurisdictions\' mechanism', n, 'other');
+      assertIncludes('and explicitly needs no action here', n, 'No action is required here');
+    });
+
+    await tc2('PDF-consistency — inputs summary and every conclusion block survive the print stylesheet', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2Set('g2Revenue','5000000'); m2Set('g2Pbt','400000');
+      assertIncludes('the inputs summary records what was entered', m2Text('#inputsSummary'), '1 January 2025');
+      function printRules(){
+        for(const sheet of m2Doc().styleSheets){
+          for(const rule of sheet.cssRules){
+            if(rule instanceof m2Win().CSSMediaRule && rule.conditionText==='print') return rule.cssRules;
+          }
+        }
+        return null;
+      }
+      const css=[...(printRules()||[])].map(r=>r.cssText).join(' ');
+      assertIncludes('print rules hide the raw entry fields', css, '.field');
+      assertIncludes('print rules hide the action buttons', css, '.btn');
+      assertIncludes('print rules hide the "what you\'ll need" panel, which is prep not record', css, '.prep-panel');
+      assert('print rules do NOT hide .inputs-summary', !/\.inputs-summary[^}]*\{[^}]*display:\s*none/.test(css));
+      assert('print rules do NOT hide .outcome', !/\.outcome[^}]*\{[^}]*display:\s*none/.test(css));
+      assert('print rules do NOT hide .gate', !/\.gate[^}]*\{[^}]*display:\s*none/.test(css));
+      assert('print rules do NOT hide .callout', !/\.callout[^}]*\{[^}]*display:\s*none/.test(css));
+      assert('print rules do NOT hide .test-card', !/\.test-card[^}]*\{[^}]*display:\s*none/.test(css));
+    });
+
+    await tc2('Module 2 — Start over clears every input and selection', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01'); m2Set('fyEnd','2025-12-31');
+      m2Set('g2Revenue','5000000'); m2Set('g2Pbt','400000');
+      m2ClickTile('disqTiles','d2');
+      m2ClickTile('nmceTiles','externallyAudited');
+      m2Doc().getElementById('startOverBtn').click();
+      assert('dates cleared', m2Doc().getElementById('fyStart').value===''&&m2Doc().getElementById('fyEnd').value==='');
+      assert('figure fields cleared', m2Doc().getElementById('g2Revenue').value===''&&m2Doc().getElementById('g2Pbt').value==='');
+      assert('no tile remains selected', m2Doc().querySelectorAll('.choice-tile.selected').length===0);
+      assertIncludes('Gate 1 back to its pending state', m2Status('g1Status'), 'Enter your dates');
+      assertIncludes('outcome back to in-progress', m2Text('#outcome'), 'Assessment in progress');
+      assertIncludes('inputs summary back to empty', m2Text('#inputsSummary'), 'Not yet entered');
+    });
+
+    await tc2('Module 1 — IN SCOPE offers Safe Harbour Screening ahead of the Compliance Calendar', ()=>{
+      toStepE();
+      driveEmptyEtoScope();
+      assertVerdict('IN SCOPE','IN SCOPE');
+      const links=[...stage().querySelectorAll('a.btn')].map(a=>({href:a.getAttribute('href'),text:a.textContent}));
+      const sh=links.find(l=>l.href==='module2-safe-harbour.html');
+      const cal=links.find(l=>l.href==='module4-compliance-calendar.html');
+      assert('links to Safe Harbour Screening', !!sh, JSON.stringify(links));
+      assert('links to the Compliance Calendar', !!cal, JSON.stringify(links));
+      assert('Safe Harbour Screening comes first', links.indexOf(sh)<links.indexOf(cal), JSON.stringify(links));
+      assert('Safe Harbour Screening is the primary action', sh&&stage().querySelector('a[href="module2-safe-harbour.html"]').classList.contains('primary'));
+    });
+
+  }catch(e){
+    current={name:'Module 2 test setup',cases:[{desc:'iframe load/setup threw an exception',pass:false,detail:(e&&e.stack)||String(e)}]};
     groups.push(current);
   }
 

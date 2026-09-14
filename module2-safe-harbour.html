@@ -1172,6 +1172,16 @@ document.getElementById('leadModal').addEventListener('click',e=>{
 });
 document.getElementById('pdfBtn').addEventListener('click',()=>requireLeadCapture(()=>window.print()));
 
+/* Test surface. The operative rules above are function declarations, so
+   they are already properties of window and test.html can call them
+   directly. `const` declarations are not — so the figures that the
+   deliberate-break checks exist to guard (the Transition Period window,
+   the two rate tiers, the five disqualifiers, the EUR thresholds and the
+   Art 5.1.1 Minimum Rate) have to be exposed explicitly, or a test could
+   only reach them through rendered text and would miss a changed
+   constant that happened to render the same way. */
+Object.assign(window,{TRANSITION_PERIOD,TRANSITION_RATE,DISQUALIFIERS,EUR_10M,EUR_1M,EUR_50M,MINIMUM_RATE,CITE_M2});
+
 refresh();
 </script>
 </body>
