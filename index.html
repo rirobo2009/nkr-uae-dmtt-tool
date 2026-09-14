@@ -623,8 +623,15 @@ function actionRow(showModule4Link){
   const p=document.createElement('button');p.className='btn primary';p.textContent='Print / Save as PDF';p.onclick=()=>{requireLeadCapture(function(){window.print();});};
   const r=document.createElement('button');r.className='btn ghost';r.textContent='Start a new assessment';r.onclick=start;
   wrap.appendChild(p);wrap.appendChild(r);
+  /* Both next steps are offered on an IN SCOPE conclusion, Safe Harbour
+     Screening first: a safe harbour may deem the Top-up Tax zero and end
+     the enquiry, in which case the compliance deadlines still apply but
+     the computation does not. Ordering them the other way round would
+     send users to plan deadlines for a liability they may not have. */
   if(showModule4Link){
-    const m=document.createElement('a');m.className='btn primary';m.href='module4-compliance-calendar.html';m.textContent='Continue to Compliance Calendar →';
+    const sh=document.createElement('a');sh.className='btn primary';sh.href='module2-safe-harbour.html';sh.textContent='Continue to Safe Harbour Screening →';
+    wrap.appendChild(sh);
+    const m=document.createElement('a');m.className='btn';m.href='module4-compliance-calendar.html';m.textContent='Compliance Calendar →';
     wrap.appendChild(m);
   }
   return wrap;
