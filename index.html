@@ -359,22 +359,26 @@ const CITE={
   ttgeie10:"TTGEIE1 §10",
   exclNotCharged:"Art. 1.5, CD 142/2024 Annexure (not a Constituent Entity); Art. 2.1, CD 142/2024 Annexure (charging provision); TTGEIE1 §10",
   exclAttributes:"TTGEIE1 §10; Commentary to Art. 1 ¶37(b), adopted by Ministerial Decision No. 96 of 2026",
-  // TODO(Art 7 numbering): sources disagree on which paragraphs of Art 7
-  // carry these two elections. docs/CD142-Complete-Extract.md (Pass 1, the
-  // article-by-article read of CD 142 itself) lists 7.3 as "Eligible
-  // Distribution Tax Systems", 7.4 as "ETR computation for Investment
-  // Entities", 7.5 as the Investment Entity Tax Transparency Election and
-  // 7.6 as the Taxable Distribution Method Election.
-  // docs/FTA-Guides-Extract.md (Pass 4, Finding C) instead says "an
-  // election is made under CD 142 Art 7.3/7.4", without naming either
-  // election — and the fix list then paired that pair of numbers with the
-  // names, which is where "Art 7.3 (Investment Entity Tax Transparency
-  // Election)" came from. Pass 1 is the direct read of the Decision and
-  // its names match exactly, so 7.5/7.6 is used here. Both elections are
-  // ALSO named in full, so the citation stays findable even if the
-  // numbering turns out to be the other way round. Confirm against CD 142
-  // Art 7 and correct in one place if needed.
-  ieElections:"Art. 7.5 (Investment Entity Tax Transparency Election) and Art. 7.6 (Taxable Distribution Method Election), CD 142/2024 Annexure; TTGEIE1 §10",
+  // Verified against CD 142's Annexure directly: Art 7.3 is the Investment
+  // Entity Tax Transparency Election ("7.3.1 A Filing Constituent Entity
+  // may elect to treat a Constituent Entity that is an Investment Entity as
+  // a Tax Transparent Entity if...") and Art 7.4 is the Taxable
+  // Distribution Method Election ("7.4.1 At the election of the Filing
+  // Constituent Entity, a Constituent Entity-owner located in the UAE that
+  // is not an Investment Entity may apply the Taxable Distribution
+  // Method...").
+  //
+  // Do not "correct" these to 7.5/7.6 against the OECD Model Rules'
+  // numbering. The UAE renumbered Art 7: it omits the Model Rules' 7.3
+  // (Eligible Distribution Tax Systems) and 7.4 (ETR Computation for
+  // Investment Entities), neither of which fits a QDMTT-only regime, so
+  // everything below them shifts up by two. NB docs/CD142-Complete-
+  // Extract.md records the Model Rules' numbering at this point rather
+  // than the Decision's, so it is not the authority here.
+  //
+  // Both elections are also named in full in the rendered text, so the
+  // citation survives a misidentification of the numbering either way.
+  ieElections:"Art. 7.3 (Investment Entity Tax Transparency Election) and Art. 7.4 (Taxable Distribution Method Election), CD 142/2024 Annexure; TTGEIE1 §10",
   noAdminObligations:"TTGEIE1 §10; Art. 13.1, CD 142/2024 Annexure (registration); Art. 8.1, CD 142/2024 Annexure (Top-up Tax Return)",
   girStructure:"Art. 15.2, CD 142/2024 Annexure; TTGEIE1 §10",
   investmentEntityCharge:"Art. 2.3, CD 142/2024 Annexure",

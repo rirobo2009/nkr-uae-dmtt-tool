@@ -542,6 +542,8 @@
     assertIncludes('effect 1 — cites Art 2.3, which is Investment-Entity specific', effectsCites(), '2.3');
     assertIncludes('effect 2 — inclusion is by election only', e, 'only where those owners make an election');
     assertIncludes('effect 2 — names the Tax Transparency Election', e, 'Investment Entity Tax Transparency Election');
+    assertIncludes('effect 2 — cites Art 7.3 for it (CD 142 numbering, not the Model Rules\')', effectsCites(), 'Art. 7.3 (Investment Entity Tax Transparency Election)');
+    assertIncludes('effect 2 — cites Art 7.4 for the Taxable Distribution Method Election', effectsCites(), 'Art. 7.4 (Taxable Distribution Method Election)');
     assertIncludes('effect 2 — names the Taxable Distribution Method Election', e, 'Taxable Distribution Method Election');
     assertIncludes('effect 2 — states the default absent an election', e, 'Absent an election');
     assert('does NOT claim the attributes are simply removed (that is the Excluded Entity rule)',
