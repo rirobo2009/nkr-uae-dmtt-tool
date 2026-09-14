@@ -631,6 +631,13 @@ function actionRow(showModule4Link){
   if(showModule4Link){
     const sh=document.createElement('a');sh.className='btn primary';sh.href='module2-safe-harbour.html';sh.textContent='Continue to Safe Harbour Screening →';
     wrap.appendChild(sh);
+    /* ETR & Top-up Tax sits second, and deliberately not as a primary
+       action: it is only reached if no safe harbour applies, and sending
+       a user to compute a liability before testing whether it is deemed
+       zero would waste the work. Module 2's own conclusion links here
+       directly when it finds nothing available. */
+    const etr=document.createElement('a');etr.className='btn';etr.href='module3-etr-topup-tax.html';etr.textContent='ETR & Top-up Tax →';
+    wrap.appendChild(etr);
     const m=document.createElement('a');m.className='btn';m.href='module4-compliance-calendar.html';m.textContent='Compliance Calendar →';
     wrap.appendChild(m);
   }
