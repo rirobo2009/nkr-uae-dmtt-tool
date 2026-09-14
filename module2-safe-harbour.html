@@ -290,6 +290,7 @@
     <span class="verified">Designed and verified by <a href="https://nkr.ae" target="_blank" rel="noopener">NKR Auditing LLC</a></span>
   </footer>
 </div>
+<script src="assets/dmtt-dates.js"></script>
 <script>
 /* ==================================================================
    UAE DMTT — Module 2: Safe Harbour Screening
@@ -376,7 +377,11 @@ const EUR_50M=50_000_000;
 const MINIMUM_RATE=0.15;   // Art 5.1.1 — Gate 3's ETR test, NOT the Transition Rate
 
 /* ---- small helpers ---- */
-function parseDateInput(v){ if(!v)return null; const p=v.split('-').map(Number); if(p.length!==3||p.some(isNaN))return null; return new Date(Date.UTC(p[0],p[1]-1,p[2])); }
+/* parseDateInput, addMonthsUTC, addDaysUTC, computeAutoFilledEndDate,
+   toDateInputValue and autoFillEndDate come from assets/dmtt-dates.js,
+   shared with module4-compliance-calendar.html. fmtDate stays local:
+   Module 4 returns null for an empty date and this module returns '',
+   and callers in each depend on their own contract. */
 function fmtDate(d){ return d?d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}):''; }
 function fmtEur(n){ return n===null||n===undefined||isNaN(n)?'—':'EUR '+Number(n).toLocaleString('en-GB',{maximumFractionDigits:0}); }
 function fmtPct(n){ return n===null||n===undefined||isNaN(n)||!isFinite(n)?'—':(n*100).toFixed(2)+'%'; }
@@ -1101,7 +1106,29 @@ function refresh(){
 /* ==================================================================
    Wiring
    ================================================================== */
-document.addEventListener('input',e=>{ if(e.target.matches('input')) refresh(); });
+/* END-date auto-fill, matching Module 4's behaviour through the same
+   shared helper. A DEFAULT, not a lock: fyEndTouched is one-way, set
+   only from a real user `input` event on the END field, so a manual
+   edit survives any later change to START.
+
+   The flag is safe because setting .value from script does not fire an
+   `input` event — which is exactly how autoFillEndDate writes the
+   field. This module listens by delegation on document, so the
+   distinction matters more here than in Module 4: without it, the
+   auto-fill's own write would re-enter this handler and immediately
+   mark the field as touched.
+
+   Order matters. autoFillEndDate writes .value without firing anything,
+   so refresh() has to run after it or Gate 1 would test the previous
+   END value. That is why this runs ahead of the refresh() call below
+   rather than as a separate listener. */
+let fyEndTouched=false;
+document.addEventListener('input',e=>{
+  if(!e.target.matches('input')) return;
+  if(e.target.id==='fyEnd') fyEndTouched=true;
+  if(e.target.id==='fyStart') autoFillEndDate(document.getElementById('fyStart'),document.getElementById('fyEnd'),fyEndTouched);
+  refresh();
+});
 document.addEventListener('click',e=>{
   const tile=e.target.closest('[data-tile]');
   if(tile){
@@ -1135,6 +1162,7 @@ document.addEventListener('click',e=>{
 document.getElementById('startOverBtn').addEventListener('click',()=>{
   ['fyStart','fyEnd','g2Revenue','g2Pbt','g2Hfs','g2Sct','g2Sbie','g3Income','g3Sbie','g3AvgRev','g3AvgInc','g3Tax']
     .forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
+  fyEndTouched=false;   // a fresh assessment gets the auto-filled default back
   S.disq.clear();S.qualifiedPersonsAll=null;S.noUaeCEsPrevYear=null;S.qfsSource=null;
   S.ppaPushedDown=null;S.ppaConsistent=null;S.ppaGoodwill=null;
   Object.keys(S.nmce).forEach(k=>S.nmce[k]=null);

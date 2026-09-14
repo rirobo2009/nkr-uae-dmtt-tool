@@ -298,6 +298,7 @@
   </footer>
 </div>
 
+<script src="assets/dmtt-dates.js"></script>
 <script>
 /* ==================================================================
    Lead capture (Google Sheets) — same webhook & payload shape as
@@ -393,50 +394,18 @@ const CITE_M4={
    given obligation's trigger date is wired to a live UI input yet.
    All dates are UTC-midnight Date objects to avoid timezone drift
    between the <input type=date> value and the computed deadline.
+
+   parseDateInput, addMonthsUTC, addDaysUTC, computeAutoFilledEndDate,
+   toDateInputValue and autoFillEndDate now live in
+   assets/dmtt-dates.js, shared with module2-safe-harbour.html, which
+   collects the same Fiscal Year pair. This file's own month-end
+   overflow bug and the 29 Feb clamp decision are both encoded there,
+   once. fmtDate stays local: the two modules differ on what an empty
+   value should render as, and their callers depend on that difference.
    ================================================================== */
-function parseDateInput(value){
-  // value: "YYYY-MM-DD" from <input type=date>, or falsy.
-  if(!value) return null;
-  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if(!m) return null;
-  return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
-}
-function addMonthsUTC(date,n){
-  // Deliberately NOT date.setUTCMonth(getUTCMonth()+n) — that overflows past
-  // month-end whenever the target month is shorter than the source day-of-
-  // month (e.g. 31 Dec + 6 -> 1 Jul instead of 30 Jun, since June has only
-  // 30 days). Clamp to the target month's actual last day instead, which is
-  // the standard "same day N months later, or month-end if that day doesn't
-  // exist" convention for statutory deadline math.
-  const y=date.getUTCFullYear(),m=date.getUTCMonth(),day=date.getUTCDate();
-  const targetFirst=new Date(Date.UTC(y,m+n,1));
-  const daysInTargetMonth=new Date(Date.UTC(targetFirst.getUTCFullYear(),targetFirst.getUTCMonth()+1,0)).getUTCDate();
-  return new Date(Date.UTC(targetFirst.getUTCFullYear(),targetFirst.getUTCMonth(),Math.min(day,daysInTargetMonth)));
-}
 function fmtDate(date){
   if(!date) return null;
   return date.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
-}
-// Exact day subtraction, safe as plain millisecond arithmetic (unlike month
-// arithmetic — see addMonthsUTC above) because every day is exactly
-// 86,400,000ms on a UTC-midnight Date with no DST to account for.
-function addDaysUTC(date,n){ return new Date(date.getTime()+n*86400000); }
-// Standard 12-month Fiscal Year period convention for the END-date auto-
-// fill below: start + 1 year, minus 1 day (1 Jan 2025 -> 31 Dec 2025; 1 Apr
-// 2025 -> 31 Mar 2026). Deliberately built from the SAME addMonthsUTC used
-// throughout this file's deadline math (12 months, not a fixed 365/366-day
-// offset) rather than new ad hoc arithmetic, so this can't reintroduce the
-// month-end overflow class of bug already found and fixed once here.
-// Edge case, worth being explicit about: a start date of 29 February in a
-// leap year has no exact anniversary in a non-leap year, so this composes
-// exactly like the rest of the file's month math already does — addMonthsUTC
-// clamps 29 Feb to 28 Feb of the following (non-leap) year, then -1 day
-// gives 27 Feb. Not the only defensible convention, but the direct, honest
-// result of reusing the one utility that already exists here.
-function computeAutoFilledEndDate(startDate){ return addDaysUTC(addMonthsUTC(startDate,12),-1); }
-function toDateInputValue(date){
-  const y=date.getUTCFullYear(),m=String(date.getUTCMonth()+1).padStart(2,'0'),d=String(date.getUTCDate()).padStart(2,'0');
-  return `${y}-${m}-${d}`;
 }
 // De-duplicates before joining, since the same CITE_M4 value can legitimately
 // back two different facts in one card's Learn More (e.g. TTGREG1 §8.1 covers
@@ -526,9 +495,7 @@ document.getElementById('regPathDdfe').addEventListener('click',()=>selectRegPat
 // mistake itself for a manual edit.
 let fyEndTouched=false;
 function maybeAutoFillEndDate(){
-  if(fyEndTouched) return;
-  const start=currentFyStartDate();
-  document.getElementById('fyEndDate').value = start ? toDateInputValue(computeAutoFilledEndDate(start)) : '';
+  autoFillEndDate(document.getElementById('fyStartDate'),document.getElementById('fyEndDate'),fyEndTouched);
 }
 document.getElementById('fyStartDate').addEventListener('input',()=>{ maybeAutoFillEndDate(); renderAll(); });
 document.getElementById('fyEndDate').addEventListener('input',()=>{ fyEndTouched=true; renderAll(); });

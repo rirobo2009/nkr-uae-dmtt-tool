@@ -32,7 +32,8 @@
   against <code>docs/UAE-DMTT-Module1-Applicability-Spec.md</code>.<br>
   <b>Module 4 (Compliance Calendar):</b> loads <code>module4-compliance-calendar.html</code>
   into a real hidden &lt;iframe&gt; (its own window/global scope, kept separate from
-  Module 1's eval'd sandbox above so neither file's identically-named helpers collide)
+  Module 1's eval'd sandbox above so neither file's identically-named helpers collide,
+  and loading <code>assets/dmtt-dates.js</code> the way a browser would)
   and asserts on deadline computation — both paths for every date-based obligation,
   the GIR/Top-up Tax Return asymmetry, and PDF-consistency — against
   <code>docs/UAE-DMTT-Module4-ComplianceCalendar-Spec.md</code>.<br>
@@ -57,16 +58,36 @@
 
 <!-- Module 4 gets its own real iframe (own window/global scope) rather than
      the eval-into-global-scope trick above — index.html and
-     module4-compliance-calendar.html are both self-contained single-file
-     tools that reuse the same short names (CITE*, tip, requireLeadCapture,
-     getSavedLead, start, mount, ...); eval'ing both into one global scope
-     would collide on the first top-level `const` redeclaration. An iframe
-     also renders Module 4's real CSS/layout, not just its logic. -->
+     module4-compliance-calendar.html reuse the same short names (CITE*,
+     tip, requireLeadCapture, getSavedLead, start, mount, ...); eval'ing
+     both into one global scope would collide on the first top-level
+     `const` redeclaration. An iframe also renders Module 4's real
+     CSS/layout, not just its logic.
+
+     NB these pages are no longer single-file: Modules 2 and 4 both load
+     assets/dmtt-dates.js, the shared Fiscal Year date helpers. That
+     needs no special handling here — an iframe loads an external
+     script tag exactly as a browser would, resolved relative to the page, and
+     test.html is served from the same directory. It does mean a failed
+     load of that file surfaces as date-handling failures across both
+     modules' scenarios at once rather than as one broken test, so check
+     it loaded before hunting for a logic bug in either caller.
+
+     index.html does NOT load the shared helper and must not: its only
+     date pair is prStart/prEnd in the Step A pro-ration sub-step, which
+     captures a period the user has just declared is SHORTER than twelve
+     months. A twelve-month auto-fill there would be wrong by
+     construction. Module 1's sandbox below therefore stays exactly as
+     it was — eval'ing index.html's inline script alone is still the
+     whole of that page's JS. -->
 <iframe id="m4Frame" style="position:absolute;left:-9999px;top:-9999px;width:900px;height:1600px;border:0"></iframe>
-<!-- Module 2 gets its own iframe for the same reason as Module 4: it is a
-     self-contained single-file tool with its own top-level consts
-     (TRANSITION_PERIOD, EUR_10M, S, ...) that would collide with Module 4's
-     if both were eval'd into one scope. -->
+<!-- Module 2 gets its own iframe for the same reason as Module 4: its
+     top-level consts (TRANSITION_PERIOD, EUR_10M, S, ...) would collide
+     with Module 4's if both were eval'd into one scope. It loads the
+     same assets/dmtt-dates.js as Module 4 — each iframe gets its own
+     copy in its own global scope, which is what lets the parity check
+     below compare the two independently rather than trivially comparing
+     one object with itself. -->
 <iframe id="m2Frame" style="position:absolute;left:-9999px;top:-9999px;width:900px;height:2400px;border:0"></iframe>
 
 <script>
@@ -1990,6 +2011,115 @@
       assert('print rules do NOT hide .gate', !/\.gate[^}]*\{[^}]*display:\s*none/.test(css));
       assert('print rules do NOT hide .callout', !/\.callout[^}]*\{[^}]*display:\s*none/.test(css));
       assert('print rules do NOT hide .test-card', !/\.test-card[^}]*\{[^}]*display:\s*none/.test(css));
+    });
+
+    // -----------------------------------------------------------------
+    // END-date auto-fill — same behaviour as Module 4, through the same
+    // shared helper in assets/dmtt-dates.js. Mirrors Module 4's own three
+    // scenarios (normal, leap year, manual edit survives), and adds the
+    // module-specific question: that Gate 1's boundary tests still fire
+    // correctly on an auto-filled rather than a typed END date.
+    // -----------------------------------------------------------------
+    await tc2('Auto-fill — END fills from START on a non-leap year (start + 1yr - 1 day)', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01');
+      assert('1 Jan 2025 auto-fills 31 Dec 2025', m2Doc().getElementById('fyEnd').value==='2025-12-31',
+        m2Doc().getElementById('fyEnd').value);
+      m2Set('fyStart','2025-04-01');
+      assert('1 Apr 2025 auto-fills 31 Mar 2026', m2Doc().getElementById('fyEnd').value==='2026-03-31',
+        m2Doc().getElementById('fyEnd').value);
+    });
+
+    await tc2('Auto-fill — 29 Feb has no exact anniversary, so it clamps then subtracts a day', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2028-02-29');
+      // addMonthsUTC clamps 29 Feb 2028 -> 28 Feb 2029 (2029 is not a leap
+      // year), then -1 day gives 27 Feb. Same composition as Module 4.
+      assert('29 Feb 2028 auto-fills 27 Feb 2029', m2Doc().getElementById('fyEnd').value==='2029-02-27',
+        m2Doc().getElementById('fyEnd').value);
+    });
+
+    await tc2('Auto-fill — a manually edited END is never overwritten by a later START change', async ()=>{
+      await resetM2();
+      m2Set('fyStart','2025-01-01');
+      assert('auto-filled first', m2Doc().getElementById('fyEnd').value==='2025-12-31');
+      m2Set('fyEnd','2025-06-30');                       // manual edit
+      assert('the manual value is kept', m2Doc().getElementById('fyEnd').value==='2025-06-30');
+      m2Set('fyStart','2025-03-01');                     // later START change
+      assert('a later START change does NOT overwrite it', m2Doc().getElementById('fyEnd').value==='2025-06-30',
+        m2Doc().getElementById('fyEnd').value);
+      m2Set('fyStart','2026-01-01');
+      assert('and still does not on a second change', m2Doc().getElementById('fyEnd').value==='2025-06-30',
+        m2Doc().getElementById('fyEnd').value);
+      // Start over restores the default behaviour for a fresh assessment.
+      m2Doc().getElementById('startOverBtn').click();
+      m2Set('fyStart','2025-01-01');
+      assert('Start over resets the touched flag, so auto-fill resumes',
+        m2Doc().getElementById('fyEnd').value==='2025-12-31', m2Doc().getElementById('fyEnd').value);
+    });
+
+    await tc2('Auto-fill — Gate 1 boundary tests fire correctly on an auto-filled END date', async ()=>{
+      await resetM2();
+      // The module-specific risk: the auto-fill writes .value without firing
+      // an input event, so a refresh that ran before the write would test the
+      // previous END. These assert Gate 1's verdict, not just the field.
+      m2Set('fyStart','2026-12-31');
+      assert('auto-fills 30 Dec 2027', m2Doc().getElementById('fyEnd').value==='2027-12-30');
+      assertIncludes('window open — begins before 1 Jan 2027 and ends before 1 Jul 2028',
+        m2Status('g1Status'), 'open');
+      m2Set('fyStart','2027-01-01');
+      assert('auto-fills 31 Dec 2027', m2Doc().getElementById('fyEnd').value==='2027-12-31');
+      assertIncludes('window closed — begins on 1 Jan 2027', m2Status('g1Status'), 'closed');
+      assertIncludes('and names the failing condition', m2Text('#g1Detail'), 'on or after 1 January 2027');
+      // The end-date limb, reached via a manually typed END on an in-window start.
+      m2Set('fyStart','2026-08-01');
+      assertIncludes('auto-filled 12-month FY from Aug 2026 is still in window', m2Status('g1Status'), 'open');
+      m2Set('fyEnd','2028-07-01');   // manual, past the end limb
+      assertIncludes('a manually typed END past 1 Jul 2028 closes the window', m2Status('g1Status'), 'closed');
+      assertIncludes('and names that limb as the failure', m2Text('#g1Detail'), 'on or after 1 July 2028');
+    });
+
+    await tc2('Auto-fill — Module 2 and Module 4 share one implementation, not two copies', async ()=>{
+      const w2=m2Win(),w4=m4Win();
+      assert('both expose computeAutoFilledEndDate', typeof w2.computeAutoFilledEndDate==='function'&&typeof w4.computeAutoFilledEndDate==='function');
+      // Each iframe has its own global scope, so these are genuinely two
+      // separate evaluations of the same file — comparing them is a real
+      // parity check, not an object compared with itself.
+      assert('they are distinct function objects in distinct scopes', w2.computeAutoFilledEndDate!==w4.computeAutoFilledEndDate);
+      assert('and come from the same source text',
+        w2.computeAutoFilledEndDate.toString()===w4.computeAutoFilledEndDate.toString());
+      assert('addMonthsUTC likewise', w2.addMonthsUTC.toString()===w4.addMonthsUTC.toString());
+      const cases=[[2025,1,1],[2025,4,1],[2028,2,29],[2024,2,29],[2025,12,31],[2026,8,31],[2027,3,30]];
+      cases.forEach(([y,m,d])=>{
+        const a=w2.computeAutoFilledEndDate(new (w2.Date)(Date.UTC(y,m-1,d))).getTime();
+        const b=w4.computeAutoFilledEndDate(new (w4.Date)(Date.UTC(y,m-1,d))).getTime();
+        assert(`identical result for ${y}-${m}-${d}`, a===b, a+' vs '+b);
+      });
+      // The month-end overflow this helper exists to avoid.
+      const overflow=w2.addMonthsUTC(new (w2.Date)(Date.UTC(2025,11,31)),6);
+      assert('31 Dec + 6 months clamps to 30 Jun, not 1 Jul',
+        overflow.getUTCMonth()===5&&overflow.getUTCDate()===30, overflow.toISOString());
+    });
+
+    await tc2('Auto-fill — index.html does not load the shared helper, and has no FY date pair to fill', ()=>{
+      // Module 1's only date pair is prStart/prEnd in the Step A pro-ration
+      // sub-step, capturing a period the user has just said is SHORTER than
+      // twelve months. A twelve-month default there would pre-fill the one
+      // value that cannot be right and would compute an "adjusted" threshold
+      // equal to the unadjusted one. Guard that it stays absent.
+      assert('Module 1 has no fyStart/fyEnd fields',
+        !document.getElementById('sandbox').querySelector('#fyStart, #fyEnd'));
+      assert('the pro-ration pair is not wired to any auto-fill helper',
+        typeof window.autoFillEndDate==='undefined',
+        'autoFillEndDate leaked into Module 1\'s sandbox scope');
+      reset();
+      clickOpt(0);                                  // A: Yes
+      document.getElementById('prYes').click();     // short FY -> reveals the date pair
+      const ps=document.getElementById('prStart'),pe=document.getElementById('prEnd');
+      assert('the pro-ration date pair exists', !!ps&&!!pe);
+      ps.value='2025-01-01';
+      ps.dispatchEvent(new Event('input',{bubbles:true}));
+      assert('entering a period start does NOT auto-fill the period end', pe.value==='', pe.value);
     });
 
     await tc2('Module 2 — Start over clears every input and selection', async ()=>{
